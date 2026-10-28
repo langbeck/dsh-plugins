@@ -1,0 +1,54 @@
+# ---------------------------------------------------------------------------
+# dsh-plugins — durable DSH Web GUI plugins (plain Node.js; no bundler)
+# ---------------------------------------------------------------------------
+
+# Local work-in-progress packages. `wip/` holds scratch experiments (for
+# example wip/overview) that are not ready to be part of this repository: the
+# files stay on disk, but git keeps its distance. Anchored to the root so a
+# future `src/wip/` inside a plugin is not caught by accident.
+/wip/
+
+# Dependencies — installed locally with `npm install`, never committed.
+# package-lock.json should be tracked instead once the project grows one.
+node_modules/
+.pnpm-store/
+.yarn/cache/
+
+# npm / yarn / pnpm debug logs and crash reports
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Local secrets and machine-specific configuration. Never commit a credential:
+# it is much cheaper to un-ignore a legitimate file than to rotate a token that
+# reached a commit. An intentional `.env.example` template stays trackable.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Test and coverage output
+coverage/
+.nyc_output/
+*.lcov
+
+# Editor and OS noise
+.vscode/
+.idea/
+.zed/
+.helix/
+.nvim.lua
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# NOTE: lib/client.js is *generated* by build.mjs, but it is committed on
+# purpose: each plugin's `exports` point at it and `dsh plugin add link:<dir>`
+# installs straight from a checkout, so a fresh clone works with no build step.
+# Rebuild with `npm run build` after editing src/client.js.

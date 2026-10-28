@@ -1,0 +1,37 @@
+{
+  "name": "dsh-plugin-slot-explorer",
+  "version": "0.14.0",
+  "private": true,
+  "type": "module",
+  "description": "Slot Explorer: labels additive Web UI slots with pills and opens the Slot Explorer dialog to style them live.",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./lib/client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node build.mjs && node selftest.mjs"
+  },
+  "files": [
+    "src",
+    "lib",
+    "cordis.patch.yml",
+    "build.mjs",
+    "selftest.mjs",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ]
+}

@@ -1,0 +1,8 @@
+# The Slot Explorer bundle layer.
+#
+# One Host-plane row. The Host half is inert: the row exists so the
+# client-modules host resolves this package's `dsh.client` declaration and
+# serves `./client` at /plugins/dsh-plugin-slot-explorer/client.js.
+- insert:
+    - id: slot-explorer
+      name: 'dsh-plugin-slot-explorer'
