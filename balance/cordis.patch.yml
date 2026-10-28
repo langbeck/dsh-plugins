@@ -1,0 +1,8 @@
+# The Balance bundle layer.
+#
+# One Host-plane row. The Host half is inert except for its Config schema, which
+# gives the row a Configure page in the Plugin Manager; the client half renders
+# the sidebar pill.
+- insert:
+    - id: balance
+      name: 'dsh-plugin-balance'

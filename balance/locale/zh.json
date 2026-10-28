@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "余额",
+    "description": "在 Web 侧边栏底部显示 DeepSeek 账户余额，并按币种汇总。"
+  }
+}

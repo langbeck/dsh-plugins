@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Balance",
+    "description": "Shows the DeepSeek account balance in the Web sidebar footer, summed per currency."
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "dsh-plugin-balance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Balance: shows the DeepSeek account balance in the Web sidebar footer, summed per currency.",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./lib/client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node build.mjs && node selftest.mjs"
+  },
+  "files": [
+    "src",
+    "lib",
+    "cordis.patch.yml",
+    "build.mjs",
+    "selftest.mjs",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.18.5"
+  }
+}

@@ -1,0 +1,171 @@
+# Balance
+
+A durable DSH Web GUI plugin: a **full-width row in the sidebar footer** shows
+the DeepSeek account balance for every currency, e.g.
+`$0.00 USD + ¥2.55 CNY`. The footer lays its actions out in one flex row; while
+this block is present that row wraps, so it takes the whole width and the other
+footer actions sit above it. It renders two rows:
+
+1. **Balance** — a bold `Balance` label in the same tertiary gray as the
+   currency codes, then the amounts (currency codes bold); the compact age of the last successful
+   read (`now`, `5min`, `2h`, `3d`) is vertically centered at the right.
+2. **Session** — an estimate of the current Session's cost
+   (`$0.0032 USD`) including its subagent children.
+
+Topped-up and granted balances are **summed per currency** — the pill never
+separates the two kinds. Currencies render with their symbol and code (USD `$`,
+CNY `¥`); other currencies fall back to the code. The pill is hidden while the
+account is signed out, still loading, or the balance cannot be read.
+
+## Install
+
+The package is its own bundle (`dsh.bundle.patch`), so it installs without
+editing profile files.
+
+### From the public repository
+
+Use **Plugins → Add plugin** in the Web GUI and paste:
+
+```
+github:langbeck/dsh-plugins#main&path:/balance
+```
+
+or from a shell:
+
+```sh
+dsh plugin --profile web add 'github:langbeck/dsh-plugins#main&path:/balance'
+```
+
+`&path:/balance` is required because this plugin is a package inside a
+multi-plugin repository. `#main` tracks the branch; use a tag or commit for a
+fixed version.
+
+### From npm
+
+Once published:
+
+```sh
+dsh plugin --profile web add dsh-plugin-balance
+```
+
+The same package name works in **Plugins → Add plugin**.
+
+### From a local checkout
+
+```sh
+pnpm install --dir /path/to/dsh-plugins/balance   # the Host Config schema needs schemastery
+dsh plugin --profile web add link:/path/to/dsh-plugins/balance
+```
+
+or, in a session, call `plugin_manager` → `install_bundle` with the absolute
+directory.
+
+After a **Web** install, click **Enable now** (or switch the bundle on under
+**Installed plugins**); `dsh plugin add` selects the new bundle itself. Then
+reload the Web GUI page. Remove with:
+
+```sh
+dsh plugin --profile web remove dsh-plugin-balance
+```
+
+## Configuration
+
+The plugin row carries a Config schema and registers its own **plugin item**, so
+the Plugin Manager shows a **Balance** settings card in the Plugins page
+(beside the other built-in plugin settings); the bundle row also keeps a
+**Configure** control. Both open the same form. The resolved values are read
+live by the client half.
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| Refresh interval (seconds) | `60` | How often to re-read the balance. `0` disables automatic refresh. |
+| Show zero balances | on | Show a currency whose balance is exactly zero. |
+| Show currency codes | on | Append `USD` / `CNY` after the amount. |
+| Pricing refresh interval (seconds) | `3600` | How often Host-side session-cost pricing is re-read from OpenRouter. |
+
+The same values can be set in a profile patch:
+
+```yaml
+- id: balance
+  name: 'dsh-plugin-balance'
+  config:
+    refreshSeconds: 120
+    showZeroBalances: false
+    showCurrencyName: true
+```
+
+### When it reads the balance
+
+The balance is read when the plugin mounts, whenever the page becomes visible,
+every `refreshSeconds` (default 60; `0` disables the timer), and again when a
+session finishes running (a turn ends). The compact age at the right edge of
+the row (`now`, `5min`, `2h`, …) is the age of the last **successful** read, so
+a stale value is visible at a glance. A turn's cost is not part of the
+turn-end event, so the turn-end read is a heuristic: whatever the Platform
+wallet reports at that moment is shown, and the next poll picks up a delayed
+settlement.
+
+## Session cost
+
+The footer's `$0.0032 USD` line is an estimate of the current Session, including
+its subagent descendants:
+
+- **Currency:** prices are USD, so the estimate is a USD equivalent. The
+  Session log and the account endpoint do not report which wallet currency a
+  request was charged in; see the limitation below.
+- **Pricing source:** OpenRouter's public `deepseek/*` model list, fetched by
+  the Host at startup and every `pricingRefreshSeconds` (default one hour). The
+  DSH model (`deepseek-flash`, `deepseek-v4-pro`) is mapped to OpenRouter's
+  `~deepseek/*-latest` alias and priced from that alias target's concrete row,
+  so a new release is picked up by the next refresh.
+- **Effective time:** every settled model call is priced at its step-start UTC
+  instant, applying OpenRouter's `overrides` (DeepSeek's weekday peak windows);
+  off-peak is the base rate.
+- **Accounting:** each call's cache-read, uncached-input, cache-write and output
+  tokens are priced separately. The fold matches token-meter's retry semantics
+  (a retried step replaces its previous settlement) and ignores fork-inherited
+  events, so a forked Session is not charged for its parent's history.
+- **Scope:** subagent Sessions are added to the total. A Session that the Host
+  cannot query, or a model with no pricing row, contributes unpriced calls; the
+  displayed number stays an approximation and does not mark the lower bound.
+
+The suffix is an estimate, not a bill. Known limitations:
+
+- **Search / Fetch fees are excluded.** They are billed per successful request
+  (US$0.75 per 1,000; free for Harness server-side tool calls until
+  2026-11-01 00:00 Beijing time) and are not part of token usage, so a
+  token-based estimate is a lower bound when those tools run.
+- **Chinese public holidays are not modelled.** DeepSeek treats them as
+  off-peak; OpenRouter's weekday overrides do not, so a holiday peak window can
+  be overpriced.
+- **Price revisions are applied to the whole historical estimate.** The estimate
+  is recomputed with the latest fetched table, not the table in effect when each
+  call ran.
+- **Charged currency is not exposed.** DSH records token usage, not the wallet
+  currency a request settled against; the Platform deducts granted balance
+  before topped-up balance, and the wallet query lists balances per currency,
+  but there is no per-request charge-currency field. The estimate therefore
+  stays in USD instead of guessing.
+- **Unmapped models stay unpriced.** A non-DeepSeek provider or a renamed model
+  without a matching pricing row is reported as unpriced rather than guessed.
+- **Failed attempts without reported usage are invisible**, so the estimate can
+  undercount tokens a provider billed.
+
+## Layout
+
+| Path | What it is |
+| --- | --- |
+| `src/index.js` | Host half: `Config` schema, OpenRouter pricing cache, Session-cost fold, and the authenticated `/api/balance-session-cost` route. |
+| `src/client.js` | Client half: the footer row (slot `sidebar.footer.action`), the Configure page (`plugins.row.config`), and the plugin item (`plugins.item`). |
+| `build.mjs` | Wraps `src/client.js` into `lib/client.js`. |
+| `lib/client.js` | **Generated** module-loader bundle. |
+| `cordis.patch.yml` | The bundle layer: one inert row. |
+| `locale/en.json`, `locale/zh.json`, `icon.svg` | Plugin Manager display metadata. |
+
+## Develop
+
+```sh
+npm install     # schemastery, for the Host Config schema
+npm run build   # regenerate lib/client.js
+npm test        # build + bundle/schema selftest
+```
