@@ -94,7 +94,13 @@ with the slot key whose content is the pill.
 
 ## Develop
 
+From this directory:
+
 ```sh
-npm run build   # regenerate lib/client.js
-npm test        # build + bundle selftest
+just build      # regenerate lib/client.js
+just test       # build + bundle selftest
 ```
+
+From the repository root, use `just build slot-explorer` /
+`just test slot-explorer`. The npm equivalents (`npm run build`, `npm test`)
+also work.

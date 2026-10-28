@@ -38,16 +38,22 @@ for configuration and uninstall steps.
 | `balance/` | Balance plugin. |
 | `wip/` | Local scratch packages, git-ignored. |
 
-## Develop
+## Build
 
-Each plugin builds and tests on its own:
+The repository uses [just](https://github.com/casey/just): one `justfile` at the
+root and one in each plugin folder.
 
 ```sh
-cd slot-explorer
-npm run build   # regenerate lib/client.js from src/client.js
-npm test        # build + bundle selftest
-
-cd balance
-npm install     # schemastery + esbuild (Host schema, Client JSX build)
-npm test        # build + bundle/schema selftest
+just build              # build every plugin
+just build balance      # build one plugin
+just test               # run every plugin's tests
+just test balance       # run one plugin's tests
 ```
+
+Inside a plugin directory, `just build` and `just test` operate on that plugin
+only. `just` recipe names cannot contain `:`, so the one-plugin form is
+`just build <plugin>` (`just build:<plugin>` is not valid just syntax).
+
+Install npm dependencies where needed first (`cd balance && npm install`;
+`slot-explorer` has none). The plain npm scripts (`npm run build`, `npm test`)
+remain available.

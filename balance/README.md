@@ -171,11 +171,16 @@ The suffix is an estimate, not a bill. Known limitations:
 
 ## Develop
 
+From this directory:
+
 ```sh
 npm install     # schemastery (Host schema) and esbuild (Client JSX build)
-npm run build   # bundle src/client/index.jsx -> lib/client.js
-npm test        # build + 124 selftest checks
+just build      # bundle src/client/index.jsx -> lib/client.js
+just test       # build + 124 selftest checks
 ```
+
+From the repository root, use `just build balance` / `just test balance`. The
+npm equivalents (`npm run build`, `npm test`) also work.
 
 The Client half is JSX. esbuild leaves `react` and `react/jsx-runtime` external;
 the page's shared module table provides both, and `build.mjs` wraps the CommonJS
