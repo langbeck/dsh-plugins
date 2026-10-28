@@ -48,6 +48,6 @@ npm run build   # regenerate lib/client.js from src/client.js
 npm test        # build + bundle selftest
 
 cd balance
-npm install     # schemastery, for the Host Config schema
+npm install     # schemastery + esbuild (Host schema, Client JSX build)
 npm test        # build + bundle/schema selftest
 ```

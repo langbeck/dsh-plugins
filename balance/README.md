@@ -155,9 +155,16 @@ The suffix is an estimate, not a bill. Known limitations:
 
 | Path | What it is |
 | --- | --- |
-| `src/index.js` | Host half: `Config` schema, OpenRouter pricing cache, Session-cost fold, and the authenticated `/api/balance-session-cost` route. |
-| `src/client.js` | Client half: the footer row (slot `sidebar.footer.action`), the Configure page (`plugins.row.config`), and the plugin item (`plugins.item`). |
-| `build.mjs` | Wraps `src/client.js` into `lib/client.js`. |
+| `src/index.js` | Host entry: `Config` schema, pricing lifecycle, and the authenticated `/api/balance-session-cost` route. |
+| `src/host/pricing.js` | OpenRouter fetch/cache, DeepSeek alias-target mapping, and effective peak/off-peak prices. |
+| `src/host/session-cost.js` | Session-log fold, retry/inherited handling, subagent roll-up, and per-model cost aggregation. |
+| `src/host/util.js` | Host-side error/number helpers. |
+| `src/client/index.jsx` | Client entry: slot registrations, balance polling, layout rule, and cost-tracker wiring. |
+| `src/client/components/BalanceRow.jsx` | The full-width `Balance`/`Session` footer block. |
+| `src/client/components/SettingsForm.jsx` | Settings page used by the row Configure control and the plugin item. |
+| `src/client/lib/*.js` | Money/time formatting, config normalization, stores, hooks, inline styles, and the cost client. |
+| `src/client/constants.js`, `src/client/locale.js` | Shared constants/layout CSS and the in-app dictionaries. |
+| `build.mjs` | Bundles `src/client/index.jsx` with esbuild and wraps it in the page's module-loader factory. |
 | `lib/client.js` | **Generated** module-loader bundle. |
 | `cordis.patch.yml` | The bundle layer: one inert row. |
 | `locale/en.json`, `locale/zh.json`, `icon.svg` | Plugin Manager display metadata. |
@@ -165,7 +172,11 @@ The suffix is an estimate, not a bill. Known limitations:
 ## Develop
 
 ```sh
-npm install     # schemastery, for the Host Config schema
-npm run build   # regenerate lib/client.js
-npm test        # build + bundle/schema selftest
+npm install     # schemastery (Host schema) and esbuild (Client JSX build)
+npm run build   # bundle src/client/index.jsx -> lib/client.js
+npm test        # build + 124 selftest checks
 ```
+
+The Client half is JSX. esbuild leaves `react` and `react/jsx-runtime` external;
+the page's shared module table provides both, and `build.mjs` wraps the CommonJS
+output in the `window.__ModuleLoader__` factory the Web GUI loads.
