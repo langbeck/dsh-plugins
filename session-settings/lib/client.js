@@ -122,6 +122,8 @@ var EN = {
   "tools.selectValue": "Select\u2026",
   "tools.parameters": "Parameters",
   "tools.recentCalls": "Recent calls",
+  "tools.invocationsCount": "Invocations: {n}",
+  "tools.details": "Tool details",
   "tools.noRecentCalls": "No calls recorded in this Session.",
   "tools.arguments": "Arguments",
   "tools.result": "Result",
@@ -189,6 +191,8 @@ var ZH = {
   "tools.selectValue": "\u9009\u62E9\u2026",
   "tools.parameters": "\u53C2\u6570",
   "tools.recentCalls": "\u6700\u8FD1\u8C03\u7528",
+  "tools.invocationsCount": "\u8C03\u7528\u6B21\u6570\uFF1A{n}",
+  "tools.details": "\u5DE5\u5177\u8BE6\u60C5",
   "tools.noRecentCalls": "\u6B64\u4F1A\u8BDD\u5C1A\u65E0\u8C03\u7528\u8BB0\u5F55\u3002",
   "tools.arguments": "\u53C2\u6570",
   "tools.result": "\u7ED3\u679C",
@@ -513,10 +517,6 @@ var toolArtworkStyle = {
   color: "#ffffff",
   boxSizing: "border-box"
 };
-var toolItemStyle = {
-  display: "flex",
-  flexDirection: "column"
-};
 var toolBodyButtonStyle = {
   flex: "1 1 auto",
   minWidth: 0,
@@ -534,8 +534,21 @@ var toolBodyButtonStyle = {
 var toolDetailsStyle = {
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
-  padding: "0 2px 10px 52px"
+  gap: "8px"
+};
+var detailBackdropStyle = {
+  ...backdropStyle,
+  zIndex: 1100,
+  padding: "16px"
+};
+var detailPanelStyle = {
+  ...panelStyle,
+  width: "min(900px, 100%)",
+  maxHeight: "min(820px, 90vh)"
+};
+var detailBodyStyle = {
+  ...bodyStyle,
+  padding: "16px 20px"
 };
 var toolBodyStyle = {
   flex: "1 1 auto",
@@ -544,6 +557,18 @@ var toolBodyStyle = {
   flexDirection: "column",
   gap: "2px"
 };
+var toolTitleRowStyle = {
+  display: "flex",
+  alignItems: "baseline",
+  gap: "8px",
+  minWidth: 0,
+  width: "100%"
+};
+var toolStatsStyle = {
+  color: "var(--dsw-alias-label-tertiary)",
+  fontSize: "11px",
+  lineHeight: "16px"
+};
 var toolNameStyle = {
   fontSize: "13px",
   lineHeight: "18px",
@@ -551,6 +576,8 @@ var toolNameStyle = {
   color: "var(--dsw-alias-label-primary)"
 };
 var toolDescriptionStyle = {
+  flex: "1 1 auto",
+  minWidth: 0,
   fontSize: "12px",
   lineHeight: "17px",
   color: "var(--dsw-alias-label-tertiary)",
@@ -814,7 +841,7 @@ function SessionSettingsDialog(props) {
   const [actionError, setActionError] = (0, import_react2.useState)("");
   const [busy, setBusy] = (0, import_react2.useState)(false);
   const [search, setSearch] = (0, import_react2.useState)("");
-  const [expanded, setExpanded] = (0, import_react2.useState)("");
+  const [detailTool, setDetailTool] = (0, import_react2.useState)("");
   const [pendingPreset, setPendingPreset] = (0, import_react2.useState)("");
   (0, import_react2.useEffect)(() => {
     let cancelled = false;
@@ -835,11 +862,16 @@ function SessionSettingsDialog(props) {
   }, [sessionId]);
   (0, import_react2.useEffect)(() => {
     const onKey = (event) => {
-      if (event.key === "Escape" && pendingPreset === "") onClose();
+      if (event.key !== "Escape") return;
+      if (detailTool !== "") {
+        setDetailTool("");
+        return;
+      }
+      if (pendingPreset === "") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, pendingPreset]);
+  }, [onClose, pendingPreset, detailTool]);
   async function reload() {
     setBusy(true);
     setActionError("");
@@ -891,88 +923,90 @@ function SessionSettingsDialog(props) {
     if (needle === "") return snapshot.commands;
     return snapshot.commands.filter((command) => command.name.toLowerCase().includes(needle) || command.description.toLowerCase().includes(needle));
   }, [snapshot, search]);
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
     "div",
     {
       style: backdropStyle,
       onMouseDown: (event) => {
         if (event.target === event.currentTarget) onClose();
       },
-      children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-        "div",
-        {
-          role: "dialog",
-          "aria-modal": "true",
-          "aria-label": t("dialog.title"),
-          style: panelStyle,
-          onMouseDown: (event) => event.stopPropagation(),
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: headerStyle, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { flex: "1 1 auto", minWidth: 0 }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { style: titleStyle, children: t("dialog.title") }),
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: subtitleStyle, children: t("dialog.subtitle") })
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+          "div",
+          {
+            role: "dialog",
+            "aria-modal": "true",
+            "aria-label": t("dialog.title"),
+            style: panelStyle,
+            onMouseDown: (event) => event.stopPropagation(),
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: headerStyle, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { flex: "1 1 auto", minWidth: 0 }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { style: titleStyle, children: t("dialog.title") }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: subtitleStyle, children: t("dialog.subtitle") })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", "aria-label": t("common.close"), title: t("common.close"), style: secondaryButtonStyle(false), onClick: onClose, children: t("common.close") })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", "aria-label": t("common.close"), title: t("common.close"), style: secondaryButtonStyle(false), onClick: onClose, children: t("common.close") })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { role: "tablist", style: tabBarStyle, children: TABS.map((name) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-              "button",
-              {
-                type: "button",
-                role: "tab",
-                "aria-selected": tab === name,
-                style: tabStyle(tab === name),
-                onClick: () => {
-                  setTab(name);
-                  setSearch("");
-                  setExpanded("");
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { role: "tablist", style: tabBarStyle, children: TABS.map((name) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                "button",
+                {
+                  type: "button",
+                  role: "tab",
+                  "aria-selected": tab === name,
+                  style: tabStyle(tab === name),
+                  onClick: () => {
+                    setTab(name);
+                    setSearch("");
+                    setDetailTool("");
+                  },
+                  children: t("tab." + name)
                 },
-                children: t("tab." + name)
-              },
-              name
-            )) }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tab === "tools" ? toolsBodyStyle : bodyStyle, children: [
-              status === "loading" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("common.loading") }) : null,
-              status === "error" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: errorStyle, children: error === "" ? t("error.load") : error }),
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: rowStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: primaryButtonStyle(false), onClick: () => void reload(), children: t("common.retry") }) })
-              ] }) : null,
-              status === "ready" && snapshot !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { children: [
-                actionError === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: errorStyle, children: actionError }),
-                tab === "settings" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-                  SettingsTab,
-                  {
-                    snapshot,
-                    t,
-                    busy,
-                    pendingPreset,
-                    setPendingPreset,
-                    changePreset
-                  }
-                ) : null,
-                tab === "tools" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-                  ToolsTab,
-                  {
-                    snapshot,
-                    t,
-                    busy,
-                    expanded,
-                    setExpanded,
-                    onPolicy: setToolPolicy
-                  }
-                ) : null,
-                tab === "commands" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CommandsTab, { snapshot, t, search, setSearch, commands }) : null
-              ] }) : null
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: footerStyle, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: snapshot !== void 0 && snapshot.live === false ? t("settings.readOnlySession") : "" }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: secondaryButtonStyle(busy || status !== "ready"), disabled: busy || status !== "ready", onClick: () => void reload(), children: t("common.refresh") }),
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: primaryButtonStyle(false), onClick: onClose, children: t("common.close") })
+                name
+              )) }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tab === "tools" ? toolsBodyStyle : bodyStyle, children: [
+                status === "loading" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("common.loading") }) : null,
+                status === "error" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: errorStyle, children: error === "" ? t("error.load") : error }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: rowStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: primaryButtonStyle(false), onClick: () => void reload(), children: t("common.retry") }) })
+                ] }) : null,
+                status === "ready" && snapshot !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { children: [
+                  actionError === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: errorStyle, children: actionError }),
+                  tab === "settings" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                    SettingsTab,
+                    {
+                      snapshot,
+                      t,
+                      busy,
+                      pendingPreset,
+                      setPendingPreset,
+                      changePreset
+                    }
+                  ) : null,
+                  tab === "tools" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                    ToolsTab,
+                    {
+                      snapshot,
+                      t,
+                      busy,
+                      onOpen: setDetailTool,
+                      onPolicy: setToolPolicy
+                    }
+                  ) : null,
+                  tab === "commands" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CommandsTab, { snapshot, t, search, setSearch, commands }) : null
+                ] }) : null
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: footerStyle, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: snapshot !== void 0 && snapshot.live === false ? t("settings.readOnlySession") : "" }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: secondaryButtonStyle(busy || status !== "ready"), disabled: busy || status !== "ready", onClick: () => void reload(), children: t("common.refresh") }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: primaryButtonStyle(false), onClick: onClose, children: t("common.close") })
+                ] })
               ] })
-            ] })
-          ]
-        }
-      )
+            ]
+          }
+        ),
+        detailTool !== "" && snapshot !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolDetailDialog, { tool: snapshot.tools.find((tool) => tool.name === detailTool), t, onClose: () => setDetailTool("") }) : null
+      ]
     }
   );
 }
@@ -1033,7 +1067,7 @@ function SettingsTab(props) {
   ] }) });
 }
 function ToolsTab(props) {
-  const { snapshot, t, busy, expanded, setExpanded, onPolicy } = props;
+  const { snapshot, t, busy, onOpen, onPolicy } = props;
   const blocked = snapshot.blockList.session;
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { children: [
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { style: disabledLineStyle, children: [
@@ -1042,76 +1076,105 @@ function ToolsTab(props) {
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: toolListStyle, children: snapshot.tools.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: emptyStyle, children: t("tools.empty") }) : snapshot.tools.map((tool) => {
       const isBlocked = blocked.includes(tool.name);
-      const open = expanded === tool.name;
       const label = isBlocked ? t("tools.unblockTool", { name: tool.name }) : t("tools.blockTool", { name: tool.name });
-      return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolItemStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolRowStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-            "button",
-            {
-              type: "button",
-              "aria-expanded": open,
-              style: toolBodyButtonStyle,
-              onClick: () => setExpanded(open ? "" : tool.name),
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolArtwork, { name: tool.name }),
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolBodyStyle, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: toolNameStyle, children: tool.name }),
-                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: toolDescriptionStyle, children: tool.description })
-                ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: { flex: "none", display: "inline-flex", color: "var(--dsw-alias-label-tertiary)", transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 120ms ease" }, "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { viewBox: "0 0 16 16", width: "14", height: "14", focusable: "false", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M6 3.5 10.5 8 6 12.5", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" }) }) })
-              ]
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-            "button",
-            {
-              type: "button",
-              role: "switch",
-              "aria-checked": !isBlocked,
-              "aria-label": label,
-              title: label,
-              disabled: busy,
-              style: switchTrackStyle(!isBlocked, busy),
-              onClick: () => onPolicy(tool.name),
-              children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: switchKnobStyle(!isBlocked) })
-            }
-          )
-        ] }),
-        open ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolDetailsStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: tool.description }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.schemaPreview") }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SchemaForm, { schema: tool.parameters, t }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.jsonSchema") }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: schemaText(tool.parameters) }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.recentCalls") }),
-          tool.recentCalls.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("tools.noRecentCalls") }) : tool.recentCalls.map((call) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: metaBadgeStyle, children: call.status }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: hintStyle, children: [
-                "turn ",
-                call.turn,
-                " \xB7 step ",
-                call.step
-              ] })
+      return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolRowStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("button", { type: "button", style: toolBodyButtonStyle, onClick: () => onOpen(tool.name), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolArtwork, { name: tool.name }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolBodyStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolTitleRowStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: toolNameStyle, children: tool.name }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: toolDescriptionStyle, title: tool.description, children: tool.description })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.arguments") }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: call.arguments }),
-            call.result === "" || call.result === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "4px" }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.result") }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: call.result })
-            ] }),
-            call.error === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { style: errorStyle, children: [
-              t("tools.error"),
-              ": ",
-              call.error.code,
-              " ",
-              call.error.reason ?? ""
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: toolStatsStyle, children: [
+              t("tools.invocationsCount", { n: tool.callCount ?? tool.recentCalls.length }),
+              isBlocked ? " \xB7 " + t("tools.blocked") : ""
             ] })
-          ] }, call.callId))
-        ] }) : null
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+          "button",
+          {
+            type: "button",
+            role: "switch",
+            "aria-checked": !isBlocked,
+            "aria-label": label,
+            title: label,
+            disabled: busy,
+            style: switchTrackStyle(!isBlocked, busy),
+            onClick: () => onPolicy(tool.name),
+            children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: switchKnobStyle(!isBlocked) })
+          }
+        )
       ] }, tool.name);
     }) })
+  ] });
+}
+function ToolDetailDialog(props) {
+  const { tool, t, onClose } = props;
+  if (tool === void 0) return null;
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    "div",
+    {
+      style: detailBackdropStyle,
+      onMouseDown: (event) => {
+        if (event.target === event.currentTarget) onClose();
+      },
+      children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+        "div",
+        {
+          role: "dialog",
+          "aria-modal": "true",
+          "aria-label": t("tools.details") + ": " + tool.name,
+          style: detailPanelStyle,
+          onMouseDown: (event) => event.stopPropagation(),
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: headerStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolArtwork, { name: tool.name }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { flex: "1 1 auto", minWidth: 0 }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { style: titleStyle, children: tool.name }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: subtitleStyle, children: tool.description })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: secondaryButtonStyle(false), onClick: onClose, children: t("common.close") })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: detailBodyStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolDetails, { tool, t }) })
+          ]
+        }
+      )
+    }
+  );
+}
+function ToolDetails(props) {
+  const { tool, t } = props;
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolDetailsStyle, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.schemaPreview") }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SchemaForm, { schema: tool.parameters, t }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.jsonSchema") }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: schemaText(tool.parameters) }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.recentCalls") }),
+    tool.recentCalls.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("tools.noRecentCalls") }) : tool.recentCalls.map((call) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: metaBadgeStyle, children: call.status }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: hintStyle, children: [
+          "turn ",
+          call.turn,
+          " \xB7 step ",
+          call.step
+        ] })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.arguments") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: call.arguments }),
+      call.result === "" || call.result === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "4px" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.result") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: call.result })
+      ] }),
+      call.error === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { style: errorStyle, children: [
+        t("tools.error"),
+        ": ",
+        call.error.code,
+        " ",
+        call.error.reason ?? ""
+      ] })
+    ] }, call.callId))
   ] });
 }
 var TOOL_ARTWORK_COLORS = ["#4d6bfe", "#2ea043", "#b7791f", "#8250df", "#1f6feb", "#c2414b"];

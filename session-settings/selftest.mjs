@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 import vm from 'node:vm'
 
 import * as host from './src/index.js'
-import { commandView, foldRecentToolCalls, mergeToolHistory, toolView } from './src/tools.js'
+import { commandView, countToolCalls, foldRecentToolCalls, mergeToolHistory, toolView } from './src/tools.js'
 import { EN, ZH } from './src/client/locale.js'
 import { collectSchemaFields, schemaDefaultHint, schemaTypeLabel } from './src/client/lib/schema.js'
 import { disabledLineStyle, presetOptionStyle, presetRowStyle, switchKnobStyle, switchTrackStyle, toolRowStyle, toolsBodyStyle } from './src/client/lib/styles.js'
@@ -63,6 +63,10 @@ equal(calls[1].result, 'content', 'foldRecentToolCalls attaches result text')
 const inherited = foldRecentToolCalls(events, 2, 8)
 equal(inherited.length, 1, 'foldRecentToolCalls skips inherited events')
 equal(inherited[0].callId, 'b', 'foldRecentToolCalls keeps own events after the inherited prefix')
+const counts = countToolCalls(events, 0)
+equal(counts.get('read_file'), 1, 'countToolCalls counts each call by tool')
+equal(counts.get('plugin_manager'), 1, 'countToolCalls counts all tool names')
+equal(countToolCalls(events, 2).size, 1, 'countToolCalls skips inherited calls')
 
 equal(host.sanitizeTools([' plugin_manager ', 'plugin_manager', '', 7, 'read_file']).join(','), 'plugin_manager,read_file', 'sanitizeTools trims and dedupes strings')
 equal(host.sanitizeTools('plugin_manager').length, 0, 'sanitizeTools rejects a non-array')
@@ -125,6 +129,7 @@ async function callHost(body) {
 const readValue = await callHost({ sessionId: 'session-1', action: 'read' })
 check(readValue.ok === true, 'read returns ok')
 equal(readValue.value.tools[0].name, 'plugin_manager', 'read exposes the Session tool schema')
+equal(readValue.value.tools[0].callCount, 1, 'read attaches the invocation count')
 equal(readValue.value.tools[0].recentCalls[0].result, 'ok', 'read attaches recent tool calls')
 equal(readValue.value.commands[0].name, 'compact', 'read exposes Host commands')
 equal(readValue.value.knobs.sandbox, 'workspace-write', 'read exposes the effective sandbox')

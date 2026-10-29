@@ -13,7 +13,7 @@
  * table; third-party plugins cannot add presets.
  */
 
-import { commandView, foldRecentToolCalls, mergeToolHistory, toolView } from './tools.js'
+import { commandView, countToolCalls, foldRecentToolCalls, mergeToolHistory, toolView } from './tools.js'
 
 export const name = 'session-settings'
 
@@ -79,14 +79,17 @@ export function apply(ctx) {
 
   async function recentCalls(session) {
     const query = queryService()
-    if (query === undefined) return []
+    if (query === undefined) return { calls: [], counts: new Map() }
     let observation
     try {
       observation = await query.observeSession(session.id, { projectionMode: 'none' })
       const inherited = typeof session.inheritedEventCount === 'number' ? session.inheritedEventCount : 0
-      return foldRecentToolCalls(observation.events, inherited, RECENT_CALLS)
+      return {
+        calls: foldRecentToolCalls(observation.events, inherited, RECENT_CALLS),
+        counts: countToolCalls(observation.events, inherited),
+      }
     } catch (error) {
-      return []
+      return { calls: [], counts: new Map() }
     } finally {
       if (observation !== undefined) {
         try {
@@ -103,7 +106,7 @@ export function apply(ctx) {
     const current = ctx.permissionPresets.current(session)
     const sandbox = readSandbox(ctx, session)
     const approval = readApproval(ctx, session)
-    const calls = await recentCalls(session)
+    const { calls, counts } = await recentCalls(session)
     const tools = toolSchemas(session)
     const recentByTool = new Map()
     for (const call of calls) {
@@ -123,7 +126,7 @@ export function apply(ctx) {
         })),
       },
       knobs: { sandbox, approval },
-      tools: tools.map((tool) => ({ ...tool, recentCalls: recentByTool.get(tool.name) ?? [] })),
+      tools: tools.map((tool) => ({ ...tool, callCount: counts.get(tool.name) ?? 0, recentCalls: recentByTool.get(tool.name) ?? [] })),
       commands: commandDescriptors(sessionId),
       blockList: {
         session: Array.from(sessionBlockLists.get(sessionId) ?? []),

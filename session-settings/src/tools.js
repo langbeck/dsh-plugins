@@ -79,6 +79,19 @@ export function foldRecentToolCalls(events, inheritedEventCount = 0, limit = 8) 
   return ordered.slice(-Math.max(0, limit)).reverse()
 }
 
+/** Count every own tool call in a Session, grouped by tool name. */
+export function countToolCalls(events, inheritedEventCount = 0) {
+  const counts = new Map()
+  for (const event of events) {
+    if (event === null || typeof event !== 'object' || event.type !== 'tool/call') continue
+    if (typeof event.seq === 'number' && event.seq < inheritedEventCount) continue
+    const data = event.data !== null && event.data !== undefined && typeof event.data === 'object' ? event.data : {}
+    if (typeof data.name !== 'string') continue
+    counts.set(data.name, (counts.get(data.name) ?? 0) + 1)
+  }
+  return counts
+}
+
 /** Flatten a tool result message's content for compact display. */
 function resultText(message) {
   if (message === null || message === undefined || typeof message !== 'object') return ''

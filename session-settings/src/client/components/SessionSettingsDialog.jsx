@@ -50,11 +50,15 @@ import {
   toolBodyButtonStyle,
   toolBodyStyle,
   toolDescriptionStyle,
+  detailBackdropStyle,
+  detailBodyStyle,
+  detailPanelStyle,
   toolDetailsStyle,
-  toolItemStyle,
   toolListStyle,
   toolNameStyle,
   toolRowStyle,
+  toolStatsStyle,
+  toolTitleRowStyle,
   toolsBodyStyle,
   warningStyle,
 } from '../lib/styles.js'
@@ -77,7 +81,7 @@ export default function SessionSettingsDialog(props) {
   const [actionError, setActionError] = useState('')
   const [busy, setBusy] = useState(false)
   const [search, setSearch] = useState('')
-  const [expanded, setExpanded] = useState('')
+  const [detailTool, setDetailTool] = useState('')
   const [pendingPreset, setPendingPreset] = useState('')
 
   useEffect(() => {
@@ -102,11 +106,16 @@ export default function SessionSettingsDialog(props) {
 
   useEffect(() => {
     const onKey = (event) => {
-      if (event.key === 'Escape' && pendingPreset === '') onClose()
+      if (event.key !== 'Escape') return
+      if (detailTool !== '') {
+        setDetailTool('')
+        return
+      }
+      if (pendingPreset === '') onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, pendingPreset])
+  }, [onClose, pendingPreset, detailTool])
 
   async function reload() {
     setBusy(true)
@@ -199,7 +208,7 @@ export default function SessionSettingsDialog(props) {
               onClick={() => {
                 setTab(name)
                 setSearch('')
-                setExpanded('')
+                setDetailTool('')
               }}
             >
               {t('tab.' + name)}
@@ -237,8 +246,7 @@ export default function SessionSettingsDialog(props) {
                   snapshot={snapshot}
                   t={t}
                   busy={busy}
-                  expanded={expanded}
-                  setExpanded={setExpanded}
+                  onOpen={setDetailTool}
                   onPolicy={setToolPolicy}
                 />
               ) : null}
@@ -261,6 +269,9 @@ export default function SessionSettingsDialog(props) {
           </div>
         </div>
       </div>
+      {detailTool !== '' && snapshot !== undefined ? (
+        <ToolDetailDialog tool={snapshot.tools.find((tool) => tool.name === detailTool)} t={t} onClose={() => setDetailTool('')} />
+      ) : null}
     </div>
   )
 }
@@ -329,7 +340,7 @@ function SettingsTab(props) {
 }
 
 function ToolsTab(props) {
-  const { snapshot, t, busy, expanded, setExpanded, onPolicy } = props
+  const { snapshot, t, busy, onOpen, onPolicy } = props
   const blocked = snapshot.blockList.session
   return (
     <div>
@@ -340,68 +351,34 @@ function ToolsTab(props) {
       <div style={toolListStyle}>
         {snapshot.tools.length === 0 ? <p style={emptyStyle}>{t('tools.empty')}</p> : snapshot.tools.map((tool) => {
           const isBlocked = blocked.includes(tool.name)
-          const open = expanded === tool.name
           const label = isBlocked ? t('tools.unblockTool', { name: tool.name }) : t('tools.blockTool', { name: tool.name })
           return (
-            <div key={tool.name} style={toolItemStyle}>
-              <div style={toolRowStyle}>
-                <button
-                  type="button"
-                  aria-expanded={open}
-                  style={toolBodyButtonStyle}
-                  onClick={() => setExpanded(open ? '' : tool.name)}
-                >
-                  <ToolArtwork name={tool.name} />
-                  <div style={toolBodyStyle}>
+            <div key={tool.name} style={toolRowStyle}>
+              <button type="button" style={toolBodyButtonStyle} onClick={() => onOpen(tool.name)}>
+                <ToolArtwork name={tool.name} />
+                <div style={toolBodyStyle}>
+                  <div style={toolTitleRowStyle}>
                     <span style={toolNameStyle}>{tool.name}</span>
-                    <span style={toolDescriptionStyle}>{tool.description}</span>
+                    <span style={toolDescriptionStyle} title={tool.description}>{tool.description}</span>
                   </div>
-                  <span style={{ flex: 'none', display: 'inline-flex', color: 'var(--dsw-alias-label-tertiary)', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 120ms ease' }} aria-hidden="true">
-                    <svg viewBox="0 0 16 16" width="14" height="14" focusable="false">
-                      <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                  <span style={toolStatsStyle}>
+                    {t('tools.invocationsCount', { n: tool.callCount ?? tool.recentCalls.length })}
+                    {isBlocked ? ' · ' + t('tools.blocked') : ''}
                   </span>
-                </button>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={!isBlocked}
-                  aria-label={label}
-                  title={label}
-                  disabled={busy}
-                  style={switchTrackStyle(!isBlocked, busy)}
-                  onClick={() => onPolicy(tool.name)}
-                >
-                  <span style={switchKnobStyle(!isBlocked)} />
-                </button>
-              </div>
-              {open ? (
-                <div style={toolDetailsStyle}>
-                  <p style={hintStyle}>{tool.description}</p>
-                  <span style={labelStyle}>{t('tools.schemaPreview')}</span>
-                  <SchemaForm schema={tool.parameters} t={t} />
-                  <span style={labelStyle}>{t('tools.jsonSchema')}</span>
-                  <pre style={codeBlockStyle}>{schemaText(tool.parameters)}</pre>
-                  <span style={labelStyle}>{t('tools.recentCalls')}</span>
-                  {tool.recentCalls.length === 0 ? <p style={hintStyle}>{t('tools.noRecentCalls')}</p> : tool.recentCalls.map((call) => (
-                    <div key={call.callId} style={sectionStyle}>
-                      <div style={rowStyle}>
-                        <span style={metaBadgeStyle}>{call.status}</span>
-                        <span style={hintStyle}>turn {call.turn} · step {call.step}</span>
-                      </div>
-                      <span style={labelStyle}>{t('tools.arguments')}</span>
-                      <pre style={codeBlockStyle}>{call.arguments}</pre>
-                      {call.result === '' || call.result === undefined ? null : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <span style={labelStyle}>{t('tools.result')}</span>
-                          <pre style={codeBlockStyle}>{call.result}</pre>
-                        </div>
-                      )}
-                      {call.error === undefined ? null : <p style={errorStyle}>{t('tools.error')}: {call.error.code} {call.error.reason ?? ''}</p>}
-                    </div>
-                  ))}
                 </div>
-              ) : null}
+              </button>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!isBlocked}
+                aria-label={label}
+                title={label}
+                disabled={busy}
+                style={switchTrackStyle(!isBlocked, busy)}
+                onClick={() => onPolicy(tool.name)}
+              >
+                <span style={switchKnobStyle(!isBlocked)} />
+              </button>
             </div>
           )
         })}
@@ -410,6 +387,71 @@ function ToolsTab(props) {
   )
 }
 
+
+function ToolDetailDialog(props) {
+  const { tool, t, onClose } = props
+  if (tool === undefined) return null
+  return (
+    <div
+      style={detailBackdropStyle}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('tools.details') + ': ' + tool.name}
+        style={detailPanelStyle}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div style={headerStyle}>
+          <ToolArtwork name={tool.name} />
+          <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+            <h2 style={titleStyle}>{tool.name}</h2>
+            <p style={subtitleStyle}>{tool.description}</p>
+          </div>
+          <button type="button" style={secondaryButtonStyle(false)} onClick={onClose}>
+            {t('common.close')}
+          </button>
+        </div>
+        <div style={detailBodyStyle}>
+          <ToolDetails tool={tool} t={t} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ToolDetails(props) {
+  const { tool, t } = props
+  return (
+    <div style={toolDetailsStyle}>
+      <span style={labelStyle}>{t('tools.schemaPreview')}</span>
+      <SchemaForm schema={tool.parameters} t={t} />
+      <span style={labelStyle}>{t('tools.jsonSchema')}</span>
+      <pre style={codeBlockStyle}>{schemaText(tool.parameters)}</pre>
+      <span style={labelStyle}>{t('tools.recentCalls')}</span>
+      {tool.recentCalls.length === 0 ? <p style={hintStyle}>{t('tools.noRecentCalls')}</p> : tool.recentCalls.map((call) => (
+        <div key={call.callId} style={sectionStyle}>
+          <div style={rowStyle}>
+            <span style={metaBadgeStyle}>{call.status}</span>
+            <span style={hintStyle}>turn {call.turn} · step {call.step}</span>
+          </div>
+          <span style={labelStyle}>{t('tools.arguments')}</span>
+          <pre style={codeBlockStyle}>{call.arguments}</pre>
+          {call.result === '' || call.result === undefined ? null : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={labelStyle}>{t('tools.result')}</span>
+              <pre style={codeBlockStyle}>{call.result}</pre>
+            </div>
+          )}
+          {call.error === undefined ? null : <p style={errorStyle}>{t('tools.error')}: {call.error.code} {call.error.reason ?? ''}</p>}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 const TOOL_ARTWORK_COLORS = ['#4d6bfe', '#2ea043', '#b7791f', '#8250df', '#1f6feb', '#c2414b']
 

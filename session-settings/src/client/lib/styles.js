@@ -461,7 +461,23 @@ export const toolDetailsStyle = {
   display: 'flex',
   flexDirection: 'column',
   gap: '8px',
-  padding: '0 2px 10px 52px',
+}
+
+export const detailBackdropStyle = {
+  ...backdropStyle,
+  zIndex: 1100,
+  padding: '16px',
+}
+
+export const detailPanelStyle = {
+  ...panelStyle,
+  width: 'min(900px, 100%)',
+  maxHeight: 'min(820px, 90vh)',
+}
+
+export const detailBodyStyle = {
+  ...bodyStyle,
+  padding: '16px 20px',
 }
 
 export const toolBodyStyle = {
@@ -472,6 +488,20 @@ export const toolBodyStyle = {
   gap: '2px',
 }
 
+export const toolTitleRowStyle = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: '8px',
+  minWidth: 0,
+  width: '100%',
+}
+
+export const toolStatsStyle = {
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontSize: '11px',
+  lineHeight: '16px',
+}
+
 export const toolNameStyle = {
   fontSize: '13px',
   lineHeight: '18px',
@@ -480,6 +510,8 @@ export const toolNameStyle = {
 }
 
 export const toolDescriptionStyle = {
+  flex: '1 1 auto',
+  minWidth: 0,
   fontSize: '12px',
   lineHeight: '17px',
   color: 'var(--dsw-alias-label-tertiary)',
