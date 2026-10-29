@@ -82,7 +82,8 @@ export function inputStyle(disabled, width = '96px') {
 
 export function selectStyle(disabled) {
   return {
-    ...inputStyle(disabled, '180px'),
+    ...inputStyle(disabled, '100%'),
+    maxWidth: '420px',
     appearance: 'auto',
   }
 }

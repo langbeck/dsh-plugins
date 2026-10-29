@@ -39,7 +39,9 @@ The card data is a list of string pairs in `src/client/index.jsx`:
 
 The component also accepts localized `{ labelKey, valueKey }` entries. The
 current defaults derive Firewall, Embedding, Classifier, and Mode from the live
-config form, so they update immediately after Save.
+config form, so they update immediately after Save. A **Blocks / total** row is
+sampled from the Host's `POST /api/tool-firewall-stats` route every five
+seconds and counts firewall inspections and denials since the plugin reloaded.
 
 ## Configuration
 

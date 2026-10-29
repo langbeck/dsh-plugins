@@ -127,7 +127,8 @@ function inputStyle(disabled, width = "96px") {
 }
 function selectStyle(disabled) {
   return {
-    ...inputStyle(disabled, "180px"),
+    ...inputStyle(disabled, "100%"),
+    maxWidth: "420px",
     appearance: "auto"
   };
 }
@@ -690,6 +691,7 @@ var CONFIG_KEY = `${PACKAGE}#${ROW_ID}`;
 var INJECT = ["slots", "locale", "configForms"];
 var STATS_ID = "tool-firewall";
 var OVERLAY_ID = "tool-firewall-settings";
+var STATS_ROUTE = "/api/tool-firewall-stats";
 var LAYOUT_CSS = [
   'div:has(> [data-slot="sidebar.footer.action"] > [data-tool-firewall-pill]) {',
   "  flex-wrap: wrap;",
@@ -725,6 +727,7 @@ var EN = {
   "stats.embedding": "Embedding",
   "stats.classifier": "Classifier",
   "stats.mode": "Mode",
+  "stats.blocks": "Blocks / total",
   "stats.on": "On",
   "stats.off": "Off",
   "stats.open": "Open",
@@ -795,6 +798,7 @@ var ZH = {
   "stats.embedding": "\u5D4C\u5165",
   "stats.classifier": "\u5206\u7C7B\u5668",
   "stats.mode": "\u6A21\u5F0F",
+  "stats.blocks": "\u963B\u6B62 / \u603B\u6570",
   "stats.on": "\u5F00",
   "stats.off": "\u5173",
   "stats.open": "Open",
@@ -870,27 +874,55 @@ function readConfigValue(form) {
     return void 0;
   }
 }
-function buildStats(value) {
+function buildStats(value, counters = { blocked: 0, total: 0 }) {
   const config = normalizeConfig(value);
   return [
     { labelKey: "stats.firewall", valueKey: config.enabled ? "stats.on" : "stats.off" },
     { labelKey: "stats.embedding", valueKey: config.embeddingEnabled ? "stats.on" : "stats.off" },
     { labelKey: "stats.classifier", valueKey: config.classifierEnabled ? "stats.on" : "stats.off" },
-    { labelKey: "stats.mode", valueKey: config.semanticFailure === "closed" ? "stats.closed" : "stats.open" }
+    { labelKey: "stats.mode", valueKey: config.semanticFailure === "closed" ? "stats.closed" : "stats.open" },
+    { labelKey: "stats.blocks", value: String(counters.blocked ?? 0) + " / " + String(counters.total ?? 0) }
   ];
 }
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), "tool-firewall: dictionaries");
   const configForm = ctx.configForms.get(ROW_ID);
-  const statsStore = createValueStore(buildStats(readConfigValue(configForm)));
+  const remoteStats = { blocked: 0, total: 0 };
+  const statsStore = createValueStore(buildStats(readConfigValue(configForm), remoteStats));
   const uiStore = createValueStore({ open: false });
   const open = () => uiStore.set({ open: true });
   const close = () => uiStore.set({ open: false });
+  const refreshStats = () => statsStore.set(buildStats(readConfigValue(configForm), remoteStats));
   ctx.effect(() => {
-    const refresh = () => statsStore.set(buildStats(readConfigValue(configForm)));
-    refresh();
-    return configForm.subscribe(refresh);
+    refreshStats();
+    return configForm.subscribe(refreshStats);
   }, "tool-firewall: stats");
+  ctx.effect(() => {
+    if (typeof window === "undefined" || typeof fetch !== "function") return void 0;
+    let disposed = false;
+    const tick = () => {
+      if (disposed) return;
+      Promise.resolve().then(() => fetch(STATS_ROUTE, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}"
+      })).then((response) => response.ok ? response.json() : void 0).then((result) => {
+        if (disposed || result === void 0 || result.ok !== true) return;
+        const value = result.value;
+        if (value === null || value === void 0) return;
+        remoteStats.blocked = Number.isFinite(value.blocked) ? value.blocked : remoteStats.blocked;
+        remoteStats.total = Number.isFinite(value.total) ? value.total : remoteStats.total;
+        refreshStats();
+      }).catch(() => {
+      });
+    };
+    tick();
+    const timer = setInterval(tick, 5e3);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+    };
+  }, "tool-firewall: remote stats");
   ctx.effect(() => {
     if (typeof document === "undefined" || document.head === void 0) return void 0;
     const tag = document.createElement("style");

@@ -30,7 +30,9 @@ import { createInferenceClient } from './host/inference-client.js'
 
 export const name = 'tool-firewall'
 
-export const inject = ['tools']
+export const inject = ['tools', 'connection']
+
+const STATS_ROUTE = '/api/tool-firewall-stats'
 
 export const Config = Schema.object({
   enabled: Schema.boolean().default(DEFAULT_CONFIG.enabled).volatile(),
@@ -71,6 +73,8 @@ function nullInference() {
 
 export function apply(ctx, config) {
   const logger = ctx.logger
+  const startedAt = Date.now()
+  const counters = { total: 0, blocked: 0 }
   let runtime
 
   function currentConfig() {
@@ -140,5 +144,33 @@ export function apply(ctx, config) {
     }
   }), 'tool-firewall: settings refresh')
 
-  ctx.effect(() => ctx.on('tools/pre-execute', (exec, next) => handlePreExecute(exec, next), { prepend: true }), 'tool-firewall: pre-execute gate')
+  ctx.effect(() => ctx.on('tools/pre-execute', async (exec, next) => {
+    if (runtime === undefined || !runtime.config.enabled) return handlePreExecute(exec, next)
+    counters.total += 1
+    const decision = await handlePreExecute(exec, next)
+    if (decision.kind === 'deny' && String(decision.info?.code ?? '').startsWith('TOOL_FIREWALL_')) {
+      counters.blocked += 1
+    }
+    return decision
+  }, { prepend: true }), 'tool-firewall: pre-execute gate')
+
+  ctx.effect(() => {
+    const dispose = ctx.connection.fetch.register({
+      path: STATS_ROUTE,
+      methods: ['POST'],
+      requestBody: 'buffered',
+      fetch: async () => Response.json({
+        ok: true,
+        value: {
+          total: counters.total,
+          blocked: counters.blocked,
+          enabled: runtime?.config.enabled === true,
+          startedAt,
+        },
+      }),
+    })
+    return () => {
+      Promise.resolve(dispose()).catch(() => {})
+    }
+  }, 'tool-firewall: stats route')
 }

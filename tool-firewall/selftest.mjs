@@ -51,6 +51,7 @@ for (const key of Object.keys(DEFAULT_CONFIG)) {
 }
 equal(host.name, 'tool-firewall', 'Host plugin row name is tool-firewall')
 check(host.inject.includes('tools'), 'Host injects tools')
+check(host.inject.includes('connection'), 'Host injects connection for the stats route')
 check(Object.values(host.Config.dict).every((field) => field.meta?.volatile === true), 'every Host Config field is volatile for live settings')
 const normalized = normalizeConfig({ maliceThreshold: 1.5, alignmentThreshold: -1, shellTools: ' bash, pwsh ,bash', cacheEntries: 0 })
 close(normalized.maliceThreshold, 1, 'normalize clamps malice threshold')
@@ -327,10 +328,13 @@ const statsInjected = statsRegistration.options.inject()
 const overlayInjected = overlayRegistration.options.inject()
 const statsTree = ReactFake.reset(() => statsRegistration.component({ wide: true, t: (key) => key, ...statsInjected }))
 const statsButtons = []
+const statsLabels = []
 walkTree(statsTree, (node) => {
   if (node !== null && typeof node === 'object' && node.type === 'button') statsButtons.push(node)
+  if (node !== null && typeof node === 'object' && typeof node.props?.children === 'string') statsLabels.push(node.props.children)
 })
 check(statsButtons.length === 1, 'sidebar stats card is one button')
+check(statsLabels.includes('stats.blocks'), 'sidebar stats card includes the block count row')
 statsButtons[0].props.onClick()
 equal(overlayInjected.uiStore.getSnapshot().open, true, 'clicking the stats card opens the settings dialog')
 const dialogTree = ReactFake.reset(() => overlayRegistration.component({ t: (key) => key, configForm, ...overlayInjected }))
@@ -347,14 +351,18 @@ function walkTree(node, visit) {
 }
 const labels = []
 const buttons = []
+const selects = []
 walkTree(formTree, (node) => {
   if (node.props === undefined) return
   if (typeof node.props.children === 'string') labels.push(node.props.children)
   if (node.type === 'button') buttons.push(node)
+  if (node.type === 'select') selects.push(node)
 })
 for (const key of ['field.enabled', 'field.maliceThreshold', 'field.bypassRegex', 'field.embeddingModel', 'field.classifierModel', 'config.save', 'config.reset']) {
   check(labels.includes(key), 'form renders ' + key)
 }
+check(selects.length > 0 && selects[0].props.style.width === '100%', 'select controls use the full field width')
+check(selects.length > 0 && selects[0].props.style.maxWidth === '420px', 'select controls keep a readable maximum width')
 const saveButton = buttons.find((button) => button.props.children === 'config.save')
 const resetButton = buttons.find((button) => button.props.children === 'config.reset')
 check(saveButton !== undefined && resetButton !== undefined, 'form renders save and reset buttons')

@@ -9,6 +9,7 @@ export const CONFIG_KEY = `${PACKAGE}#${ROW_ID}`
 export const INJECT = ['slots', 'locale', 'configForms']
 export const STATS_ID = 'tool-firewall'
 export const OVERLAY_ID = 'tool-firewall-settings'
+export const STATS_ROUTE = '/api/tool-firewall-stats'
 
 /**
  * Footer entries lay out in one flex row. Wrapping while this card is present
