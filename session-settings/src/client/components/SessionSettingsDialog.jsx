@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { readSettings, applyPreset, saveBlockList } from '../lib/api.js'
+import { collectSchemaFields, schemaDefaultHint, schemaTypeLabel } from '../lib/schema.js'
 import {
   backdropStyle,
   bodyStyle,
@@ -26,6 +27,16 @@ import {
   presetRowStyle,
   primaryButtonStyle,
   rowStyle,
+  schemaControlStyle,
+  schemaDescriptionStyle,
+  schemaFieldHeaderStyle,
+  schemaFieldNameStyle,
+  schemaFieldStyle,
+  schemaFormStyle,
+  schemaHintStyle,
+  schemaObjectStyle,
+  schemaRequiredStyle,
+  schemaTypeStyle,
   secondaryButtonStyle,
   sectionStyle,
   sectionTitleStyle,
@@ -367,7 +378,9 @@ function ToolsTab(props) {
               {open ? (
                 <div style={toolDetailsStyle}>
                   <p style={hintStyle}>{tool.description}</p>
-                  <span style={labelStyle}>{t('tools.parameters')}</span>
+                  <span style={labelStyle}>{t('tools.schemaPreview')}</span>
+                  <SchemaForm schema={tool.parameters} t={t} />
+                  <span style={labelStyle}>{t('tools.jsonSchema')}</span>
                   <pre style={codeBlockStyle}>{schemaText(tool.parameters)}</pre>
                   <span style={labelStyle}>{t('tools.recentCalls')}</span>
                   {tool.recentCalls.length === 0 ? <p style={hintStyle}>{t('tools.noRecentCalls')}</p> : tool.recentCalls.map((call) => (
@@ -414,6 +427,68 @@ function ToolArtwork({ name }) {
       </svg>
     </div>
   )
+}
+
+function SchemaForm(props) {
+  const { schema, t } = props
+  const fields = collectSchemaFields(schema)
+  if (fields.length === 0) return <p style={hintStyle}>{t('tools.noParameters')}</p>
+  return (
+    <div style={schemaFormStyle}>
+      {fields.map((field) => (
+        <div key={field.path} style={{ ...schemaFieldStyle, marginLeft: field.depth > 0 ? 16 : 0 }}>
+          <div style={schemaFieldHeaderStyle}>
+            <span style={schemaFieldNameStyle}>{field.name}</span>
+            {field.required ? <span style={schemaRequiredStyle}>*</span> : null}
+            <span style={schemaTypeStyle}>{field.typeLabel}</span>
+            {schemaDefaultHint(field.schema) === undefined ? null : <span style={schemaHintStyle}>{schemaDefaultHint(field.schema)}</span>}
+          </div>
+          <SchemaControl field={field} t={t} />
+          {field.schema.description === undefined || field.schema.description === '' ? null : (
+            <span style={schemaDescriptionStyle}>{field.schema.description}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SchemaControl(props) {
+  const { field, t } = props
+  const schema = field.schema
+  const label = field.path
+  const style = schemaControlStyle
+  const placeholder = typeof schema.default === 'string' || typeof schema.default === 'number' ? String(schema.default) : field.typeLabel
+  if (Array.isArray(schema.enum)) {
+    return (
+      <select disabled aria-label={label} style={style}>
+        <option>{t('tools.selectValue')}</option>
+        {schema.enum.map((value) => <option key={String(value)}>{String(value)}</option>)}
+      </select>
+    )
+  }
+  if (Array.isArray(schema.oneOf)) {
+    return (
+      <select disabled aria-label={label} style={style}>
+        <option>{t('tools.selectValue')}</option>
+        {schema.oneOf.map((branch, index) => <option key={index}>{schemaTypeLabel(branch)}</option>)}
+      </select>
+    )
+  }
+  if (schema.const !== undefined) {
+    return <input disabled readOnly aria-label={label} style={style} value={JSON.stringify(schema.const)} />
+  }
+  if (schema.type === 'boolean') {
+    return <input disabled type="checkbox" aria-label={label} style={{ ...style, width: '16px', height: '16px', padding: 0 }} />
+  }
+  if (schema.type === 'number' || schema.type === 'integer') {
+    return <input disabled type="number" aria-label={label} placeholder={placeholder} style={style} />
+  }
+  if (schema.type === 'object') {
+    const count = schema.properties === undefined || schema.properties === null ? 0 : Object.keys(schema.properties).length
+    return <div style={schemaObjectStyle}>{t('tools.objectSummary', { n: count })}</div>
+  }
+  return <input disabled type="text" aria-label={label} placeholder={placeholder} style={style} />
 }
 
 function CommandsTab(props) {

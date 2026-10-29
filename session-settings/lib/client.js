@@ -115,6 +115,11 @@ var EN = {
   "tools.search": "Search tools\u2026",
   "tools.empty": "No tools are visible for this Session.",
   "tools.deferLoading": "deferred",
+  "tools.schemaPreview": "Schema preview",
+  "tools.jsonSchema": "JSON Schema",
+  "tools.noParameters": "No declared parameters.",
+  "tools.objectSummary": "{n} properties",
+  "tools.selectValue": "Select\u2026",
   "tools.parameters": "Parameters",
   "tools.recentCalls": "Recent calls",
   "tools.noRecentCalls": "No calls recorded in this Session.",
@@ -177,6 +182,11 @@ var ZH = {
   "tools.search": "\u641C\u7D22\u5DE5\u5177\u2026",
   "tools.empty": "\u6B64\u4F1A\u8BDD\u6CA1\u6709\u53EF\u89C1\u5DE5\u5177\u3002",
   "tools.deferLoading": "\u5EF6\u8FDF\u52A0\u8F7D",
+  "tools.schemaPreview": "\u6A21\u5F0F\u9884\u89C8",
+  "tools.jsonSchema": "JSON Schema",
+  "tools.noParameters": "\u6CA1\u6709\u58F0\u660E\u7684\u53C2\u6570\u3002",
+  "tools.objectSummary": "{n} \u4E2A\u5C5E\u6027",
+  "tools.selectValue": "\u9009\u62E9\u2026",
   "tools.parameters": "\u53C2\u6570",
   "tools.recentCalls": "\u6700\u8FD1\u8C03\u7528",
   "tools.noRecentCalls": "\u6B64\u4F1A\u8BDD\u5C1A\u65E0\u8C03\u7528\u8BB0\u5F55\u3002",
@@ -576,6 +586,77 @@ function switchKnobStyle(checked) {
     transition: "transform 120ms ease"
   };
 }
+var schemaFormStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "10px",
+  padding: "12px",
+  border: "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "8px",
+  background: "var(--dsw-alias-bg-layer-2)"
+};
+var schemaFieldStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px"
+};
+var schemaFieldHeaderStyle = {
+  display: "flex",
+  alignItems: "baseline",
+  gap: "7px",
+  flexWrap: "wrap"
+};
+var schemaFieldNameStyle = {
+  fontFamily: "var(--dsw-font-mono, ui-monospace, monospace)",
+  fontSize: "12px",
+  fontWeight: 600,
+  color: "var(--dsw-alias-label-primary)"
+};
+var schemaRequiredStyle = {
+  color: "var(--dsw-alias-state-error-primary, #d93025)",
+  fontSize: "11px",
+  fontWeight: 600
+};
+var schemaTypeStyle = {
+  fontFamily: "var(--dsw-font-mono, ui-monospace, monospace)",
+  fontSize: "10px",
+  color: "var(--dsw-alias-label-tertiary)"
+};
+var schemaDescriptionStyle = {
+  color: "var(--dsw-alias-label-tertiary)",
+  fontSize: "11px",
+  lineHeight: "16px"
+};
+var schemaHintStyle = {
+  color: "var(--dsw-alias-label-tertiary)",
+  fontSize: "10px",
+  lineHeight: "15px"
+};
+var schemaControlStyle = {
+  boxSizing: "border-box",
+  width: "100%",
+  maxWidth: "320px",
+  height: "28px",
+  padding: "0 8px",
+  border: "0.5px solid var(--dsw-alias-border-l4)",
+  borderRadius: "6px",
+  background: "var(--dsw-alias-bg-layer-3)",
+  color: "var(--dsw-alias-label-secondary)",
+  font: "inherit",
+  fontSize: "12px",
+  opacity: 0.8
+};
+var schemaObjectStyle = {
+  boxSizing: "border-box",
+  width: "100%",
+  maxWidth: "320px",
+  padding: "6px 8px",
+  border: "0.5px dashed var(--dsw-alias-border-l3)",
+  borderRadius: "6px",
+  color: "var(--dsw-alias-label-tertiary)",
+  fontFamily: "var(--dsw-font-mono, ui-monospace, monospace)",
+  fontSize: "11px"
+};
 var disabledLineStyle = {
   position: "sticky",
   top: 0,
@@ -658,6 +739,62 @@ function applyPreset(sessionId, preset) {
 }
 function saveBlockList(sessionId, block) {
   return post({ sessionId, action: "policies", block });
+}
+
+// src/client/lib/schema.js
+function collectSchemaFields(schema) {
+  if (schema === null || typeof schema !== "object") return [];
+  const rows = [];
+  if (schema.type === "object" && schema.properties !== void 0 && schema.properties !== null && typeof schema.properties === "object") {
+    walkObject(schema, 0, "", rows);
+    return rows;
+  }
+  rows.push({ name: "value", path: "value", schema, required: false, depth: 0, typeLabel: schemaTypeLabel(schema) });
+  return rows;
+}
+function walkObject(schema, depth, prefix, out) {
+  const properties = schema.properties !== null && typeof schema.properties === "object" ? schema.properties : {};
+  const required = new Set(Array.isArray(schema.required) ? schema.required.filter((name) => typeof name === "string") : []);
+  for (const [name, child] of Object.entries(properties)) {
+    if (child === null || typeof child !== "object") continue;
+    const path = prefix === "" ? name : prefix + "." + name;
+    out.push({
+      name,
+      path,
+      schema: child,
+      required: required.has(name),
+      depth,
+      typeLabel: schemaTypeLabel(child)
+    });
+    if (child.type === "object" && child.properties !== void 0 && child.properties !== null) {
+      walkObject(child, depth + 1, path, out);
+    }
+  }
+}
+function schemaTypeLabel(schema) {
+  if (schema === null || typeof schema !== "object") return "any";
+  if (Array.isArray(schema.oneOf) && schema.oneOf.length > 0) return "oneOf(" + schema.oneOf.length + ")";
+  if (schema.const !== void 0) return "const " + JSON.stringify(schema.const);
+  if (Array.isArray(schema.enum) && schema.enum.length > 0) return "enum(" + schema.enum.length + ")";
+  if (Array.isArray(schema.type)) return schema.type.join(" | ");
+  if (schema.type === "array") return "array<" + schemaTypeLabel(schema.items) + ">";
+  if (schema.type === "object") return "object";
+  if (typeof schema.type === "string") return schema.type;
+  if (schema.properties !== void 0) return "object";
+  return "any";
+}
+function schemaDefaultHint(schema) {
+  if (schema === null || typeof schema !== "object") return void 0;
+  if (schema.default !== void 0) return "default: " + jsonText(schema.default);
+  if (Array.isArray(schema.examples) && schema.examples.length > 0) return "example: " + jsonText(schema.examples[0]);
+  return void 0;
+}
+function jsonText(value) {
+  try {
+    return JSON.stringify(value);
+  } catch (error) {
+    return String(value);
+  }
 }
 
 // src/client/components/SessionSettingsDialog.jsx
@@ -943,7 +1080,9 @@ function ToolsTab(props) {
         ] }),
         open ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolDetailsStyle, children: [
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: tool.description }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.parameters") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.schemaPreview") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SchemaForm, { schema: tool.parameters, t }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.jsonSchema") }),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: schemaText(tool.parameters) }),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.recentCalls") }),
           tool.recentCalls.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("tools.noRecentCalls") }) : tool.recentCalls.map((call) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
@@ -987,6 +1126,54 @@ function ToolArtwork({ name }) {
       fill: "currentColor"
     }
   ) }) });
+}
+function SchemaForm(props) {
+  const { schema, t } = props;
+  const fields = collectSchemaFields(schema);
+  if (fields.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("tools.noParameters") });
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: schemaFormStyle, children: fields.map((field) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { ...schemaFieldStyle, marginLeft: field.depth > 0 ? 16 : 0 }, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: schemaFieldHeaderStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: schemaFieldNameStyle, children: field.name }),
+      field.required ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: schemaRequiredStyle, children: "*" }) : null,
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: schemaTypeStyle, children: field.typeLabel }),
+      schemaDefaultHint(field.schema) === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: schemaHintStyle, children: schemaDefaultHint(field.schema) })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SchemaControl, { field, t }),
+    field.schema.description === void 0 || field.schema.description === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: schemaDescriptionStyle, children: field.schema.description })
+  ] }, field.path)) });
+}
+function SchemaControl(props) {
+  const { field, t } = props;
+  const schema = field.schema;
+  const label = field.path;
+  const style = schemaControlStyle;
+  const placeholder = typeof schema.default === "string" || typeof schema.default === "number" ? String(schema.default) : field.typeLabel;
+  if (Array.isArray(schema.enum)) {
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("select", { disabled: true, "aria-label": label, style, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { children: t("tools.selectValue") }),
+      schema.enum.map((value) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { children: String(value) }, String(value)))
+    ] });
+  }
+  if (Array.isArray(schema.oneOf)) {
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("select", { disabled: true, "aria-label": label, style, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { children: t("tools.selectValue") }),
+      schema.oneOf.map((branch, index) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { children: schemaTypeLabel(branch) }, index))
+    ] });
+  }
+  if (schema.const !== void 0) {
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("input", { disabled: true, readOnly: true, "aria-label": label, style, value: JSON.stringify(schema.const) });
+  }
+  if (schema.type === "boolean") {
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("input", { disabled: true, type: "checkbox", "aria-label": label, style: { ...style, width: "16px", height: "16px", padding: 0 } });
+  }
+  if (schema.type === "number" || schema.type === "integer") {
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("input", { disabled: true, type: "number", "aria-label": label, placeholder, style });
+  }
+  if (schema.type === "object") {
+    const count = schema.properties === void 0 || schema.properties === null ? 0 : Object.keys(schema.properties).length;
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: schemaObjectStyle, children: t("tools.objectSummary", { n: count }) });
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("input", { disabled: true, type: "text", "aria-label": label, placeholder, style });
 }
 function CommandsTab(props) {
   const { t, search, setSearch, commands } = props;

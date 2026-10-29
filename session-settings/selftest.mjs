@@ -13,6 +13,7 @@ import vm from 'node:vm'
 import * as host from './src/index.js'
 import { commandView, foldRecentToolCalls, mergeToolHistory, toolView } from './src/tools.js'
 import { EN, ZH } from './src/client/locale.js'
+import { collectSchemaFields, schemaDefaultHint, schemaTypeLabel } from './src/client/lib/schema.js'
 import { disabledLineStyle, presetOptionStyle, presetRowStyle, switchKnobStyle, switchTrackStyle, toolRowStyle, toolsBodyStyle } from './src/client/lib/styles.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -181,6 +182,35 @@ const importedStyles = new Set(
 const usedStyles = new Set(Array.from(dialogSource.matchAll(/\b([A-Za-z_$][\w$]*Style)\b/g), (match) => match[1]))
 const missingStyles = Array.from(usedStyles).filter((name) => !importedStyles.has(name) && !new RegExp('(?:function|const|let)\\s+' + name + '\\b').test(dialogSource))
 equal(missingStyles.length, 0, 'every style identifier in the dialog is imported (' + missingStyles.join(', ') + ')')
+
+// ---------------------------------------------------------------------------
+// Schema form preview
+// ---------------------------------------------------------------------------
+
+const fields = collectSchemaFields({
+  type: 'object',
+  required: ['path'],
+  properties: {
+    path: { type: 'string', description: 'File path' },
+    limit: { type: 'number', default: 10 },
+    mode: { type: 'string', enum: ['read', 'write'] },
+    nested: { type: 'object', properties: { flag: { type: 'boolean' } } },
+    items: { type: 'array', items: { type: 'string' } },
+    variant: { oneOf: [{ type: 'string' }, { type: 'number' }] },
+  },
+})
+equal(fields.length, 7, 'schema form flattens object properties and nested objects')
+equal(fields[0].name, 'path', 'schema form keeps property names')
+equal(fields[0].required, true, 'schema form marks required properties')
+equal(fields[0].depth, 0, 'top-level fields are at depth zero')
+equal(fields.find((field) => field.path === 'nested.flag').depth, 1, 'nested fields are indented by depth')
+equal(schemaTypeLabel({ type: 'array', items: { type: 'string' } }), 'array<string>', 'schema type label renders array item type')
+equal(schemaTypeLabel({ enum: ['a', 'b'] }), 'enum(2)', 'schema type label renders enum arity')
+equal(schemaTypeLabel({ oneOf: [{ type: 'string' }, { type: 'number' }] }), 'oneOf(2)', 'schema type label renders oneOf arity')
+equal(schemaDefaultHint({ default: 10 }), 'default: 10', 'schema form shows a default hint')
+equal(schemaDefaultHint({ examples: ['abc'] }), 'example: "abc"', 'schema form falls back to the first example')
+equal(collectSchemaFields({ type: 'object', properties: {} }).length, 0, 'an empty object schema has no fields')
+equal(collectSchemaFields({ type: 'string' })[0].name, 'value', 'a scalar schema renders as one value field')
 
 // ---------------------------------------------------------------------------
 // Generated Client bundle

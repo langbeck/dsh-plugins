@@ -520,6 +520,87 @@ export function switchKnobStyle(checked) {
   }
 }
 
+export const schemaFormStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+  padding: '12px',
+  border: '0.5px solid var(--dsw-alias-border-l3)',
+  borderRadius: '8px',
+  background: 'var(--dsw-alias-bg-layer-2)',
+}
+
+export const schemaFieldStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+}
+
+export const schemaFieldHeaderStyle = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: '7px',
+  flexWrap: 'wrap',
+}
+
+export const schemaFieldNameStyle = {
+  fontFamily: 'var(--dsw-font-mono, ui-monospace, monospace)',
+  fontSize: '12px',
+  fontWeight: 600,
+  color: 'var(--dsw-alias-label-primary)',
+}
+
+export const schemaRequiredStyle = {
+  color: 'var(--dsw-alias-state-error-primary, #d93025)',
+  fontSize: '11px',
+  fontWeight: 600,
+}
+
+export const schemaTypeStyle = {
+  fontFamily: 'var(--dsw-font-mono, ui-monospace, monospace)',
+  fontSize: '10px',
+  color: 'var(--dsw-alias-label-tertiary)',
+}
+
+export const schemaDescriptionStyle = {
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontSize: '11px',
+  lineHeight: '16px',
+}
+
+export const schemaHintStyle = {
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontSize: '10px',
+  lineHeight: '15px',
+}
+
+export const schemaControlStyle = {
+  boxSizing: 'border-box',
+  width: '100%',
+  maxWidth: '320px',
+  height: '28px',
+  padding: '0 8px',
+  border: '0.5px solid var(--dsw-alias-border-l4)',
+  borderRadius: '6px',
+  background: 'var(--dsw-alias-bg-layer-3)',
+  color: 'var(--dsw-alias-label-secondary)',
+  font: 'inherit',
+  fontSize: '12px',
+  opacity: 0.8,
+}
+
+export const schemaObjectStyle = {
+  boxSizing: 'border-box',
+  width: '100%',
+  maxWidth: '320px',
+  padding: '6px 8px',
+  border: '0.5px dashed var(--dsw-alias-border-l3)',
+  borderRadius: '6px',
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontFamily: 'var(--dsw-font-mono, ui-monospace, monospace)',
+  fontSize: '11px',
+}
+
 export const disabledLineStyle = {
   position: 'sticky',
   top: 0,
