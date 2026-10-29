@@ -153,6 +153,15 @@ function formatUsd(value) {
   if (value >= 1e-4) return "$" + value.toFixed(4);
   return "<$0.0001";
 }
+function formatRemainingUsd(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "\u2014";
+  if (Math.abs(value) <= 1e-3) return "$0.00";
+  if (value < 0) {
+    const absolute = Math.abs(value);
+    return "-$" + absolute.toFixed(absolute >= 0.01 ? 2 : 4);
+  }
+  return formatUsd(value);
+}
 
 // src/client/lib/time.js
 function relativeTimeParts(updatedAt, now) {
@@ -487,7 +496,7 @@ function BalanceRow(props) {
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: walletStyle, children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: amountStyle, children: formatUsd(cost.limitUsd) }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: codeStyle, children: "USD" }),
-          typeof cost.remainingUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: remainingStyle(cost.remainingUsd), children: t("row.remaining", { amount: formatUsd(cost.remainingUsd) }) }) : null
+          typeof cost.remainingUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: remainingStyle(cost.remainingUsd), children: t("row.remaining", { amount: formatRemainingUsd(cost.remainingUsd) }) }) : null
         ] })
       ] }) : null
     ] }),

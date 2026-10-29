@@ -42,7 +42,8 @@ question with defaults (`+$1`, `+$5`, `+$10`, double) plus a custom amount; the
 new cap is saved before the step proceeds. Per-turn approvals remain ephemeral.
 
 The sidebar's Session block gains a `Limit $5.00 ($2.50 left)` row while a cap
-is set.
+is set. An overage greater than $0.001 renders as a negative remainder, e.g.
+`Limit $2.00 USD (-$0.10 left)`.
 
 ## Install
 

@@ -17,6 +17,7 @@ import { DEFAULT_CONFIG } from './src/client/constants.js'
 import { normalizeConfig } from './src/client/lib/config.js'
 import {
   formatAmount,
+  formatRemainingUsd,
   formatUsd,
   orderWalletList,
   sumWallets,
@@ -104,6 +105,10 @@ equal(walletText({ currency: 'EUR', amount: 2.55 }, true), '2.55 EUR', 'walletTe
 equal(formatUsd(0), '$0.00', 'formatUsd renders zero')
 equal(formatUsd(0.0032), '$0.0032', 'formatUsd renders sub-cent estimates with four decimals')
 equal(formatUsd(0.5), '$0.50', 'formatUsd renders ordinary cents')
+equal(formatRemainingUsd(0.32), '$0.32', 'formatRemainingUsd renders positive budget')
+equal(formatRemainingUsd(-0.1), '-$0.10', 'formatRemainingUsd renders an over-budget amount')
+equal(formatRemainingUsd(-0.0005), '$0.00', 'formatRemainingUsd hides negligible overages')
+equal(formatRemainingUsd(-0.002), '-$0.0020', 'formatRemainingUsd keeps sub-cent overages visible')
 
 equal(
   summaryText([{ currency: 'USD', amount: 0 }, { currency: 'CNY', amount: 2.55 }], normalizeConfig({})),
@@ -368,7 +373,7 @@ equal(await service.limitOf('root'), 0.01, 'the service exposes the cap')
 const capRoute = await routeHandler({ json: async () => ({ sessionId: 'root' }), signal: new AbortController().signal })
 const capValue = await capRoute.json()
 equal(capValue.value.limitUsd, 0.01, 'the cost route carries the cap')
-check(capValue.value.remainingUsd === 0, 'the cost route clamps remaining to zero')
+check(capValue.value.remainingUsd < 0, 'the cost route reports the over-budget remainder')
 const eventsAbort = new AbortController()
 const eventsResponse = await routes['/api/balance-events']({
   url: 'http://localhost/api/balance-events?sessionId=root',
@@ -669,6 +674,15 @@ walkTree(exhaustedTree, (node) => {
   if (node.props !== undefined && typeof node.props.children === 'string' && node.props.children.indexOf('row.remaining') === 0) exhaustedRemaining = node
 })
 check(exhaustedRemaining !== undefined && String(exhaustedRemaining.props.style.color).includes('state-error'), 'an exhausted budget is highlighted in red')
+
+injected.costStore.set({ status: 'ready', sessionId: 's1', totalUsd: 2.1, limitUsd: 2, remainingUsd: -0.1, partial: false })
+const overTree = ReactFake.reset(() => pillRegistration.component(pillProps(true)))
+let overRemaining
+walkTree(overTree, (node) => {
+  if (node.props !== undefined && typeof node.props.children === 'string' && node.props.children.indexOf('row.remaining') === 0) overRemaining = node
+})
+check(overRemaining !== undefined && overRemaining.props.children.includes('-$0.10'), 'an over-budget remainder renders as a negative amount')
+check(overRemaining !== undefined && String(overRemaining.props.style.color).includes('state-error'), 'an over-budget remainder is red')
 
 const narrowTree = ReactFake.reset(() => pillRegistration.component(pillProps(false)))
 const narrowText = textOf(narrowTree).join(' ')

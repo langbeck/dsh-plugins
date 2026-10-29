@@ -10,7 +10,7 @@
  *   limitOf(sessionId), setLimit(sessionId, limitUsd | null), pricingState()
  *
  * `/limit <usd>`, `/limit off`, and `/limit` manage the current Session cap.
- * A pre-step guard pauses an over-cap turn and asks whether to proceed once,
+ * A pre-step guard pauses an over-cap turn and asks whether to allow the turn,
  * increase the cap, or cancel.
  */
 
@@ -168,7 +168,7 @@ export function apply(ctx, config) {
       return {
         ...value,
         limitUsd,
-        remainingUsd: limitUsd === null ? null : Math.max(0, limitUsd - value.totalUsd),
+        remainingUsd: limitUsd === null ? null : limitUsd - value.totalUsd,
         limitPersistence: limitsTable === undefined ? 'memory' : 'durable',
       }
     },

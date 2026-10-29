@@ -85,3 +85,14 @@ export function formatUsd(value) {
   if (value >= 0.0001) return '$' + value.toFixed(4)
   return '<$0.0001'
 }
+
+/** Remaining-cap text; shows a negative balance once more than $0.001 is over. */
+export function formatRemainingUsd(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '—'
+  if (Math.abs(value) <= 0.001) return '$0.00'
+  if (value < 0) {
+    const absolute = Math.abs(value)
+    return '-$' + absolute.toFixed(absolute >= 0.01 ? 2 : 4)
+  }
+  return formatUsd(value)
+}

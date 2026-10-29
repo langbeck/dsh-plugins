@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 
 import { COST_CHANGED_EVENT, COST_REFRESH_MS, EVENTS_ROUTE } from '../constants.js'
 import { useNow, useSnapshot } from '../lib/hooks.js'
-import { formatUsd, summaryText, visibleWallets, walletAmountText } from '../lib/money.js'
+import { formatRemainingUsd, formatUsd, summaryText, visibleWallets, walletAmountText } from '../lib/money.js'
 import { compactTimeLabel, formatUpdatedAt, relativeTimeParts } from '../lib/time.js'
 import {
   amountStyle,
@@ -148,7 +148,7 @@ export default function BalanceRow(props) {
               <span style={amountStyle}>{formatUsd(cost.limitUsd)}</span>
               <span style={codeStyle}>USD</span>
               {typeof cost.remainingUsd === 'number' ? (
-                <span style={remainingStyle(cost.remainingUsd)}>{t('row.remaining', { amount: formatUsd(cost.remainingUsd) })}</span>
+                <span style={remainingStyle(cost.remainingUsd)}>{t('row.remaining', { amount: formatRemainingUsd(cost.remainingUsd) })}</span>
               ) : null}
             </span>
           </div>
