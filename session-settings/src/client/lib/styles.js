@@ -431,6 +431,33 @@ export const toolArtworkStyle = {
   boxSizing: 'border-box',
 }
 
+export const toolItemStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+}
+
+export const toolBodyButtonStyle = {
+  flex: '1 1 auto',
+  minWidth: 0,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  padding: 0,
+  border: 'none',
+  background: 'transparent',
+  color: 'inherit',
+  textAlign: 'left',
+  cursor: 'pointer',
+  font: 'inherit',
+}
+
+export const toolDetailsStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+  padding: '0 2px 10px 52px',
+}
+
 export const toolBodyStyle = {
   flex: '1 1 auto',
   minWidth: 0,
@@ -480,7 +507,9 @@ export function switchKnobStyle(checked) {
     width: '18px',
     height: '18px',
     borderRadius: '50%',
-    background: 'var(--dsw-alias-label-primary-foreground, #ffffff)',
+    background: checked
+      ? 'var(--dsw-alias-state-success-primary, #2ea043)'
+      : 'var(--dsw-alias-state-error-primary, #d93025)',
     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.25)',
     transform: checked ? 'translateX(16px)' : 'translateX(0)',
     transition: 'transform 120ms ease',

@@ -4,6 +4,7 @@ import { readSettings, applyPreset, saveBlockList } from '../lib/api.js'
 import {
   backdropStyle,
   bodyStyle,
+  codeBlockStyle,
   dangerButtonStyle,
   disabledLineStyle,
   emptyStyle,
@@ -35,8 +36,11 @@ import {
   tabStyle,
   titleStyle,
   toolArtworkStyle,
+  toolBodyButtonStyle,
   toolBodyStyle,
   toolDescriptionStyle,
+  toolDetailsStyle,
+  toolItemStyle,
   toolListStyle,
   toolNameStyle,
   toolRowStyle,
@@ -61,6 +65,7 @@ export default function SessionSettingsDialog(props) {
   const [actionError, setActionError] = useState('')
   const [busy, setBusy] = useState(false)
   const [search, setSearch] = useState('')
+  const [expanded, setExpanded] = useState('')
   const [pendingPreset, setPendingPreset] = useState('')
 
   useEffect(() => {
@@ -182,6 +187,7 @@ export default function SessionSettingsDialog(props) {
               onClick={() => {
                 setTab(name)
                 setSearch('')
+                setExpanded('')
               }}
             >
               {t('tab.' + name)}
@@ -215,7 +221,14 @@ export default function SessionSettingsDialog(props) {
                 />
               ) : null}
               {tab === 'tools' ? (
-                <ToolsTab snapshot={snapshot} t={t} busy={busy} onPolicy={setToolPolicy} />
+                <ToolsTab
+                  snapshot={snapshot}
+                  t={t}
+                  busy={busy}
+                  expanded={expanded}
+                  setExpanded={setExpanded}
+                  onPolicy={setToolPolicy}
+                />
               ) : null}
               {tab === 'commands' ? (
                 <CommandsTab snapshot={snapshot} t={t} search={search} setSearch={setSearch} commands={commands} />
@@ -304,33 +317,73 @@ function SettingsTab(props) {
 }
 
 function ToolsTab(props) {
-  const { snapshot, t, busy, onPolicy } = props
+  const { snapshot, t, busy, expanded, setExpanded, onPolicy } = props
   const blocked = snapshot.blockList.session
   return (
     <div>
       <div style={toolListStyle}>
         {snapshot.tools.length === 0 ? <p style={emptyStyle}>{t('tools.empty')}</p> : snapshot.tools.map((tool) => {
           const isBlocked = blocked.includes(tool.name)
+          const open = expanded === tool.name
           const label = isBlocked ? t('tools.unblockTool', { name: tool.name }) : t('tools.blockTool', { name: tool.name })
           return (
-            <div key={tool.name} style={toolRowStyle}>
-              <ToolArtwork name={tool.name} />
-              <div style={toolBodyStyle}>
-                <span style={toolNameStyle}>{tool.name}</span>
-                <span style={toolDescriptionStyle}>{tool.description}</span>
+            <div key={tool.name} style={toolItemStyle}>
+              <div style={toolRowStyle}>
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  style={toolBodyButtonStyle}
+                  onClick={() => setExpanded(open ? '' : tool.name)}
+                >
+                  <ToolArtwork name={tool.name} />
+                  <div style={toolBodyStyle}>
+                    <span style={toolNameStyle}>{tool.name}</span>
+                    <span style={toolDescriptionStyle}>{tool.description}</span>
+                  </div>
+                  <span style={{ flex: 'none', display: 'inline-flex', color: 'var(--dsw-alias-label-tertiary)', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 120ms ease' }} aria-hidden="true">
+                    <svg viewBox="0 0 16 16" width="14" height="14" focusable="false">
+                      <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={!isBlocked}
+                  aria-label={label}
+                  title={label}
+                  disabled={busy}
+                  style={switchTrackStyle(!isBlocked, busy)}
+                  onClick={() => onPolicy(tool.name)}
+                >
+                  <span style={switchKnobStyle(!isBlocked)} />
+                </button>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={!isBlocked}
-                aria-label={label}
-                title={label}
-                disabled={busy}
-                style={switchTrackStyle(!isBlocked, busy)}
-                onClick={() => onPolicy(tool.name)}
-              >
-                <span style={switchKnobStyle(!isBlocked)} />
-              </button>
+              {open ? (
+                <div style={toolDetailsStyle}>
+                  <p style={hintStyle}>{tool.description}</p>
+                  <span style={labelStyle}>{t('tools.parameters')}</span>
+                  <pre style={codeBlockStyle}>{schemaText(tool.parameters)}</pre>
+                  <span style={labelStyle}>{t('tools.recentCalls')}</span>
+                  {tool.recentCalls.length === 0 ? <p style={hintStyle}>{t('tools.noRecentCalls')}</p> : tool.recentCalls.map((call) => (
+                    <div key={call.callId} style={sectionStyle}>
+                      <div style={rowStyle}>
+                        <span style={metaBadgeStyle}>{call.status}</span>
+                        <span style={hintStyle}>turn {call.turn} · step {call.step}</span>
+                      </div>
+                      <span style={labelStyle}>{t('tools.arguments')}</span>
+                      <pre style={codeBlockStyle}>{call.arguments}</pre>
+                      {call.result === '' || call.result === undefined ? null : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={labelStyle}>{t('tools.result')}</span>
+                          <pre style={codeBlockStyle}>{call.result}</pre>
+                        </div>
+                      )}
+                      {call.error === undefined ? null : <p style={errorStyle}>{t('tools.error')}: {call.error.code} {call.error.reason ?? ''}</p>}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           )
         })}
@@ -342,6 +395,7 @@ function ToolsTab(props) {
     </div>
   )
 }
+
 
 const TOOL_ARTWORK_COLORS = ['#4d6bfe', '#2ea043', '#b7791f', '#8250df', '#1f6feb', '#c2414b']
 
@@ -385,3 +439,10 @@ function CommandsTab(props) {
   )
 }
 
+function schemaText(schema) {
+  try {
+    return JSON.stringify(schema, null, 2)
+  } catch (error) {
+    return String(schema)
+  }
+}

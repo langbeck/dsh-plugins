@@ -454,6 +454,20 @@ var itemDescriptionStyle = {
   textOverflow: "ellipsis",
   whiteSpace: "nowrap"
 };
+var codeBlockStyle = {
+  margin: 0,
+  padding: "8px 10px",
+  borderRadius: "7px",
+  background: "var(--dsw-alias-bg-layer-3)",
+  color: "var(--dsw-alias-label-secondary)",
+  fontFamily: "var(--dsw-font-mono, ui-monospace, monospace)",
+  fontSize: "11px",
+  lineHeight: "16px",
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  maxHeight: "260px",
+  overflow: "auto"
+};
 var metaBadgeStyle = {
   flex: "none",
   padding: "1px 6px",
@@ -483,6 +497,30 @@ var toolArtworkStyle = {
   justifyContent: "center",
   color: "#ffffff",
   boxSizing: "border-box"
+};
+var toolItemStyle = {
+  display: "flex",
+  flexDirection: "column"
+};
+var toolBodyButtonStyle = {
+  flex: "1 1 auto",
+  minWidth: 0,
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+  padding: 0,
+  border: "none",
+  background: "transparent",
+  color: "inherit",
+  textAlign: "left",
+  cursor: "pointer",
+  font: "inherit"
+};
+var toolDetailsStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  padding: "0 2px 10px 52px"
 };
 var toolBodyStyle = {
   flex: "1 1 auto",
@@ -527,7 +565,7 @@ function switchKnobStyle(checked) {
     width: "18px",
     height: "18px",
     borderRadius: "50%",
-    background: "var(--dsw-alias-label-primary-foreground, #ffffff)",
+    background: checked ? "var(--dsw-alias-state-success-primary, #2ea043)" : "var(--dsw-alias-state-error-primary, #d93025)",
     boxShadow: "0 1px 2px rgba(0, 0, 0, 0.25)",
     transform: checked ? "translateX(16px)" : "translateX(0)",
     transition: "transform 120ms ease"
@@ -630,6 +668,7 @@ function SessionSettingsDialog(props) {
   const [actionError, setActionError] = (0, import_react2.useState)("");
   const [busy, setBusy] = (0, import_react2.useState)(false);
   const [search, setSearch] = (0, import_react2.useState)("");
+  const [expanded, setExpanded] = (0, import_react2.useState)("");
   const [pendingPreset, setPendingPreset] = (0, import_react2.useState)("");
   (0, import_react2.useEffect)(() => {
     let cancelled = false;
@@ -739,6 +778,7 @@ function SessionSettingsDialog(props) {
                 onClick: () => {
                   setTab(name);
                   setSearch("");
+                  setExpanded("");
                 },
                 children: t("tab." + name)
               },
@@ -763,7 +803,17 @@ function SessionSettingsDialog(props) {
                     changePreset
                   }
                 ) : null,
-                tab === "tools" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolsTab, { snapshot, t, busy, onPolicy: setToolPolicy }) : null,
+                tab === "tools" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                  ToolsTab,
+                  {
+                    snapshot,
+                    t,
+                    busy,
+                    expanded,
+                    setExpanded,
+                    onPolicy: setToolPolicy
+                  }
+                ) : null,
                 tab === "commands" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CommandsTab, { snapshot, t, search, setSearch, commands }) : null
               ] }) : null
             ] }),
@@ -837,32 +887,77 @@ function SettingsTab(props) {
   ] }) });
 }
 function ToolsTab(props) {
-  const { snapshot, t, busy, onPolicy } = props;
+  const { snapshot, t, busy, expanded, setExpanded, onPolicy } = props;
   const blocked = snapshot.blockList.session;
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { children: [
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: toolListStyle, children: snapshot.tools.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: emptyStyle, children: t("tools.empty") }) : snapshot.tools.map((tool) => {
       const isBlocked = blocked.includes(tool.name);
+      const open = expanded === tool.name;
       const label = isBlocked ? t("tools.unblockTool", { name: tool.name }) : t("tools.blockTool", { name: tool.name });
-      return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolRowStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolArtwork, { name: tool.name }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolBodyStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: toolNameStyle, children: tool.name }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: toolDescriptionStyle, children: tool.description })
+      return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolItemStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolRowStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            "button",
+            {
+              type: "button",
+              "aria-expanded": open,
+              style: toolBodyButtonStyle,
+              onClick: () => setExpanded(open ? "" : tool.name),
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolArtwork, { name: tool.name }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolBodyStyle, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: toolNameStyle, children: tool.name }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: toolDescriptionStyle, children: tool.description })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: { flex: "none", display: "inline-flex", color: "var(--dsw-alias-label-tertiary)", transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 120ms ease" }, "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { viewBox: "0 0 16 16", width: "14", height: "14", focusable: "false", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M6 3.5 10.5 8 6 12.5", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" }) }) })
+              ]
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            "button",
+            {
+              type: "button",
+              role: "switch",
+              "aria-checked": !isBlocked,
+              "aria-label": label,
+              title: label,
+              disabled: busy,
+              style: switchTrackStyle(!isBlocked, busy),
+              onClick: () => onPolicy(tool.name),
+              children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: switchKnobStyle(!isBlocked) })
+            }
+          )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-          "button",
-          {
-            type: "button",
-            role: "switch",
-            "aria-checked": !isBlocked,
-            "aria-label": label,
-            title: label,
-            disabled: busy,
-            style: switchTrackStyle(!isBlocked, busy),
-            onClick: () => onPolicy(tool.name),
-            children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: switchKnobStyle(!isBlocked) })
-          }
-        )
+        open ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolDetailsStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: tool.description }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.parameters") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: schemaText(tool.parameters) }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.recentCalls") }),
+          tool.recentCalls.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("tools.noRecentCalls") }) : tool.recentCalls.map((call) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: metaBadgeStyle, children: call.status }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: hintStyle, children: [
+                "turn ",
+                call.turn,
+                " \xB7 step ",
+                call.step
+              ] })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.arguments") }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: call.arguments }),
+            call.result === "" || call.result === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "4px" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.result") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: call.result })
+            ] }),
+            call.error === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { style: errorStyle, children: [
+              t("tools.error"),
+              ": ",
+              call.error.code,
+              " ",
+              call.error.reason ?? ""
+            ] })
+          ] }, call.callId))
+        ] }) : null
       ] }, tool.name);
     }) }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { style: disabledLineStyle, children: [
@@ -912,6 +1007,13 @@ function CommandsTab(props) {
       command.acceptsAttachments ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: metaBadgeStyle, children: t("commands.attachments") }) : null
     ] }, command.name))
   ] });
+}
+function schemaText(schema) {
+  try {
+    return JSON.stringify(schema, null, 2);
+  } catch (error) {
+    return String(schema);
+  }
 }
 
 // src/client/components/SessionSettingsOverlay.jsx
