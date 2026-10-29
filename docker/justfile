@@ -3,9 +3,9 @@
 #
 #   just build          build the image with podman
 #   just web            serve the Web UI: `dsh --profile web --no-open`, bound
-#                       to HOST:PORT inside the container and published on the
-#                       same host port (HOST defaults to auto = the container's
-#                       own IPv4, PORT to 3080)
+#                       to HOST:PORT inside the container and published only
+#                       on PUBLISH_HOST (defaults: HOST=auto, PUBLISH_HOST=
+#                       127.0.0.1, PORT=3080)
 #   just run [args...]  run dsh with arbitrary arguments; publishes no ports
 #   just bash [args...] open a shell in the same container instead of running dsh
 
@@ -35,11 +35,22 @@ dsh_home := home_directory() + "/.dsh"
 # env_var_or_default() is just's equivalent of bash's ${PORT:-3080}.
 port := env_var_or_default("PORT", "3080")
 
+# Host address that publishes the container port. The default loopback keeps
+# the UI reachable only from this machine, independent of the Wi-Fi address.
+# Set PUBLISH_HOST=0.0.0.0 to expose it on the LAN.
+publish_host := env_var_or_default("PUBLISH_HOST", "127.0.0.1")
+
+# Podman network to attach. The default `podman` bridge gives the container a
+# private IPv4 from a stable subnet, instead of an address copied from the
+# host's current Wi-Fi network. Override with NETWORK=slirp4netns or a custom
+# network name if needed.
+network := env_var_or_default("NETWORK", "podman")
+
 # Address dsh's Web UI binds inside the container. "auto" resolves the
 # container's own non-loopback IPv4 at startup, which is the address podman's
-# published port forwards to; set HOST to a literal IPv4 to pin it instead,
-# e.g. `HOST=127.0.0.1 just web` (rootless podman with pasta) or
-# `HOST=10.88.0.2 just web`. A wildcard is rejected by dsh by design.
+# published port forwards to; with the default `podman` network this is the
+# stable private bridge address. Set HOST to a literal IPv4 to pin it instead,
+# e.g. `HOST=10.88.0.2 just web`. A wildcard is rejected by dsh by design.
 host := env_var_or_default("HOST", "auto")
 
 # Build the image from the Dockerfile in this directory.
@@ -47,15 +58,17 @@ build:
     podman build --tag {{image}}:{{tag}} .
 
 # Serve the Web UI on the same host port, binding the container's own IPv4.
+# Only the loopback host address is published by default.
 web:
     podman run --rm -it \
-        --publish "{{port}}:{{port}}" \
+        --network "{{network}}" \
+        --publish "{{publish_host}}:{{port}}:{{port}}" \
         --workdir "{{project_root}}" \
         --volume "{{project_root}}:{{project_root}}:idmap" \
         --volume "{{dsh_home}}:/root/.dsh:idmap" \
         --entrypoint /bin/bash \
         {{image}}:{{tag}} \
-        -c 'host="{{host}}"; if [ "$host" = auto ]; then host=$(hostname -I 2>/dev/null | tr " " "\n" | grep -v "^127\." | grep -m1 -E "^([0-9]{1,3}\.){3}[0-9]{1,3}$"); fi; if [ -z "$host" ] && command -v ip >/dev/null 2>&1; then host=$(ip -4 -o addr show scope global | awk "{print \$4}" | cut -d/ -f1 | grep -m1 -E "^([0-9]{1,3}\.){3}[0-9]{1,3}$"); fi; if [ -z "$host" ]; then echo "error: could not determine the container IPv4; set HOST=<ip> to override" >&2; exit 1; fi; echo "web: http://127.0.0.1:{{port}} (bound to $host:{{port}} inside)"; exec npx @deepseek-ai/dsh --profile web --no-open --host "$host" --port "{{port}}"'
+        -c 'host="{{host}}"; if [ "$host" = auto ]; then host=$(hostname -I 2>/dev/null | tr " " "\n" | grep -v "^127\." | grep -m1 -E "^([0-9]{1,3}\.){3}[0-9]{1,3}$"); fi; if [ -z "$host" ] && command -v ip >/dev/null 2>&1; then host=$(ip -4 -o addr show scope global | awk "{print \$4}" | cut -d/ -f1 | grep -m1 -E "^([0-9]{1,3}\.){3}[0-9]{1,3}$"); fi; if [ -z "$host" ]; then echo "error: could not determine the container IPv4; set HOST=<ip> to override" >&2; exit 1; fi; echo "web: http://{{publish_host}}:{{port}} (bound to $host:{{port}} inside {{network}})"; exec npx @deepseek-ai/dsh --profile web --no-open --host "$host" --port "{{port}}"'
 
 # Run the image, passing any arguments through to dsh (which requires a profile).
 run *args:
