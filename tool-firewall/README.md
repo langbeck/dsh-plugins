@@ -28,7 +28,8 @@ checks over command-like, URL, and path fields only.
 The Plugin Manager row has a configure page and a Plugins-list item. Save writes
 the values through DSH `configForms`; **Restore defaults** clears the profile
 overrides, so the defaults declared in `src/index.js`/`src/config.js` apply
-again.
+again. Config fields are volatile: saves are applied live and rebuild the
+evaluator without restarting the Host.
 
 Important fields:
 

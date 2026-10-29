@@ -29,6 +29,17 @@ export const MAX_TIMEOUT_MS = 5000
 export const MAX_CACHE_ENTRIES = 4096
 export const MAX_CACHE_TTL_MS = 86_400_000
 
+/** Resolve schemastery volatile Config references into plain values. */
+export function unrefConfig(value) {
+  const source = value !== null && typeof value === 'object' ? value : {}
+  const out = {}
+  for (const key of Object.keys(DEFAULT_CONFIG)) {
+    const raw = source[key]
+    out[key] = raw !== null && raw !== undefined && typeof raw.get === 'function' ? raw.get() : raw
+  }
+  return out
+}
+
 function clampNumber(value, fallback, min, max, integer = false) {
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return fallback
@@ -76,7 +87,7 @@ export function validateConfig(value) {
 
 /** Normalize a partial or invalid config into a usable one. */
 export function normalizeConfig(value) {
-  const source = value !== null && typeof value === 'object' ? value : {}
+  const source = unrefConfig(value)
   return {
     enabled: source.enabled !== false,
     maliceThreshold: clampNumber(source.maliceThreshold, DEFAULT_CONFIG.maliceThreshold, 0, 1),

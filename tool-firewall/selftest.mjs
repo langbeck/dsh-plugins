@@ -43,7 +43,7 @@ function close(actual, expected, label) {
 // Config
 // ---------------------------------------------------------------------------
 
-const defaults = host.Config({})
+const defaults = normalizeConfig(host.Config({}))
 for (const key of Object.keys(DEFAULT_CONFIG)) {
   const actual = Array.isArray(defaults[key]) ? JSON.stringify(defaults[key]) : defaults[key]
   const expected = Array.isArray(DEFAULT_CONFIG[key]) ? JSON.stringify(DEFAULT_CONFIG[key]) : DEFAULT_CONFIG[key]
@@ -51,6 +51,7 @@ for (const key of Object.keys(DEFAULT_CONFIG)) {
 }
 equal(host.name, 'tool-firewall', 'Host plugin row name is tool-firewall')
 check(host.inject.includes('tools'), 'Host injects tools')
+check(Object.values(host.Config.dict).every((field) => field.meta?.volatile === true), 'every Host Config field is volatile for live settings')
 const normalized = normalizeConfig({ maliceThreshold: 1.5, alignmentThreshold: -1, shellTools: ' bash, pwsh ,bash', cacheEntries: 0 })
 close(normalized.maliceThreshold, 1, 'normalize clamps malice threshold')
 close(normalized.alignmentThreshold, 0, 'normalize clamps alignment threshold')

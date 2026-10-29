@@ -71,6 +71,15 @@ var MAX_TEXT_TOKENS = 512;
 var MAX_TIMEOUT_MS = 5e3;
 var MAX_CACHE_ENTRIES = 4096;
 var MAX_CACHE_TTL_MS = 864e5;
+function unrefConfig(value) {
+  const source = value !== null && typeof value === "object" ? value : {};
+  const out = {};
+  for (const key of Object.keys(DEFAULT_CONFIG)) {
+    const raw = source[key];
+    out[key] = raw !== null && raw !== void 0 && typeof raw.get === "function" ? raw.get() : raw;
+  }
+  return out;
+}
 function clampNumber(value, fallback, min, max, integer = false) {
   const numeric2 = Number(value);
   if (!Number.isFinite(numeric2)) return fallback;
@@ -95,7 +104,7 @@ function normalizeStringList(value, fallback) {
   return out.length > 0 ? out : [...fallback];
 }
 function normalizeConfig(value) {
-  const source = value !== null && typeof value === "object" ? value : {};
+  const source = unrefConfig(value);
   return {
     enabled: source.enabled !== false,
     maliceThreshold: clampNumber(source.maliceThreshold, DEFAULT_CONFIG.maliceThreshold, 0, 1),
