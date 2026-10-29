@@ -7,4 +7,17 @@ export const PACKAGE = 'dsh-plugin-tool-firewall'
 export const ROW_ID = 'tool-firewall'
 export const CONFIG_KEY = `${PACKAGE}#${ROW_ID}`
 export const INJECT = ['slots', 'locale', 'configForms']
+export const STATS_ID = 'tool-firewall'
+export const OVERLAY_ID = 'tool-firewall-settings'
+
+/**
+ * Footer entries lay out in one flex row. Wrapping while this card is present
+ * keeps the stats block on its own line, matching the Balance footer block.
+ */
+export const LAYOUT_CSS = [
+  'div:has(> [data-slot="sidebar.footer.action"] > [data-tool-firewall-pill]) {',
+  '  flex-wrap: wrap;',
+  '}',
+].join('\n')
+
 export { DEFAULT_CONFIG }

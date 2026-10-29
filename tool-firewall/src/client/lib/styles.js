@@ -117,3 +117,159 @@ export function secondaryButtonStyle(disabled) {
     opacity: disabled ? 0.6 : 1,
   }
 }
+
+// Sidebar stats card ------------------------------------------------------------
+
+export function statsCardStyle(wide) {
+  if (!wide) {
+    return {
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flex: 'none',
+      minWidth: '32px',
+      height: '28px',
+      padding: '0 6px',
+      border: '0.5px solid var(--dsw-alias-border-l3)',
+      borderRadius: 'var(--dsw-radius-md, 8px)',
+      background: 'var(--dsw-alias-bg-layer-1)',
+      color: 'var(--dsw-alias-label-primary)',
+      font: 'inherit',
+      fontSize: '11px',
+      fontWeight: 600,
+      cursor: 'pointer',
+      boxSizing: 'border-box',
+    }
+  }
+  return {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: '2px',
+    flex: '1 0 100%',
+    alignSelf: 'stretch',
+    width: '100%',
+    minWidth: 0,
+    maxWidth: '100%',
+    marginTop: '6px',
+    marginBottom: '6px',
+    padding: '6px 10px',
+    border: '0.5px solid var(--dsw-alias-border-l3)',
+    borderRadius: 'var(--dsw-radius-md, 8px)',
+    background: 'var(--dsw-alias-bg-layer-1)',
+    color: 'var(--dsw-alias-label-primary)',
+    font: 'inherit',
+    fontSize: '12px',
+    lineHeight: '16px',
+    textAlign: 'left',
+    cursor: 'pointer',
+    boxSizing: 'border-box',
+    fontVariantNumeric: 'tabular-nums',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+  }
+}
+
+export const statsRowStyle = {
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: '12px',
+  width: '100%',
+  minWidth: 0,
+}
+
+export const statsLabelStyle = {
+  flex: 'none',
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontWeight: 600,
+  fontSize: '11px',
+  lineHeight: '16px',
+}
+
+export const statsValueStyle = {
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  color: 'var(--dsw-alias-label-primary)',
+  fontWeight: 600,
+  fontSize: '11px',
+  lineHeight: '16px',
+}
+
+// Settings dialog ----------------------------------------------------------------
+
+export const dialogBackdropStyle = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 1100,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '20px',
+  background: 'rgba(0, 0, 0, 0.32)',
+  boxSizing: 'border-box',
+  pointerEvents: 'auto',
+}
+
+export const dialogPanelStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  width: 'min(720px, 100%)',
+  maxHeight: 'min(780px, 88vh)',
+  minHeight: '240px',
+  border: '0.5px solid var(--dsw-alias-border-l3)',
+  borderRadius: 'var(--dsw-radius-lg, 12px)',
+  background: 'var(--dsw-alias-bg-layer-1)',
+  color: 'var(--dsw-alias-label-primary)',
+  boxShadow: '0 18px 60px rgba(0, 0, 0, 0.28)',
+  overflow: 'hidden',
+  boxSizing: 'border-box',
+}
+
+export const dialogHeaderStyle = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '12px',
+  padding: '16px 18px 10px',
+  borderBottom: '0.5px solid var(--dsw-alias-border-l3)',
+}
+
+export const dialogTitleStyle = {
+  margin: 0,
+  fontSize: '16px',
+  lineHeight: '22px',
+  fontWeight: 600,
+}
+
+export const dialogSubtitleStyle = {
+  margin: '3px 0 0',
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontSize: '12px',
+  lineHeight: '18px',
+}
+
+export const dialogBodyStyle = {
+  flex: '1 1 auto',
+  minHeight: 0,
+  overflowY: 'auto',
+  padding: '14px 20px 20px',
+}
+
+export function dialogCloseStyle() {
+  return {
+    marginLeft: 'auto',
+    flex: 'none',
+    width: '28px',
+    height: '28px',
+    border: 'none',
+    borderRadius: 'var(--dsw-radius-md, 8px)',
+    background: 'transparent',
+    color: 'var(--dsw-alias-label-tertiary)',
+    font: 'inherit',
+    fontSize: '20px',
+    lineHeight: '20px',
+    cursor: 'pointer',
+  }
+}
+

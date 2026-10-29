@@ -40,93 +40,8 @@ __export(index_exports, {
 });
 module.exports = __toCommonJS(index_exports);
 
-// src/client/components/SettingsForm.jsx
-var import_react2 = require("react");
-
-// src/config.js
-var DEFAULT_CONFIG = Object.freeze({
-  enabled: true,
-  maliceThreshold: 0.85,
-  alignmentThreshold: 0.35,
-  bypassRegex: "^(?:ls|git status|git branch|pwd)$",
-  shellTools: Object.freeze(["bash", "pwsh", "terminal_send", "run_code"]),
-  maxCommandChars: 8192,
-  maxTextTokens: 256,
-  embeddingEnabled: true,
-  embeddingModel: "Xenova/all-MiniLM-L6-v2",
-  embeddingRevision: "751bff37182d3f1213fa05d7196b954e230abad9",
-  classifierEnabled: false,
-  classifierModel: "",
-  classifierRevision: "",
-  classifierLabels: Object.freeze(["MALICIOUS", "LABEL_1"]),
-  modelTimeoutMs: 50,
-  semanticFailure: "open",
-  cacheEntries: 256,
-  cacheTtlMs: 6e5,
-  allowRemoteModels: true
-});
-var SEMANTIC_FAILURE_MODES = Object.freeze(["open", "closed"]);
-var MAX_COMMAND_CHARS = 65536;
-var MAX_TEXT_TOKENS = 512;
-var MAX_TIMEOUT_MS = 5e3;
-var MAX_CACHE_ENTRIES = 4096;
-var MAX_CACHE_TTL_MS = 864e5;
-function unrefConfig(value) {
-  const source = value !== null && typeof value === "object" ? value : {};
-  const out = {};
-  for (const key of Object.keys(DEFAULT_CONFIG)) {
-    const raw = source[key];
-    out[key] = raw !== null && raw !== void 0 && typeof raw.get === "function" ? raw.get() : raw;
-  }
-  return out;
-}
-function clampNumber(value, fallback, min, max, integer = false) {
-  const numeric2 = Number(value);
-  if (!Number.isFinite(numeric2)) return fallback;
-  const rounded = integer ? Math.round(numeric2) : numeric2;
-  return Math.min(max, Math.max(min, rounded));
-}
-function normalizeString(value, fallback) {
-  return typeof value === "string" ? value : fallback;
-}
-function normalizeStringList(value, fallback) {
-  let entries;
-  if (Array.isArray(value)) entries = value;
-  else if (typeof value === "string") entries = value.split(",");
-  else entries = fallback;
-  const out = [];
-  for (const entry of entries) {
-    if (typeof entry !== "string") continue;
-    const trimmed = entry.trim();
-    if (trimmed === "") continue;
-    if (!out.includes(trimmed)) out.push(trimmed);
-  }
-  return out.length > 0 ? out : [...fallback];
-}
-function normalizeConfig(value) {
-  const source = unrefConfig(value);
-  return {
-    enabled: source.enabled !== false,
-    maliceThreshold: clampNumber(source.maliceThreshold, DEFAULT_CONFIG.maliceThreshold, 0, 1),
-    alignmentThreshold: clampNumber(source.alignmentThreshold, DEFAULT_CONFIG.alignmentThreshold, 0, 1),
-    bypassRegex: normalizeString(source.bypassRegex, DEFAULT_CONFIG.bypassRegex),
-    shellTools: normalizeStringList(source.shellTools, DEFAULT_CONFIG.shellTools),
-    maxCommandChars: clampNumber(source.maxCommandChars, DEFAULT_CONFIG.maxCommandChars, 64, MAX_COMMAND_CHARS, true),
-    maxTextTokens: clampNumber(source.maxTextTokens, DEFAULT_CONFIG.maxTextTokens, 16, MAX_TEXT_TOKENS, true),
-    embeddingEnabled: source.embeddingEnabled !== false,
-    embeddingModel: normalizeString(source.embeddingModel, DEFAULT_CONFIG.embeddingModel),
-    embeddingRevision: normalizeString(source.embeddingRevision, DEFAULT_CONFIG.embeddingRevision),
-    classifierEnabled: source.classifierEnabled === true,
-    classifierModel: normalizeString(source.classifierModel, DEFAULT_CONFIG.classifierModel),
-    classifierRevision: normalizeString(source.classifierRevision, DEFAULT_CONFIG.classifierRevision),
-    classifierLabels: normalizeStringList(source.classifierLabels, DEFAULT_CONFIG.classifierLabels),
-    modelTimeoutMs: clampNumber(source.modelTimeoutMs, DEFAULT_CONFIG.modelTimeoutMs, 1, MAX_TIMEOUT_MS, true),
-    semanticFailure: SEMANTIC_FAILURE_MODES.includes(source.semanticFailure) ? source.semanticFailure : DEFAULT_CONFIG.semanticFailure,
-    cacheEntries: clampNumber(source.cacheEntries, DEFAULT_CONFIG.cacheEntries, 1, MAX_CACHE_ENTRIES, true),
-    cacheTtlMs: clampNumber(source.cacheTtlMs, DEFAULT_CONFIG.cacheTtlMs, 1e3, MAX_CACHE_TTL_MS, true),
-    allowRemoteModels: source.allowRemoteModels !== false
-  };
-}
+// src/client/components/FirewallSettingsDialog.jsx
+var import_react3 = require("react");
 
 // src/client/lib/hooks.js
 var import_react = __toESM(require("react"), 1);
@@ -243,6 +158,234 @@ function secondaryButtonStyle(disabled) {
     fontSize: "13px",
     cursor: disabled ? "default" : "pointer",
     opacity: disabled ? 0.6 : 1
+  };
+}
+function statsCardStyle(wide) {
+  if (!wide) {
+    return {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flex: "none",
+      minWidth: "32px",
+      height: "28px",
+      padding: "0 6px",
+      border: "0.5px solid var(--dsw-alias-border-l3)",
+      borderRadius: "var(--dsw-radius-md, 8px)",
+      background: "var(--dsw-alias-bg-layer-1)",
+      color: "var(--dsw-alias-label-primary)",
+      font: "inherit",
+      fontSize: "11px",
+      fontWeight: 600,
+      cursor: "pointer",
+      boxSizing: "border-box"
+    };
+  }
+  return {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: "2px",
+    flex: "1 0 100%",
+    alignSelf: "stretch",
+    width: "100%",
+    minWidth: 0,
+    maxWidth: "100%",
+    marginTop: "6px",
+    marginBottom: "6px",
+    padding: "6px 10px",
+    border: "0.5px solid var(--dsw-alias-border-l3)",
+    borderRadius: "var(--dsw-radius-md, 8px)",
+    background: "var(--dsw-alias-bg-layer-1)",
+    color: "var(--dsw-alias-label-primary)",
+    font: "inherit",
+    fontSize: "12px",
+    lineHeight: "16px",
+    textAlign: "left",
+    cursor: "pointer",
+    boxSizing: "border-box",
+    fontVariantNumeric: "tabular-nums",
+    whiteSpace: "nowrap",
+    overflow: "hidden"
+  };
+}
+var statsRowStyle = {
+  display: "flex",
+  alignItems: "baseline",
+  justifyContent: "space-between",
+  gap: "12px",
+  width: "100%",
+  minWidth: 0
+};
+var statsLabelStyle = {
+  flex: "none",
+  color: "var(--dsw-alias-label-tertiary)",
+  fontWeight: 600,
+  fontSize: "11px",
+  lineHeight: "16px"
+};
+var statsValueStyle = {
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  color: "var(--dsw-alias-label-primary)",
+  fontWeight: 600,
+  fontSize: "11px",
+  lineHeight: "16px"
+};
+var dialogBackdropStyle = {
+  position: "fixed",
+  inset: 0,
+  zIndex: 1100,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "20px",
+  background: "rgba(0, 0, 0, 0.32)",
+  boxSizing: "border-box",
+  pointerEvents: "auto"
+};
+var dialogPanelStyle = {
+  display: "flex",
+  flexDirection: "column",
+  width: "min(720px, 100%)",
+  maxHeight: "min(780px, 88vh)",
+  minHeight: "240px",
+  border: "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "var(--dsw-radius-lg, 12px)",
+  background: "var(--dsw-alias-bg-layer-1)",
+  color: "var(--dsw-alias-label-primary)",
+  boxShadow: "0 18px 60px rgba(0, 0, 0, 0.28)",
+  overflow: "hidden",
+  boxSizing: "border-box"
+};
+var dialogHeaderStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "12px",
+  padding: "16px 18px 10px",
+  borderBottom: "0.5px solid var(--dsw-alias-border-l3)"
+};
+var dialogTitleStyle = {
+  margin: 0,
+  fontSize: "16px",
+  lineHeight: "22px",
+  fontWeight: 600
+};
+var dialogSubtitleStyle = {
+  margin: "3px 0 0",
+  color: "var(--dsw-alias-label-tertiary)",
+  fontSize: "12px",
+  lineHeight: "18px"
+};
+var dialogBodyStyle = {
+  flex: "1 1 auto",
+  minHeight: 0,
+  overflowY: "auto",
+  padding: "14px 20px 20px"
+};
+function dialogCloseStyle() {
+  return {
+    marginLeft: "auto",
+    flex: "none",
+    width: "28px",
+    height: "28px",
+    border: "none",
+    borderRadius: "var(--dsw-radius-md, 8px)",
+    background: "transparent",
+    color: "var(--dsw-alias-label-tertiary)",
+    font: "inherit",
+    fontSize: "20px",
+    lineHeight: "20px",
+    cursor: "pointer"
+  };
+}
+
+// src/client/components/SettingsForm.jsx
+var import_react2 = require("react");
+
+// src/config.js
+var DEFAULT_CONFIG = Object.freeze({
+  enabled: true,
+  maliceThreshold: 0.85,
+  alignmentThreshold: 0.35,
+  bypassRegex: "^(?:ls|git status|git branch|pwd)$",
+  shellTools: Object.freeze(["bash", "pwsh", "terminal_send", "run_code"]),
+  maxCommandChars: 8192,
+  maxTextTokens: 256,
+  embeddingEnabled: true,
+  embeddingModel: "Xenova/all-MiniLM-L6-v2",
+  embeddingRevision: "751bff37182d3f1213fa05d7196b954e230abad9",
+  classifierEnabled: false,
+  classifierModel: "",
+  classifierRevision: "",
+  classifierLabels: Object.freeze(["MALICIOUS", "LABEL_1"]),
+  modelTimeoutMs: 50,
+  semanticFailure: "open",
+  cacheEntries: 256,
+  cacheTtlMs: 6e5,
+  allowRemoteModels: true
+});
+var SEMANTIC_FAILURE_MODES = Object.freeze(["open", "closed"]);
+var MAX_COMMAND_CHARS = 65536;
+var MAX_TEXT_TOKENS = 512;
+var MAX_TIMEOUT_MS = 5e3;
+var MAX_CACHE_ENTRIES = 4096;
+var MAX_CACHE_TTL_MS = 864e5;
+function unrefConfig(value) {
+  const source = value !== null && typeof value === "object" ? value : {};
+  const out = {};
+  for (const key of Object.keys(DEFAULT_CONFIG)) {
+    const raw = source[key];
+    out[key] = raw !== null && raw !== void 0 && typeof raw.get === "function" ? raw.get() : raw;
+  }
+  return out;
+}
+function clampNumber(value, fallback, min, max, integer = false) {
+  const numeric2 = Number(value);
+  if (!Number.isFinite(numeric2)) return fallback;
+  const rounded = integer ? Math.round(numeric2) : numeric2;
+  return Math.min(max, Math.max(min, rounded));
+}
+function normalizeString(value, fallback) {
+  return typeof value === "string" ? value : fallback;
+}
+function normalizeStringList(value, fallback) {
+  let entries;
+  if (Array.isArray(value)) entries = value;
+  else if (typeof value === "string") entries = value.split(",");
+  else entries = fallback;
+  const out = [];
+  for (const entry of entries) {
+    if (typeof entry !== "string") continue;
+    const trimmed = entry.trim();
+    if (trimmed === "") continue;
+    if (!out.includes(trimmed)) out.push(trimmed);
+  }
+  return out.length > 0 ? out : [...fallback];
+}
+function normalizeConfig(value) {
+  const source = unrefConfig(value);
+  return {
+    enabled: source.enabled !== false,
+    maliceThreshold: clampNumber(source.maliceThreshold, DEFAULT_CONFIG.maliceThreshold, 0, 1),
+    alignmentThreshold: clampNumber(source.alignmentThreshold, DEFAULT_CONFIG.alignmentThreshold, 0, 1),
+    bypassRegex: normalizeString(source.bypassRegex, DEFAULT_CONFIG.bypassRegex),
+    shellTools: normalizeStringList(source.shellTools, DEFAULT_CONFIG.shellTools),
+    maxCommandChars: clampNumber(source.maxCommandChars, DEFAULT_CONFIG.maxCommandChars, 64, MAX_COMMAND_CHARS, true),
+    maxTextTokens: clampNumber(source.maxTextTokens, DEFAULT_CONFIG.maxTextTokens, 16, MAX_TEXT_TOKENS, true),
+    embeddingEnabled: source.embeddingEnabled !== false,
+    embeddingModel: normalizeString(source.embeddingModel, DEFAULT_CONFIG.embeddingModel),
+    embeddingRevision: normalizeString(source.embeddingRevision, DEFAULT_CONFIG.embeddingRevision),
+    classifierEnabled: source.classifierEnabled === true,
+    classifierModel: normalizeString(source.classifierModel, DEFAULT_CONFIG.classifierModel),
+    classifierRevision: normalizeString(source.classifierRevision, DEFAULT_CONFIG.classifierRevision),
+    classifierLabels: normalizeStringList(source.classifierLabels, DEFAULT_CONFIG.classifierLabels),
+    modelTimeoutMs: clampNumber(source.modelTimeoutMs, DEFAULT_CONFIG.modelTimeoutMs, 1, MAX_TIMEOUT_MS, true),
+    semanticFailure: SEMANTIC_FAILURE_MODES.includes(source.semanticFailure) ? source.semanticFailure : DEFAULT_CONFIG.semanticFailure,
+    cacheEntries: clampNumber(source.cacheEntries, DEFAULT_CONFIG.cacheEntries, 1, MAX_CACHE_ENTRIES, true),
+    cacheTtlMs: clampNumber(source.cacheTtlMs, DEFAULT_CONFIG.cacheTtlMs, 1e3, MAX_CACHE_TTL_MS, true),
+    allowRemoteModels: source.allowRemoteModels !== false
   };
 }
 
@@ -468,17 +611,126 @@ function SettingsForm(props) {
   ] });
 }
 
+// src/client/components/FirewallSettingsDialog.jsx
+var import_jsx_runtime2 = require("react/jsx-runtime");
+function FirewallSettingsDialog(props) {
+  const { uiStore, close, t, configForm } = props;
+  const ui = useSnapshot(uiStore);
+  (0, import_react3.useEffect)(() => {
+    if (!ui.open) return void 0;
+    const onKey = (event) => {
+      if (event.key === "Escape") close();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [ui.open, close]);
+  if (!ui.open) return null;
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    "div",
+    {
+      style: dialogBackdropStyle,
+      onMouseDown: (event) => {
+        if (event.target === event.currentTarget) close();
+      },
+      children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: dialogPanelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("config.title"), children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: dialogHeaderStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { minWidth: 0 }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { style: dialogTitleStyle, children: t("config.title") }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: dialogSubtitleStyle, children: t("config.summary") })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: dialogCloseStyle(), "aria-label": t("dialog.close"), title: t("dialog.close"), onClick: close, children: "\xD7" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: dialogBodyStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SettingsForm, { view: "page", t, configForm }) })
+      ] })
+    }
+  );
+}
+
+// src/client/components/FirewallStats.jsx
+var import_jsx_runtime3 = require("react/jsx-runtime");
+function FirewallStats(props) {
+  const { wide = true, t, statsStore, open } = props;
+  const stats = useSnapshot(statsStore);
+  if (!wide) {
+    return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+      "button",
+      {
+        type: "button",
+        "data-tool-firewall-pill": "",
+        "aria-label": t("stats.aria"),
+        title: t("stats.aria"),
+        onClick: open,
+        style: statsCardStyle(false),
+        children: t("stats.short")
+      }
+    );
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    "button",
+    {
+      type: "button",
+      "data-tool-firewall-pill": "",
+      "aria-label": t("stats.aria"),
+      title: t("stats.aria"),
+      onClick: open,
+      style: statsCardStyle(true),
+      children: stats.map((stat, index) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { style: statsRowStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: statsLabelStyle, children: typeof stat.label === "string" ? stat.label : t(stat.labelKey) }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: statsValueStyle, children: typeof stat.value === "string" ? stat.value : t(stat.valueKey) })
+      ] }, String(stat.label ?? stat.labelKey ?? index)))
+    }
+  );
+}
+
 // src/client/constants.js
 var NS = "toolFirewall";
 var PACKAGE = "dsh-plugin-tool-firewall";
 var ROW_ID = "tool-firewall";
 var CONFIG_KEY = `${PACKAGE}#${ROW_ID}`;
 var INJECT = ["slots", "locale", "configForms"];
+var STATS_ID = "tool-firewall";
+var OVERLAY_ID = "tool-firewall-settings";
+var LAYOUT_CSS = [
+  'div:has(> [data-slot="sidebar.footer.action"] > [data-tool-firewall-pill]) {',
+  "  flex-wrap: wrap;",
+  "}"
+].join("\n");
+
+// src/client/lib/store.js
+function createValueStore(initial) {
+  let value = initial;
+  const listeners = /* @__PURE__ */ new Set();
+  return {
+    getSnapshot() {
+      return value;
+    },
+    set(next) {
+      if (Object.is(value, next)) return;
+      value = next;
+      for (const listener of Array.from(listeners)) listener();
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    }
+  };
+}
 
 // src/client/locale.js
 var EN = {
   "config.title": "Tool Firewall",
   "config.summary": "Inspects every tool call before execution and blocks risky commands.",
+  "stats.firewall": "Firewall",
+  "stats.short": "FW",
+  "stats.embedding": "Embedding",
+  "stats.classifier": "Classifier",
+  "stats.mode": "Mode",
+  "stats.on": "On",
+  "stats.off": "Off",
+  "stats.open": "Open",
+  "stats.closed": "Closed",
+  "stats.aria": "Open Tool Firewall settings",
+  "dialog.close": "Close",
   "section.general": "General",
   "section.detection": "Detection",
   "section.models": "Models",
@@ -538,6 +790,17 @@ var EN = {
 var ZH = {
   "config.title": "\u5DE5\u5177\u9632\u706B\u5899",
   "config.summary": "\u5728\u6267\u884C\u524D\u68C0\u67E5\u6BCF\u6B21\u5DE5\u5177\u8C03\u7528\u5E76\u963B\u6B62\u9AD8\u98CE\u9669\u547D\u4EE4\u3002",
+  "stats.firewall": "\u9632\u706B\u5899",
+  "stats.short": "FW",
+  "stats.embedding": "\u5D4C\u5165",
+  "stats.classifier": "\u5206\u7C7B\u5668",
+  "stats.mode": "\u6A21\u5F0F",
+  "stats.on": "\u5F00",
+  "stats.off": "\u5173",
+  "stats.open": "Open",
+  "stats.closed": "Closed",
+  "stats.aria": "\u6253\u5F00\u5DE5\u5177\u9632\u706B\u5899\u8BBE\u7F6E",
+  "dialog.close": "\u5173\u95ED",
   "section.general": "\u5E38\u89C4",
   "section.detection": "\u68C0\u6D4B",
   "section.models": "\u6A21\u578B",
@@ -599,10 +862,61 @@ var ZH = {
 function createClient() {
   return { apply, inject: INJECT };
 }
+function readConfigValue(form) {
+  try {
+    const snapshot = form.getSnapshot();
+    return snapshot === null || snapshot === void 0 ? void 0 : snapshot.value;
+  } catch (error) {
+    return void 0;
+  }
+}
+function buildStats(value) {
+  const config = normalizeConfig(value);
+  return [
+    { labelKey: "stats.firewall", valueKey: config.enabled ? "stats.on" : "stats.off" },
+    { labelKey: "stats.embedding", valueKey: config.embeddingEnabled ? "stats.on" : "stats.off" },
+    { labelKey: "stats.classifier", valueKey: config.classifierEnabled ? "stats.on" : "stats.off" },
+    { labelKey: "stats.mode", valueKey: config.semanticFailure === "closed" ? "stats.closed" : "stats.open" }
+  ];
+}
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), "tool-firewall: dictionaries");
   const bindT = ctx.locale.bind(NS);
   const configForm = ctx.configForms.get(ROW_ID);
+  const statsStore = createValueStore(buildStats(readConfigValue(configForm)));
+  const uiStore = createValueStore({ open: false });
+  const open = () => uiStore.set({ open: true });
+  const close = () => uiStore.set({ open: false });
+  ctx.effect(() => {
+    const refresh = () => statsStore.set(buildStats(readConfigValue(configForm)));
+    refresh();
+    return configForm.subscribe(refresh);
+  }, "tool-firewall: stats");
+  ctx.effect(() => {
+    if (typeof document === "undefined" || document.head === void 0) return void 0;
+    const tag = document.createElement("style");
+    tag.setAttribute("data-plugin", "dsh-plugin-tool-firewall");
+    tag.setAttribute("data-plugin-css", "tool-firewall/layout");
+    tag.textContent = LAYOUT_CSS;
+    document.head.appendChild(tag);
+    return () => {
+      if (tag.parentNode !== null && tag.parentNode !== void 0) tag.parentNode.removeChild(tag);
+    };
+  }, "tool-firewall: layout");
+  ctx.slots.inject("sidebar.footer.action", () => ctx.slots.register({
+    name: "sidebar.footer.action",
+    id: STATS_ID,
+    order: 6,
+    locale: NS,
+    inject: () => ({ statsStore, open })
+  }, FirewallStats));
+  ctx.slots.inject("shell.overlay", () => ctx.slots.register({
+    name: "shell.overlay",
+    id: OVERLAY_ID,
+    order: 110,
+    locale: NS,
+    inject: () => ({ uiStore, close, configForm })
+  }, FirewallSettingsDialog));
   ctx.slots.inject("plugins.row.config", () => ctx.slots.register({
     name: "plugins.row.config",
     key: CONFIG_KEY,

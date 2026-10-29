@@ -315,11 +315,32 @@ const fakeClientContext = {
 plugin.apply(fakeClientContext)
 const rowConfig = registrations.find((entry) => entry.options.name === 'plugins.row.config')
 const item = registrations.find((entry) => entry.options.name === 'plugins.item')
+const statsRegistration = registrations.find((entry) => entry.options.name === 'sidebar.footer.action')
+const overlayRegistration = registrations.find((entry) => entry.options.name === 'shell.overlay')
 check(rowConfig !== undefined, 'client registers the row configure page')
 check(item !== undefined, 'client registers the plugins-list item')
+check(statsRegistration !== undefined, 'client registers the sidebar stats card')
+check(overlayRegistration !== undefined, 'client registers the settings overlay')
 equal(rowConfig.options.key, 'dsh-plugin-tool-firewall#tool-firewall', 'configure page key names the package and row')
 equal(item.options.id, 'tool-firewall', 'plugins-list item uses the firewall row id')
 equal(item.options.label(), 'config.title', 'plugins-list label follows the locale')
+equal(statsRegistration.options.id, 'tool-firewall', 'sidebar stats card uses the firewall id')
+equal(overlayRegistration.options.id, 'tool-firewall-settings', 'overlay uses a distinct settings id')
+
+const statsInjected = statsRegistration.options.inject()
+const overlayInjected = overlayRegistration.options.inject()
+const statsTree = ReactFake.reset(() => statsRegistration.component({ wide: true, t: (key) => key, ...statsInjected }))
+const statsButtons = []
+walkTree(statsTree, (node) => {
+  if (node !== null && typeof node === 'object' && node.type === 'button') statsButtons.push(node)
+})
+check(statsButtons.length === 1, 'sidebar stats card is one button')
+statsButtons[0].props.onClick()
+equal(overlayInjected.uiStore.getSnapshot().open, true, 'clicking the stats card opens the settings dialog')
+const dialogTree = ReactFake.reset(() => overlayRegistration.component({ t: (key) => key, configForm, ...overlayInjected }))
+check(dialogTree !== null && typeof dialogTree === 'object', 'settings dialog renders when open')
+overlayInjected.close()
+equal(overlayInjected.uiStore.getSnapshot().open, false, 'closing the settings dialog updates state')
 
 const formTree = ReactFake.reset(() => rowConfig.component({ view: 'page', t: (key) => key, configForm }))
 function walkTree(node, visit) {

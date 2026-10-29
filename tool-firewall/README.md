@@ -23,6 +23,24 @@ PTC/`run_code` sub-calls traverse the same hook. File contents from
 `write`/`edit` are not treated as shell commands; generic tools get structural
 checks over command-like, URL, and path fields only.
 
+## Sidebar stats card
+
+The sidebar footer gains a compact stats card similar to Balance. The whole card
+is a button that opens the configuration dialog.
+
+The card data is a list of string pairs in `src/client/index.jsx`:
+
+```js
+[
+  { label: 'Firewall', value: 'On' },
+  { label: 'Embedding', value: 'On' },
+]
+```
+
+The component also accepts localized `{ labelKey, valueKey }` entries. The
+current defaults derive Firewall, Embedding, Classifier, and Mode from the live
+config form, so they update immediately after Save.
+
 ## Configuration
 
 The Plugin Manager row has a configure page and a Plugins-list item. Save writes
