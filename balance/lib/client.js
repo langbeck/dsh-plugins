@@ -59,6 +59,7 @@ var MAX_REFRESH_SECONDS = 3600;
 var CURRENCY_ORDER = ["USD", "CNY"];
 var CURRENCY_SYMBOLS = { USD: "$", CNY: "\xA5" };
 var COST_ROUTE = "/api/balance-session-cost";
+var EVENTS_ROUTE = "/api/balance-events";
 var COST_REFRESH_MS = 6e4;
 var COST_CHANGED_EVENT = "dsh-plugin-balance:cost-changed";
 var LAYOUT_CSS = [
@@ -165,6 +166,16 @@ function relativeTimeParts(updatedAt, now) {
 }
 function compactTimeLabel(parts, t) {
   return parts.unit === "now" ? t("time.now") : t(`time.${parts.unit}`, { n: parts.n });
+}
+function formatUpdatedAt(updatedAt) {
+  if (typeof updatedAt !== "number" || !Number.isFinite(updatedAt)) return void 0;
+  const date = new Date(updatedAt);
+  if (!Number.isFinite(date.getTime())) return void 0;
+  try {
+    return new Intl.DateTimeFormat(void 0, { dateStyle: "medium", timeStyle: "medium" }).format(date);
+  } catch (error) {
+    return date.toLocaleString();
+  }
 }
 
 // src/client/lib/styles.js
@@ -423,6 +434,22 @@ function BalanceRow(props) {
     };
   }, [sessionId]);
   (0, import_react2.useEffect)(() => {
+    if (typeof sessionId !== "string" || typeof EventSource === "undefined") return void 0;
+    const source = new EventSource(EVENTS_ROUTE + "?sessionId=" + encodeURIComponent(sessionId));
+    const onMessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message !== null && message !== void 0 && message.type === "limit") void refreshCost(sessionId);
+      } catch (error) {
+      }
+    };
+    source.addEventListener("message", onMessage);
+    return () => {
+      source.removeEventListener("message", onMessage);
+      source.close();
+    };
+  }, [sessionId, refreshCost]);
+  (0, import_react2.useEffect)(() => {
     if (typeof window === "undefined" || typeof window.addEventListener !== "function") return void 0;
     const onCostChanged = () => {
       if (typeof sessionId === "string") void refreshCost(sessionId);
@@ -464,7 +491,7 @@ function BalanceRow(props) {
         ] })
       ] }) : null
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: timeStyle, children: compactTimeLabel(relativeTimeParts(balance.updatedAt, now), t) })
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: timeStyle, title: formatUpdatedAt(balance.updatedAt), children: compactTimeLabel(relativeTimeParts(balance.updatedAt, now), t) })
   ] });
 }
 

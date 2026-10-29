@@ -15,3 +15,15 @@ export function relativeTimeParts(updatedAt, now) {
 export function compactTimeLabel(parts, t) {
   return parts.unit === 'now' ? t('time.now') : t(`time.${parts.unit}`, { n: parts.n })
 }
+
+/** Absolute last-update datetime in the browser's locale, for the age tooltip. */
+export function formatUpdatedAt(updatedAt) {
+  if (typeof updatedAt !== 'number' || !Number.isFinite(updatedAt)) return undefined
+  const date = new Date(updatedAt)
+  if (!Number.isFinite(date.getTime())) return undefined
+  try {
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'medium' }).format(date)
+  } catch (error) {
+    return date.toLocaleString()
+  }
+}

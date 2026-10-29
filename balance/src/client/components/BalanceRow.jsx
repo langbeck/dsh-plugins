@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
 
-import { COST_CHANGED_EVENT, COST_REFRESH_MS } from '../constants.js'
+import { COST_CHANGED_EVENT, COST_REFRESH_MS, EVENTS_ROUTE } from '../constants.js'
 import { useNow, useSnapshot } from '../lib/hooks.js'
 import { formatUsd, summaryText, visibleWallets, walletAmountText } from '../lib/money.js'
-import { compactTimeLabel, relativeTimeParts } from '../lib/time.js'
+import { compactTimeLabel, formatUpdatedAt, relativeTimeParts } from '../lib/time.js'
 import {
   amountStyle,
   codeStyle,
@@ -73,6 +73,22 @@ export default function BalanceRow(props) {
   }, [sessionId])
 
   useEffect(() => {
+    if (typeof sessionId !== 'string' || typeof EventSource === 'undefined') return undefined
+    const source = new EventSource(EVENTS_ROUTE + '?sessionId=' + encodeURIComponent(sessionId))
+    const onMessage = (event) => {
+      try {
+        const message = JSON.parse(event.data)
+        if (message !== null && message !== undefined && message.type === 'limit') void refreshCost(sessionId)
+      } catch (error) {}
+    }
+    source.addEventListener('message', onMessage)
+    return () => {
+      source.removeEventListener('message', onMessage)
+      source.close()
+    }
+  }, [sessionId, refreshCost])
+
+  useEffect(() => {
     if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return undefined
     const onCostChanged = () => {
       if (typeof sessionId === 'string') void refreshCost(sessionId)
@@ -138,7 +154,7 @@ export default function BalanceRow(props) {
           </div>
         ) : null}
       </div>
-      <span style={timeStyle}>{compactTimeLabel(relativeTimeParts(balance.updatedAt, now), t)}</span>
+      <span style={timeStyle} title={formatUpdatedAt(balance.updatedAt)}>{compactTimeLabel(relativeTimeParts(balance.updatedAt, now), t)}</span>
     </div>
   )
 }

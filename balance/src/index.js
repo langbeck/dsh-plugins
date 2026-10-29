@@ -33,6 +33,7 @@ export const Config = Schema.object({
 })
 
 const COST_ROUTE = '/api/balance-session-cost'
+const EVENTS_ROUTE = '/api/balance-events'
 const MAX_COST_LIMIT_USD = 1_000_000
 
 export function apply(ctx, config) {
@@ -45,6 +46,14 @@ export function apply(ctx, config) {
   const catalogCache = new Map()
   const sessionLimits = new Map()
   const limitApprovedTurns = new Map()
+  const eventListeners = new Set()
+
+  function notifyLimit(sessionId, limitUsd) {
+    for (const listener of Array.from(eventListeners)) {
+      if (listener.sessionId !== sessionId) continue
+      listener.send({ type: 'limit', sessionId, limitUsd })
+    }
+  }
 
   function questionService() {
     try {
@@ -62,6 +71,7 @@ export function apply(ctx, config) {
     if (value === null || value === undefined || value === '') {
       sessionLimits.delete(sessionId)
       limitApprovedTurns.delete(sessionId)
+      notifyLimit(sessionId, null)
       return null
     }
     const numeric = Number(value)
@@ -72,6 +82,7 @@ export function apply(ctx, config) {
     if (rounded <= 0) throw new Error('Cost cap must be at least $0.01')
     sessionLimits.set(sessionId, rounded)
     limitApprovedTurns.delete(sessionId)
+    notifyLimit(sessionId, rounded)
     return rounded
   }
 
@@ -174,6 +185,75 @@ export function apply(ctx, config) {
     }
     return { kind: 'reject' }
   }), 'balance: cost cap')
+
+  ctx.effect(() => {
+    const dispose = ctx.connection.fetch.register({
+      path: EVENTS_ROUTE,
+      methods: ['GET'],
+      requestBody: 'buffered',
+      fetch: async (request) => {
+        const sessionId = new URL(request.url).searchParams.get('sessionId') ?? ''
+        const encoder = new TextEncoder()
+        let closeStream = () => {}
+        const stream = new ReadableStream({
+          start(controller) {
+            let timer
+            let closed = false
+            let entry
+            const close = () => {
+              if (closed) return
+              closed = true
+              clearInterval(timer)
+              eventListeners.delete(entry)
+              try {
+                controller.close()
+              } catch (error) {}
+            }
+            closeStream = close
+            entry = {
+              sessionId,
+              close,
+              send(value) {
+                if (closed) return
+                try {
+                  controller.enqueue(encoder.encode('data: ' + JSON.stringify(value) + '\n\n'))
+                } catch (error) {
+                  close()
+                }
+              },
+            }
+            eventListeners.add(entry)
+            timer = setInterval(() => {
+              if (closed) return
+              try {
+                controller.enqueue(encoder.encode(': keepalive\n\n'))
+              } catch (error) {
+                close()
+              }
+            }, 25_000)
+            entry.send({ type: 'ready' })
+            if (request.signal.aborted) close()
+            else request.signal.addEventListener('abort', close, { once: true })
+          },
+          cancel() {
+            closeStream()
+          },
+        })
+        return new Response(stream, {
+          headers: {
+            'content-type': 'text/event-stream',
+            'cache-control': 'no-cache',
+            connection: 'keep-alive',
+          },
+        })
+      },
+    })
+    return () => {
+      for (const entry of Array.from(eventListeners)) entry.close()
+      eventListeners.clear()
+      Promise.resolve(dispose()).catch(() => {})
+    }
+  }, 'balance: cost events')
 
   ctx.effect(() => {
     const dispose = ctx.connection.fetch.register({

@@ -24,7 +24,7 @@ import {
   visibleWallets,
   walletText,
 } from './src/client/lib/money.js'
-import { compactTimeLabel, relativeTimeParts } from './src/client/lib/time.js'
+import { compactTimeLabel, formatUpdatedAt, relativeTimeParts } from './src/client/lib/time.js'
 import * as host from './src/index.js'
 import { createPricing, overrideMatches, parsePricing, resolvePrice } from './src/host/pricing.js'
 import { foldUsage, priceSettlements, readSessionCost, usageBuckets } from './src/host/session-cost.js'
@@ -120,6 +120,8 @@ equal(relativeTimeParts(referenceNow - 2 * 3_600_000, referenceNow).unit, 'hours
 equal(relativeTimeParts(referenceNow - 3 * 86_400_000, referenceNow).n, 3, 'relativeTimeParts floors whole days')
 equal(compactTimeLabel({ unit: 'now', n: 0 }, labelOf), 'time.now', 'compactTimeLabel localizes now')
 equal(compactTimeLabel({ unit: 'minutes', n: 8 }, labelOf), 'time.minutes:8', 'compactTimeLabel passes the count')
+check(typeof formatUpdatedAt(referenceNow) === 'string' && formatUpdatedAt(referenceNow).length > 0, 'formatUpdatedAt renders a locale datetime for the tooltip')
+equal(formatUpdatedAt(undefined), undefined, 'formatUpdatedAt ignores an absent timestamp')
 
 // ---------------------------------------------------------------------------
 // Host pricing
@@ -298,6 +300,7 @@ let askAnswer = { answers: [{ id: 'cost-cap', selected: ['Cancel'] }] }
 let askCalls = 0
 let nextCalls = 0
 const provided = {}
+const routes = {}
 const capDisposers = []
 const capSession = { id: 'root' }
 const capAgent = { id: 'root', session: capSession }
@@ -341,7 +344,8 @@ const fakeCapContext = {
   connection: {
     fetch: {
       register(route) {
-        routeHandler = route.fetch
+        routes[route.path] = route.fetch
+        if (route.path === '/api/balance-session-cost') routeHandler = route.fetch
         return () => {}
       },
     },
@@ -359,6 +363,21 @@ const capRoute = await routeHandler({ json: async () => ({ sessionId: 'root' }),
 const capValue = await capRoute.json()
 equal(capValue.value.limitUsd, 0.01, 'the cost route carries the cap')
 check(capValue.value.remainingUsd === 0, 'the cost route clamps remaining to zero')
+const eventsAbort = new AbortController()
+const eventsResponse = await routes['/api/balance-events']({
+  url: 'http://localhost/api/balance-events?sessionId=root',
+  signal: eventsAbort.signal,
+})
+const eventsReader = eventsResponse.body.getReader()
+const eventDecoder = new TextDecoder()
+const readyEvent = await eventsReader.read()
+check(eventDecoder.decode(readyEvent.value).includes('"type":"ready"'), 'the cost event stream opens')
+commandDefinition.handler({ agent: capAgent, rawInput: '0.02' })
+const limitEvent = await eventsReader.read()
+check(eventDecoder.decode(limitEvent.value).includes('"type":"limit"'), 'setting a cap emits a limit event')
+check(eventDecoder.decode(limitEvent.value).includes('"limitUsd":0.02'), 'the limit event carries the cap')
+eventsAbort.abort()
+await eventsReader.cancel().catch(() => {})
 const next = async () => { nextCalls += 1; return { kind: 'enter', messages: [] } }
 const payload = { agent: capAgent, turn: 1, step: 1, messages: [], signal: new AbortController().signal }
 const cancelled = await preStepHandler(payload, next)
@@ -589,6 +608,7 @@ check(contentNode !== undefined && contentNode.props.style.flexDirection === 'co
 check(pillTree.props.style.padding === '6px 10px', 'wide block has inner padding')
 
 let ageStyle
+let ageTitle
 let balanceLabelStyle
 let sessionLabelStyle
 let boldCurrency = false
@@ -596,13 +616,17 @@ let stylesOk = true
 walkTree(pillTree, (node) => {
   if (node.props === undefined) return
   if (node.props.style !== undefined && (typeof node.props.style !== 'object' || node.props.style === null)) stylesOk = false
-  if (node.props.children === 'time.now') ageStyle = node.props.style
+  if (node.props.children === 'time.now') {
+    ageStyle = node.props.style
+    ageTitle = node.props.title
+  }
   if (node.props.children === 'row.balance') balanceLabelStyle = node.props.style
   if (node.props.children === 'row.session') sessionLabelStyle = node.props.style
   if (node.props.children === 'USD' && node.props.style !== undefined && node.props.style.fontWeight === 600) boldCurrency = true
 })
 check(stylesOk, 'every style prop is an object')
 check(ageStyle !== undefined && ageStyle.alignSelf === 'center', 'the last-update age is vertically centered')
+check(typeof ageTitle === 'string' && ageTitle.length > 0, 'the last-update age has an absolute datetime tooltip')
 check(balanceLabelStyle !== undefined && balanceLabelStyle.fontSize === '11px', 'the balance label uses the larger label size')
 check(sessionLabelStyle !== undefined && sessionLabelStyle.fontSize === '11px', 'the session label uses the larger label size')
 check(balanceLabelStyle !== undefined && balanceLabelStyle.width === '52px', 'labels reserve a fixed column for their values')

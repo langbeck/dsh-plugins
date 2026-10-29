@@ -19,6 +19,7 @@ export const CURRENCY_ORDER = ['USD', 'CNY']
 export const CURRENCY_SYMBOLS = { USD: '$', CNY: '¥' }
 
 export const COST_ROUTE = '/api/balance-session-cost'
+export const EVENTS_ROUTE = '/api/balance-events'
 export const COST_REFRESH_MS = 60_000
 export const COST_CHANGED_EVENT = 'dsh-plugin-balance:cost-changed'
 
