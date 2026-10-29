@@ -3,7 +3,7 @@
 import { COST_ROUTE } from '../constants.js'
 import { createSnapshotStore } from './store.js'
 
-const IDLE = Object.freeze({ status: 'idle', sessionId: undefined, totalUsd: 0, partial: false })
+const IDLE = Object.freeze({ status: 'idle', sessionId: undefined, totalUsd: 0, limitUsd: null, remainingUsd: null, partial: false })
 
 /**
  * Track the cost of one Session at a time. The Host recomputes on demand, so
@@ -35,6 +35,8 @@ export function createCostTracker() {
       status: keepsPrevious ? 'refreshing' : 'loading',
       sessionId,
       totalUsd: keepsPrevious ? previous.totalUsd : 0,
+      limitUsd: keepsPrevious ? previous.limitUsd : null,
+      remainingUsd: keepsPrevious ? previous.remainingUsd : null,
       partial: keepsPrevious ? previous.partial : false,
     })
     return Promise.resolve()
@@ -54,25 +56,29 @@ export function createCostTracker() {
       .then((result) => {
         if (disposed || current !== generation) return
         if (result === null || result === undefined || result.ok !== true) {
-          store.set({ status: 'error', sessionId, totalUsd: 0, partial: false })
+          store.set({ status: 'error', sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, partial: false })
           return
         }
         const value = result.value
         if (value === null || value === undefined || value.pricing === null || value.pricing === undefined || value.pricing.ready !== true) {
-          store.set({ status: 'unavailable', sessionId, totalUsd: 0, partial: false })
+          store.set({ status: 'unavailable', sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, partial: false })
           return
         }
         const totalUsd = typeof value.totalUsd === 'number' && Number.isFinite(value.totalUsd) ? value.totalUsd : 0
+        const limitUsd = typeof value.limitUsd === 'number' && Number.isFinite(value.limitUsd) ? value.limitUsd : null
+        const remainingUsd = typeof value.remainingUsd === 'number' && Number.isFinite(value.remainingUsd) ? value.remainingUsd : null
         store.set({
           status: 'ready',
           sessionId,
           totalUsd,
+          limitUsd,
+          remainingUsd,
           partial: typeof value.unpricedCalls === 'number' && value.unpricedCalls > 0,
         })
       })
       .catch(() => {
         if (disposed || current !== generation) return
-        store.set({ status: 'error', sessionId, totalUsd: 0, partial: false })
+        store.set({ status: 'error', sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, partial: false })
       })
   }
 

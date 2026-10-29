@@ -22,10 +22,20 @@ account is signed out, still loading, or the balance cannot be read.
 The Host provides a `balanceCost` service for other Host plugins:
 
 - `read(sessionId, signal)` → the same Session-cost snapshot the route returns
+- `limitOf(sessionId)` / `setLimit(sessionId, limitUsd | null)`
 - `pricingState()` → pricing readiness, fetch time, revision, and error
 
 The browser route `/api/balance-session-cost` delegates to this service, so
 other plugins and the Web Client share one pricing cache and one cost fold.
+The route also returns `limitUsd` and `remainingUsd`.
+
+### Cost cap
+
+`/limit <usd>` sets the current Session's cap, `/limit off` clears it, and
+`/limit` reports it. A Host `agent/pre-step` guard pauses an over-cap turn and
+asks **Proceed once** / **Cancel**; proceeding covers the rest of that turn.
+The sidebar's Session block gains a `Limit $5.00 ($2.50 left)` row while a cap
+is set. Caps and per-turn approvals are in-memory and reset on restart.
 
 ## Install
 

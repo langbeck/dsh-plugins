@@ -435,6 +435,14 @@ function BalanceRow(props) {
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: amountStyle, children: formatUsd(cost.totalUsd) }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: codeStyle, children: "USD" })
         ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: amountStyle, children: costPending ? "\u2026" : "\u2014" })
+      ] }) : null,
+      typeof sessionId === "string" && cost.status === "ready" && cost.sessionId === sessionId && typeof cost.limitUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: rowStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: rowLabelStyle, children: t("row.limit") }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: walletStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: amountStyle, children: formatUsd(cost.limitUsd) }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: codeStyle, children: "USD" }),
+          typeof cost.remainingUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: codeStyle, children: t("row.remaining", { amount: formatUsd(cost.remainingUsd) }) }) : null
+        ] })
       ] }) : null
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: timeStyle, children: compactTimeLabel(relativeTimeParts(balance.updatedAt, now), t) })
@@ -603,7 +611,7 @@ function createSnapshotStore(initial) {
 }
 
 // src/client/lib/cost.js
-var IDLE = Object.freeze({ status: "idle", sessionId: void 0, totalUsd: 0, partial: false });
+var IDLE = Object.freeze({ status: "idle", sessionId: void 0, totalUsd: 0, limitUsd: null, remainingUsd: null, partial: false });
 function createCostTracker() {
   const store = createSnapshotStore(IDLE);
   let abort;
@@ -628,6 +636,8 @@ function createCostTracker() {
       status: keepsPrevious ? "refreshing" : "loading",
       sessionId,
       totalUsd: keepsPrevious ? previous.totalUsd : 0,
+      limitUsd: keepsPrevious ? previous.limitUsd : null,
+      remainingUsd: keepsPrevious ? previous.remainingUsd : null,
       partial: keepsPrevious ? previous.partial : false
     });
     return Promise.resolve().then(
@@ -644,24 +654,28 @@ function createCostTracker() {
     }).then((result) => {
       if (disposed || current !== generation) return;
       if (result === null || result === void 0 || result.ok !== true) {
-        store.set({ status: "error", sessionId, totalUsd: 0, partial: false });
+        store.set({ status: "error", sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, partial: false });
         return;
       }
       const value = result.value;
       if (value === null || value === void 0 || value.pricing === null || value.pricing === void 0 || value.pricing.ready !== true) {
-        store.set({ status: "unavailable", sessionId, totalUsd: 0, partial: false });
+        store.set({ status: "unavailable", sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, partial: false });
         return;
       }
       const totalUsd = typeof value.totalUsd === "number" && Number.isFinite(value.totalUsd) ? value.totalUsd : 0;
+      const limitUsd = typeof value.limitUsd === "number" && Number.isFinite(value.limitUsd) ? value.limitUsd : null;
+      const remainingUsd = typeof value.remainingUsd === "number" && Number.isFinite(value.remainingUsd) ? value.remainingUsd : null;
       store.set({
         status: "ready",
         sessionId,
         totalUsd,
+        limitUsd,
+        remainingUsd,
         partial: typeof value.unpricedCalls === "number" && value.unpricedCalls > 0
       });
     }).catch(() => {
       if (disposed || current !== generation) return;
-      store.set({ status: "error", sessionId, totalUsd: 0, partial: false });
+      store.set({ status: "error", sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, partial: false });
     });
   }
   function dispose() {
@@ -693,6 +707,8 @@ var EN = {
   "pill.aria": "DeepSeek account balance",
   "row.balance": "Balance",
   "row.session": "Session",
+  "row.limit": "Limit",
+  "row.remaining": "({amount} left)",
   "time.now": "now",
   "time.minutes": "{n}min",
   "time.hours": "{n}h",
@@ -720,6 +736,8 @@ var ZH = {
   "pill.aria": "DeepSeek \u8D26\u6237\u4F59\u989D",
   "row.balance": "\u4F59\u989D",
   "row.session": "\u4F1A\u8BDD",
+  "row.limit": "\u4E0A\u9650",
+  "row.remaining": "\uFF08\u5269\u4F59 {amount}\uFF09",
   "time.now": "\u521A\u521A",
   "time.minutes": "{n}\u5206\u949F",
   "time.hours": "{n}\u5C0F\u65F6",

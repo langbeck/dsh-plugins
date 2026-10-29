@@ -90,18 +90,14 @@ const session = {
 }
 let routeHandler
 let approvalHandler
-let preStepHandler
 let selectedPreset
 let costAvailable = false
-let askAnswer = { answers: [{ id: 'cost-cap', selected: ['Cancel'] }] }
-let askCalls = 0
-let nextCalls = 0
+let costLimit = null
 const agent = { id: 'session-1', session }
 const fakeHost = {
   effect: (callback) => callback(),
   on: (event, listener) => {
     if (event === 'approval/request') approvalHandler = listener
-    if (event === 'agent/pre-step') preStepHandler = listener
     return () => {}
   },
   connection: { fetch: { register: (route) => { routeHandler = route.fetch; return () => {} } } },
@@ -118,14 +114,10 @@ const fakeHost = {
       }
     }
     if (name === 'balanceCost' && costAvailable) {
-      return { read: async () => ({ totalUsd: 2.5, ownUsd: 2, subagentsUsd: 0.5, pricing: { ready: true } }) }
-    }
-    if (name === 'userQuestions') {
       return {
-        ask: async () => {
-          askCalls += 1
-          return askAnswer
-        },
+        read: async () => ({ totalUsd: 2.5, ownUsd: 2, subagentsUsd: 0.5, limitUsd: costLimit, pricing: { ready: true } }),
+        limitOf: () => costLimit,
+        setLimit: (_sessionId, value) => { costLimit = value },
       }
     }
     return undefined
@@ -145,7 +137,6 @@ const hostPlugin = await import('./src/index.js')
 hostPlugin.apply(fakeHost)
 check(typeof routeHandler === 'function', 'Host registers the settings route')
 check(typeof approvalHandler === 'function', 'Host registers the approval answerer')
-check(typeof preStepHandler === 'function', 'Host registers the cost-cap pre-step guard')
 
 async function callHost(body) {
   const response = await routeHandler({ json: async () => body })
@@ -186,25 +177,11 @@ equal(costRead.value.cost.available, true, 'read reports the Balance cost servic
 equal(costRead.value.cost.totalUsd, 2.5, 'read includes the current Session cost')
 const capValue = await callHost({ sessionId: 'session-1', action: 'costCap', limitUsd: 1 })
 check(capValue.ok === true, 'cost cap write returns ok')
-equal(capValue.value.costCap.limitUsd, 1, 'cost cap persists in memory')
-const next = async () => {
-  nextCalls += 1
-  return { kind: 'enter', messages: [] }
-}
-const preStepPayload = { agent, turn: 1, step: 1, messages: [], signal: new AbortController().signal }
-askAnswer = { answers: [{ id: 'cost-cap', selected: ['Cancel'] }] }
-const cancelled = await preStepHandler(preStepPayload, next)
-equal(cancelled.kind, 'reject', 'a cancelled cost-cap prompt rejects the step')
-equal(askCalls, 1, 'the cost-cap prompt is asked once')
-askAnswer = { answers: [{ id: 'cost-cap', selected: ['Proceed once'] }] }
-const proceeded = await preStepHandler({ ...preStepPayload, step: 2 }, next)
-equal(proceeded.kind, 'enter', 'proceeding once allows the step')
-equal(nextCalls, 1, 'the cost-cap guard delegates when proceeding')
-const subsequent = await preStepHandler({ ...preStepPayload, step: 3 }, next)
-equal(subsequent.kind, 'enter', 'the same turn is not prompted again after proceeding')
-equal(askCalls, 2, 'the approval covers the rest of the turn')
+equal(capValue.value.costCap.limitUsd, 1, 'cost cap write delegates to the Balance service')
+equal(costLimit, 1, 'Balance receives the requested cap')
 const clearedCap = await callHost({ sessionId: 'session-1', action: 'costCap', limitUsd: null })
-equal(clearedCap.value.costCap.limitUsd, null, 'clearing the cost cap removes it')
+equal(clearedCap.value.costCap.limitUsd, null, 'clearing the cost cap delegates to the service')
+equal(costLimit, null, 'Balance clears the cap')
 
 // ---------------------------------------------------------------------------
 // Presentation requirements

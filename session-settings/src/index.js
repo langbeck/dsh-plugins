@@ -40,8 +40,6 @@ const MAX_COST_CAP_USD = 1_000_000
 
 export function apply(ctx) {
   const sessionBlockLists = new Map()
-  const sessionCostCaps = new Map()
-  const costApprovedTurns = new Map()
 
   function queryService() {
     try {
@@ -54,14 +52,6 @@ export function apply(ctx) {
   function costService() {
     try {
       return ctx.get('balanceCost')
-    } catch (error) {
-      return undefined
-    }
-  }
-
-  function questionService() {
-    try {
-      return ctx.get('userQuestions')
     } catch (error) {
       return undefined
     }
@@ -150,6 +140,8 @@ export function apply(ctx) {
     const { calls, counts } = await recentCalls(session)
     const tools = toolSchemas(session)
     const cost = await costSnapshot(sessionId, signal)
+    const costProvider = costService()
+    const limitUsd = costProvider !== undefined && typeof costProvider.limitOf === 'function' ? costProvider.limitOf(sessionId) : null
     const recentByTool = new Map()
     for (const call of calls) {
       const list = recentByTool.get(call.name) ?? []
@@ -175,7 +167,7 @@ export function apply(ctx) {
       },
       cost,
       costCap: {
-        limitUsd: sessionCostCaps.get(sessionId) ?? null,
+        limitUsd,
       },
       defaultPolicy: 'allow',
       persistence: 'memory',
@@ -214,9 +206,11 @@ export function apply(ctx) {
       if (limitUsd !== null && costService() === undefined) {
         throw new Error('Balance cost service is not available')
       }
-      if (limitUsd === null) sessionCostCaps.delete(sessionId)
-      else sessionCostCaps.set(sessionId, limitUsd)
-      costApprovedTurns.delete(sessionId)
+      const provider = costService()
+      if (provider === undefined || typeof provider.setLimit !== 'function') {
+        throw new Error('Balance cost service is not available')
+      }
+      provider.setLimit(sessionId, limitUsd)
       return snapshot(sessionId, signal)
     }
     throw new Error('Unknown action: ' + String(action))
@@ -249,47 +243,6 @@ export function apply(ctx) {
     if ((sessionBlockLists.get(sessionId) ?? []).includes(request.toolName)) return 'rejected'
     return 'allowed-once'
   }, true), 'session-settings: approval allow-list')
-
-  ctx.effect(() => ctx.on('agent/pre-step', async (payload, next) => {
-    const sessionId = payload.agent.session.id
-    const cap = sessionCostCaps.get(sessionId)
-    if (typeof cap !== 'number' || cap <= 0) return next()
-    if (costApprovedTurns.get(sessionId) === payload.turn) return next()
-    const service = costService()
-    if (service === undefined) return next()
-    let cost
-    try {
-      cost = await service.read(sessionId, payload.signal)
-    } catch (error) {
-      return next()
-    }
-    if (!(typeof cost.totalUsd === 'number' && cost.totalUsd >= cap)) return next()
-    const questions = questionService()
-    if (questions === undefined || typeof questions.ask !== 'function') return { kind: 'reject' }
-    let answer
-    try {
-      answer = await questions.ask({
-        agent: payload.agent,
-        signal: payload.signal,
-        questions: [{
-          id: 'cost-cap',
-          header: 'Session cost cap',
-          question: 'This Session has reached its $' + cap.toFixed(2) + ' cost cap (current estimate $' + cost.totalUsd.toFixed(2) + '). Continue this turn?',
-          options: [{ label: 'Proceed once' }, { label: 'Cancel' }],
-        }],
-      })
-    } catch (error) {
-      return { kind: 'reject' }
-    }
-    const selected = answer !== null && answer !== undefined && Array.isArray(answer.answers) && Array.isArray(answer.answers[0]?.selected)
-      ? answer.answers[0].selected[0]
-      : undefined
-    if (selected === 'Proceed once') {
-      costApprovedTurns.set(sessionId, payload.turn)
-      return next()
-    }
-    return { kind: 'reject' }
-  }), 'session-settings: cost cap')
 }
 
 /** Normalize a tool block-list: strings only, unique, bounded. */

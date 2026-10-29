@@ -115,6 +115,18 @@ export default function BalanceRow(props) {
             )}
           </div>
         ) : null}
+        {typeof sessionId === 'string' && cost.status === 'ready' && cost.sessionId === sessionId && typeof cost.limitUsd === 'number' ? (
+          <div style={rowStyle}>
+            <span style={rowLabelStyle}>{t('row.limit')}</span>
+            <span style={walletStyle}>
+              <span style={amountStyle}>{formatUsd(cost.limitUsd)}</span>
+              <span style={codeStyle}>USD</span>
+              {typeof cost.remainingUsd === 'number' ? (
+                <span style={codeStyle}>{t('row.remaining', { amount: formatUsd(cost.remainingUsd) })}</span>
+              ) : null}
+            </span>
+          </div>
+        ) : null}
       </div>
       <span style={timeStyle}>{compactTimeLabel(relativeTimeParts(balance.updatedAt, now), t)}</span>
     </div>

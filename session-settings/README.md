@@ -20,15 +20,15 @@ header action to the current Session that opens a dialog with three tabs:
 
 ## Cost cap
 
-Session cost comes from the **Balance** plugin's Host `balanceCost` service.
-When Balance is not installed or enabled, the cost-cap controls are disabled
-and grayed out with a “Requires the Balance plugin” note.
+Session cost and cap state belong to the **Balance** plugin. This dialog reads
+and changes the cap through Balance's Host `balanceCost` service. When Balance
+is not installed or enabled, the cost-cap controls are disabled and grayed out
+with a “Requires the Balance plugin” note; all other settings still work.
 
-The cap is checked by a Host `agent/pre-step` guard: if the Session's estimated
-cost has reached the cap, the turn pauses and asks the user **Proceed once** or
-**Cancel**. Proceeding allows the rest of that turn; the next turn checks
-again. The cap and the per-turn approval are in-memory and reset when the Host
-process restarts.
+Balance owns enforcement: `/limit` and its `agent/pre-step` guard pause an
+over-cap turn with a **Proceed once** / **Cancel** prompt, and its sidebar row
+shows the remaining budget. The cap and per-turn approval live in Balance's
+Host memory and reset when the process restarts.
 
 Tool policy is enforced by a Host `approval/request` answerer: every request
 resolves `allowed-once` unless the tool name is blocked for that Session, in

@@ -286,6 +286,97 @@ pricingService.dispose()
 globalThis.fetch = originalHostFetch
 
 // ---------------------------------------------------------------------------
+// Host cost cap service, command, and pre-step guard
+// ---------------------------------------------------------------------------
+
+const originalCapFetch = globalThis.fetch
+globalThis.fetch = async () => ({ ok: true, json: async () => ({ data: pricingBody.data }) })
+let commandDefinition
+let preStepHandler
+let routeHandler
+let askAnswer = { answers: [{ id: 'cost-cap', selected: ['Cancel'] }] }
+let askCalls = 0
+let nextCalls = 0
+const provided = {}
+const capDisposers = []
+const capSession = { id: 'root' }
+const capAgent = { id: 'root', session: capSession }
+const capEvents = [
+  { type: 'request/header', time: nowOffPeak, seq: 0, data: { header: { config: { provider: 'deepseek-account', model: 'deepseek-flash' } } } },
+  { type: 'step/start', time: nowOffPeak, seq: 1, data: { turn: 1, step: 1 } },
+  { type: 'assistant/message', time: nowOffPeak + 1000, seq: 2, data: { turn: 1, step: 1, usage: { inputTokens: 1_000_000, outputTokens: 1000 } } },
+]
+const capQuery = {
+  async observeSession() { return observationOf('root', undefined, capEvents) },
+  async traceSession() { return { descendants: [] } },
+  async listSessions() { return [{ header: { id: 'root' } }] },
+}
+const fakeCapContext = {
+  effect(callback) {
+    const dispose = callback()
+    if (typeof dispose === 'function') capDisposers.push(dispose)
+    return dispose
+  },
+  provide(name, value) {
+    provided[name] = value
+    return () => { delete provided[name] }
+  },
+  get(name) {
+    if (name === 'sessionQuery') return capQuery
+    if (name === 'userQuestions') {
+      return { ask: async () => { askCalls += 1; return askAnswer } }
+    }
+    return undefined
+  },
+  commands: {
+    register(definition) {
+      commandDefinition = definition
+      return () => {}
+    },
+  },
+  on(event, handler) {
+    if (event === 'agent/pre-step') preStepHandler = handler
+    return () => {}
+  },
+  connection: {
+    fetch: {
+      register(route) {
+        routeHandler = route.fetch
+        return () => {}
+      },
+    },
+  },
+}
+await host.apply(fakeCapContext, { pricingRefreshSeconds: 3600 })
+check(provided.balanceCost !== undefined, 'Host provides the balanceCost service')
+check(typeof commandDefinition === 'object', 'Host registers the limit command')
+check(typeof preStepHandler === 'function', 'Host registers the pre-step cost guard')
+const service = provided.balanceCost
+const commandResult = commandDefinition.handler({ agent: capAgent, rawInput: ' 0.01 ' })
+equal(commandResult.kind, 'success', 'limit command sets a cap')
+equal(service.limitOf('root'), 0.01, 'the service exposes the cap')
+const capRoute = await routeHandler({ json: async () => ({ sessionId: 'root' }), signal: new AbortController().signal })
+const capValue = await capRoute.json()
+equal(capValue.value.limitUsd, 0.01, 'the cost route carries the cap')
+check(capValue.value.remainingUsd === 0, 'the cost route clamps remaining to zero')
+const next = async () => { nextCalls += 1; return { kind: 'enter', messages: [] } }
+const payload = { agent: capAgent, turn: 1, step: 1, messages: [], signal: new AbortController().signal }
+const cancelled = await preStepHandler(payload, next)
+equal(cancelled.kind, 'reject', 'a cancelled cap prompt rejects the step')
+equal(askCalls, 1, 'the cap prompt is asked once')
+askAnswer = { answers: [{ id: 'cost-cap', selected: ['Proceed once'] }] }
+const proceeded = await preStepHandler({ ...payload, step: 2 }, next)
+equal(proceeded.kind, 'enter', 'proceeding once allows the step')
+equal(nextCalls, 1, 'the guard delegates when proceeding')
+await preStepHandler({ ...payload, step: 3 }, next)
+equal(askCalls, 2, 'the same turn is not prompted again')
+const clearResult = commandDefinition.handler({ agent: capAgent, rawInput: 'off' })
+equal(clearResult.kind, 'success', 'limit command clears the cap')
+equal(service.limitOf('root'), null, 'the service clears the cap')
+capDisposers.reverse().forEach((dispose) => dispose())
+globalThis.fetch = originalCapFetch
+
+// ---------------------------------------------------------------------------
 // Host Config and display metadata
 // ---------------------------------------------------------------------------
 
