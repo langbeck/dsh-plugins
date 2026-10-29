@@ -384,6 +384,9 @@ walkTree(statsTree, (node) => {
 })
 check(statsButtons.length === 1, 'sidebar stats card is one button')
 check(statsLabels.includes('stats.blocks'), 'sidebar stats card includes the block count row')
+check(statsLabels.includes('stats.embeddingModel'), 'sidebar stats card has an embedding model row')
+check(statsLabels.includes('stats.classifierModel'), 'sidebar stats card has a classifier model row')
+check(statsLabels.includes('stats.disabled'), 'disabled models render as Disabled')
 let offValueStyle
 walkTree(statsTree, (node) => {
   if (node !== null && typeof node === 'object' && node.props?.children === 'stats.off') offValueStyle = node.props.style

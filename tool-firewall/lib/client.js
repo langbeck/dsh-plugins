@@ -587,8 +587,15 @@ function numberText(value, digits = 3) {
   return typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "\u2014";
 }
 function LogsPanel(props) {
-  const { logs = [], loading = false, modelError = null, t } = props;
-  const warning = modelError === null || modelError === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: errorStyle, children: t("logs.modelError", { error: modelError }) });
+  const { logs = [], loading = false, models = void 0, t } = props;
+  const warnings = [];
+  if (models?.embedding?.state === "error") {
+    warnings.push({ key: "embedding", model: t("stats.embeddingModel"), error: String(models.embedding.error ?? "unknown error") });
+  }
+  if (models?.classifier?.state === "error") {
+    warnings.push({ key: "classifier", model: t("stats.classifierModel"), error: String(models.classifier.error ?? "unknown error") });
+  }
+  const warning = warnings.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: warnings.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: errorStyle, children: t("logs.modelError", { model: entry.model, error: entry.error }) }, entry.key)) });
   if (loading && logs.length === 0) {
     return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
       warning,
@@ -706,7 +713,7 @@ function validDraft(draft) {
   return void 0;
 }
 function SettingsForm(props) {
-  const { view, t, configForm, tabbed = false, logs = [], logsLoading = false, modelError = null } = props;
+  const { view, t, configForm, tabbed = false, logs = [], logsLoading = false, models = void 0 } = props;
   const snapshot = useSnapshot(configForm);
   const resolved = normalizeConfig(snapshot.value);
   const [draft, setDraft] = (0, import_react2.useState)(resolved);
@@ -900,7 +907,7 @@ function SettingsForm(props) {
         numberField("cacheEntries", 1, 4096, 1),
         numberField("cacheTtlMs", 1e3, 864e5, 1e3)
       ] }) : null,
-      tabbed && tab === "logs" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LogsPanel, { logs, loading: logsLoading, modelError, t }) : null
+      tabbed && tab === "logs" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LogsPanel, { logs, loading: logsLoading, models, t }) : null
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedFooterStyle : footerStyle, children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: save, style: primaryButtonStyle(disabled), children: t("config.save") }),
@@ -941,7 +948,7 @@ function FirewallSettingsDialog(props) {
   const ui = useSnapshot(uiStore);
   const [logs, setLogs] = (0, import_react3.useState)([]);
   const [logsLoading, setLogsLoading] = (0, import_react3.useState)(false);
-  const [modelError, setModelError] = (0, import_react3.useState)(null);
+  const [models, setModels] = (0, import_react3.useState)(void 0);
   const [size, setSize] = (0, import_react3.useState)(readStoredSize);
   const [offset, setOffset] = (0, import_react3.useState)({ x: 0, y: 0 });
   const panelRef = (0, import_react3.useRef)(null);
@@ -995,7 +1002,7 @@ function FirewallSettingsDialog(props) {
         const value = result.value;
         if (value === void 0 || !Array.isArray(value.logs)) return;
         setLogs(value.logs);
-        setModelError(typeof value.modelError === "string" ? value.modelError : null);
+        setModels(value.models ?? void 0);
         setLogsLoading(false);
       }).catch(() => {
         if (!disposed) setLogsLoading(false);
@@ -1072,7 +1079,7 @@ function FirewallSettingsDialog(props) {
             ]
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: dialogBodyTabbedStyle, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SettingsForm, { view: "page", t, configForm, tabbed: true, logs, logsLoading, modelError }) })
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: dialogBodyTabbedStyle, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SettingsForm, { view: "page", t, configForm, tabbed: true, logs, logsLoading, models }) })
       ] })
     }
   );
@@ -1110,7 +1117,7 @@ function FirewallStats(props) {
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: statsLabelStyle, children: typeof stat.label === "string" ? stat.label : t(stat.labelKey) }),
         (() => {
           const value = typeof stat.value === "string" ? stat.value : t(stat.valueKey);
-          const off = stat.tone === "off" || stat.valueKey === "stats.off" || stat.valueKey === "stats.error" || value === t("stats.off") || value === t("stats.error");
+          const off = stat.tone === "off" || stat.tone === "error" || stat.valueKey === "stats.off" || stat.valueKey === "stats.error" || value === t("stats.off") || value === t("stats.error");
           return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: statsValueStyle(off), children: value });
         })()
       ] }, String(stat.label ?? stat.labelKey ?? index)))
@@ -1148,7 +1155,10 @@ var EN = {
   "stats.classifier": "Classifier",
   "stats.mode": "Mode",
   "stats.model": "Model",
+  "stats.embeddingModel": "Embedding model",
+  "stats.classifierModel": "Classifier model",
   "stats.ready": "Ready",
+  "stats.disabled": "Disabled",
   "stats.loading": "Loading",
   "stats.error": "Error",
   "stats.blocks": "Blocks / total",
@@ -1165,7 +1175,7 @@ var EN = {
   "tab.logs": "Logs",
   "logs.empty": "No tool calls intercepted yet.",
   "logs.loading": "Loading logs\u2026",
-  "logs.modelError": "Inference unavailable: {error}",
+  "logs.modelError": "{model} unavailable: {error}",
   "logs.allowed": "Allowed",
   "logs.blocked": "Blocked",
   "logs.bypass": "Bypass",
@@ -1244,7 +1254,10 @@ var ZH = {
   "stats.classifier": "\u5206\u7C7B\u5668",
   "stats.mode": "\u6A21\u5F0F",
   "stats.model": "\u6A21\u578B",
+  "stats.embeddingModel": "\u5D4C\u5165\u6A21\u578B",
+  "stats.classifierModel": "\u5206\u7C7B\u5668\u6A21\u578B",
   "stats.ready": "\u5C31\u7EEA",
+  "stats.disabled": "\u5DF2\u7981\u7528",
   "stats.loading": "\u52A0\u8F7D\u4E2D",
   "stats.error": "\u9519\u8BEF",
   "stats.blocks": "\u963B\u6B62 / \u603B\u6570",
@@ -1261,7 +1274,7 @@ var ZH = {
   "tab.logs": "\u65E5\u5FD7",
   "logs.empty": "\u5C1A\u672A\u62E6\u622A\u4EFB\u4F55\u5DE5\u5177\u8C03\u7528\u3002",
   "logs.loading": "\u6B63\u5728\u8BFB\u53D6\u65E5\u5FD7\u2026",
-  "logs.modelError": "\u63A8\u7406\u4E0D\u53EF\u7528\uFF1A{error}",
+  "logs.modelError": "{model} \u4E0D\u53EF\u7528\uFF1A{error}",
   "logs.allowed": "\u5DF2\u653E\u884C",
   "logs.blocked": "\u5DF2\u963B\u6B62",
   "logs.bypass": "\u8DF3\u8FC7",
@@ -1344,21 +1357,39 @@ function readConfigValue(form) {
     return void 0;
   }
 }
+function modelValue(state, configured) {
+  if (configured !== true) return "stats.disabled";
+  if (state === "ready") return "stats.ready";
+  if (state === "error") return "stats.error";
+  return "stats.loading";
+}
 function buildStats(value, counters = { blocked: 0, total: 0 }) {
   const config = normalizeConfig(value);
+  const models = counters.models ?? {};
+  const embeddingState = models.embedding?.state;
+  const classifierState = models.classifier?.state;
   return [
     { labelKey: "stats.firewall", valueKey: config.enabled ? "stats.on" : "stats.off" },
     { labelKey: "stats.embedding", valueKey: config.embeddingEnabled ? "stats.on" : "stats.off" },
     { labelKey: "stats.classifier", valueKey: config.classifierEnabled ? "stats.on" : "stats.off" },
+    {
+      labelKey: "stats.embeddingModel",
+      valueKey: modelValue(embeddingState, config.embeddingEnabled),
+      tone: embeddingState === "error" ? "error" : void 0
+    },
+    {
+      labelKey: "stats.classifierModel",
+      valueKey: modelValue(classifierState, config.classifierEnabled),
+      tone: classifierState === "error" ? "error" : void 0
+    },
     { labelKey: "stats.mode", valueKey: config.semanticFailure === "closed" ? "stats.closed" : "stats.open" },
-    { labelKey: "stats.model", valueKey: counters.modelReady === true ? "stats.ready" : counters.modelError ? "stats.error" : "stats.loading" },
     { labelKey: "stats.blocks", value: String(counters.blocked ?? 0) + " / " + String(counters.total ?? 0) }
   ];
 }
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), "tool-firewall: dictionaries");
   const configForm = ctx.configForms.get(ROW_ID);
-  const remoteStats = { blocked: 0, total: 0, modelReady: false, modelError: null };
+  const remoteStats = { blocked: 0, total: 0, models: void 0 };
   const statsStore = createValueStore(buildStats(readConfigValue(configForm), remoteStats));
   const uiStore = createValueStore({ open: false });
   const open = () => uiStore.set({ open: true });
@@ -1383,8 +1414,7 @@ function apply(ctx) {
         if (value === null || value === void 0) return;
         remoteStats.blocked = Number.isFinite(value.blocked) ? value.blocked : remoteStats.blocked;
         remoteStats.total = Number.isFinite(value.total) ? value.total : remoteStats.total;
-        remoteStats.modelReady = value.modelReady === true;
-        remoteStats.modelError = typeof value.modelError === "string" ? value.modelError : null;
+        remoteStats.models = value.models ?? remoteStats.models;
         refreshStats();
       }).catch(() => {
       });

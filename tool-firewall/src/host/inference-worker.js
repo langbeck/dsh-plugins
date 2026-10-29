@@ -13,6 +13,14 @@ const settings = workerData ?? {}
 let embeddingPipeline
 let classifierPipeline
 let loading
+const modelStates = {
+  embedding: { state: settings.embeddingEnabled === false ? 'disabled' : 'idle', error: null },
+  classifier: { state: settings.classifierEnabled === true ? 'idle' : 'disabled', error: null },
+}
+
+function messageOf(error) {
+  return error instanceof Error ? error.message : String(error)
+}
 
 function configure() {
   env.allowRemoteModels = settings.allowRemoteModels !== false
@@ -25,26 +33,40 @@ async function load() {
   configure()
   loading = (async () => {
     if (settings.embeddingEnabled !== false) {
-      embeddingPipeline = await pipeline('feature-extraction', settings.embeddingModel, {
-        device: 'cpu',
-        dtype: 'q8',
-        revision: settings.embeddingRevision,
-      })
+      modelStates.embedding = { state: 'loading', error: null }
+      try {
+        embeddingPipeline = await pipeline('feature-extraction', settings.embeddingModel, {
+          device: 'cpu',
+          dtype: 'q8',
+          revision: settings.embeddingRevision,
+        })
+        modelStates.embedding = { state: 'ready', error: null }
+      } catch (error) {
+        embeddingPipeline = undefined
+        modelStates.embedding = { state: 'error', error: messageOf(error) }
+      }
     }
     if (settings.classifierEnabled === true) {
       if (typeof settings.classifierModel !== 'string' || settings.classifierModel === '') {
-        throw new Error('classifier model is not configured')
+        modelStates.classifier = { state: 'error', error: 'classifier model is not configured' }
+      } else if (typeof settings.classifierRevision !== 'string' || settings.classifierRevision === '') {
+        modelStates.classifier = { state: 'error', error: 'classifier revision is not configured' }
+      } else {
+        modelStates.classifier = { state: 'loading', error: null }
+        try {
+          classifierPipeline = await pipeline('text-classification', settings.classifierModel, {
+            device: 'cpu',
+            dtype: 'q8',
+            revision: settings.classifierRevision,
+          })
+          modelStates.classifier = { state: 'ready', error: null }
+        } catch (error) {
+          classifierPipeline = undefined
+          modelStates.classifier = { state: 'error', error: messageOf(error) }
+        }
       }
-      if (typeof settings.classifierRevision !== 'string' || settings.classifierRevision === '') {
-        throw new Error('classifier revision is not configured')
-      }
-      classifierPipeline = await pipeline('text-classification', settings.classifierModel, {
-        device: 'cpu',
-        dtype: 'q8',
-        revision: settings.classifierRevision,
-      })
     }
-    return true
+    return modelStates
   })()
   return loading
 }
@@ -90,6 +112,14 @@ async function classify(text) {
 
 async function evaluate(message) {
   await load()
+  const embeddingError = modelStates.embedding.state === 'error' ? ': ' + (modelStates.embedding.error ?? 'unknown error') : ''
+  if (settings.embeddingEnabled !== false && modelStates.embedding.state !== 'ready') {
+    throw new Error('embedding model ' + modelStates.embedding.state + embeddingError)
+  }
+  const classifierError = modelStates.classifier.state === 'error' ? ': ' + (modelStates.classifier.error ?? 'unknown error') : ''
+  if (settings.classifierEnabled === true && modelStates.classifier.state !== 'ready') {
+    throw new Error('classifier model ' + modelStates.classifier.state + classifierError)
+  }
   const command = typeof message.command === 'string' ? message.command : ''
   const description = typeof message.description === 'string' && message.description !== '' ? message.description : undefined
   const [commandEmbedding, descriptionEmbedding, maliceScore] = await Promise.all([
@@ -105,13 +135,13 @@ if (parentPort !== null) {
     if (message === null || typeof message !== 'object' || typeof message.id !== 'number') return
     if (message.type === 'warmup') {
       try {
-        await load()
-        parentPort.postMessage({ id: message.id, ok: true, warmed: true })
+        const models = await load()
+        parentPort.postMessage({ id: message.id, ok: true, warmed: true, models })
       } catch (error) {
         parentPort.postMessage({
           id: message.id,
           ok: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: messageOf(error),
         })
       }
       return

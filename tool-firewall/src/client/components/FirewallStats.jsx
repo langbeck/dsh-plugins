@@ -38,6 +38,7 @@ export default function FirewallStats(props) {
           {(() => {
             const value = typeof stat.value === 'string' ? stat.value : t(stat.valueKey)
             const off = stat.tone === 'off'
+              || stat.tone === 'error'
               || stat.valueKey === 'stats.off'
               || stat.valueKey === 'stats.error'
               || value === t('stats.off')

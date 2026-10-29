@@ -31,6 +31,17 @@ export function createInferenceClient(config, options = {}) {
   let nextId = 1
   let pending = new Map()
   let tail = Promise.resolve()
+  let modelStates = {
+    embedding: { state: config.embeddingEnabled === false ? 'disabled' : 'loading', error: null },
+    classifier: { state: config.classifierEnabled === true ? 'loading' : 'disabled', error: null },
+  }
+
+  function setModelError(error) {
+    const message = error instanceof Error ? error.message : String(error)
+    for (const key of ['embedding', 'classifier']) {
+      if (modelStates[key].state !== 'disabled') modelStates[key] = { state: 'error', error: message }
+    }
+  }
 
   function scheduleRetry() {
     if (disposed || retryTimer !== undefined) return
@@ -85,6 +96,7 @@ export function createInferenceClient(config, options = {}) {
     ready = false
     readyPromise = undefined
     lastError = error instanceof Error ? error.message : String(error)
+    setModelError(error)
     const entries = Array.from(pending.values())
     pending = new Map()
     for (const entry of entries) entry.reject(error)
@@ -162,18 +174,33 @@ export function createInferenceClient(config, options = {}) {
     if (ready) return
     if (readyPromise !== undefined) return readyPromise
     readyPromise = (async () => {
-      await request('warmup', {}, warmupTimeoutMs)
+      const response = await request('warmup', {}, warmupTimeoutMs)
+      if (response.models !== undefined && response.models !== null && typeof response.models === 'object') {
+        modelStates = {
+          embedding: response.models.embedding ?? modelStates.embedding,
+          classifier: response.models.classifier ?? modelStates.classifier,
+        }
+      }
+      const errors = []
+      for (const key of ['embedding', 'classifier']) {
+        if (modelStates[key].state === 'error') {
+          errors.push(key + ': ' + String(modelStates[key].error ?? 'unknown error'))
+        }
+      }
+      lastError = errors.length > 0 ? errors.join('; ') : undefined
       ready = true
-      lastError = undefined
-      retryDelayMs = 5000
-      if (retryTimer !== undefined) {
-        clearTimeout(retryTimer)
-        retryTimer = undefined
+      if (errors.length === 0) {
+        retryDelayMs = 5000
+        if (retryTimer !== undefined) {
+          clearTimeout(retryTimer)
+          retryTimer = undefined
+        }
       }
     })()
     readyPromise.catch((error) => {
       readyPromise = undefined
       lastError = error instanceof Error ? error.message : String(error)
+      setModelError(error)
       if (!disposed) {
         onError(error)
         scheduleRetry()
@@ -228,5 +255,6 @@ export function createInferenceClient(config, options = {}) {
     dispose,
     get ready() { return ready },
     get lastError() { return lastError },
+    get models() { return modelStates },
   }
 }

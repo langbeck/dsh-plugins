@@ -79,7 +79,7 @@ function validDraft(draft) {
 }
 
 export default function SettingsForm(props) {
-  const { view, t, configForm, tabbed = false, logs = [], logsLoading = false, modelError = null } = props
+  const { view, t, configForm, tabbed = false, logs = [], logsLoading = false, models = undefined } = props
   const snapshot = useSnapshot(configForm)
   const resolved = normalizeConfig(snapshot.value)
   const [draft, setDraft] = useState(resolved)
@@ -299,7 +299,7 @@ export default function SettingsForm(props) {
         </section>
       ) : null}
 
-        {tabbed && tab === 'logs' ? <LogsPanel logs={logs} loading={logsLoading} modelError={modelError} t={t} /> : null}
+        {tabbed && tab === 'logs' ? <LogsPanel logs={logs} loading={logsLoading} models={models} t={t} /> : null}
       </div>
 
       <div style={tabbed ? tabbedFooterStyle : footerStyle}>

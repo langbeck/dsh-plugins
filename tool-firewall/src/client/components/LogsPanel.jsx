@@ -27,9 +27,20 @@ function numberText(value, digits = 3) {
 
 /** Recent interceptions, one collapsible row per call. */
 export default function LogsPanel(props) {
-  const { logs = [], loading = false, modelError = null, t } = props
-  const warning = modelError === null || modelError === '' ? null : (
-    <p style={errorStyle}>{t('logs.modelError', { error: modelError })}</p>
+  const { logs = [], loading = false, models = undefined, t } = props
+  const warnings = []
+  if (models?.embedding?.state === 'error') {
+    warnings.push({ key: 'embedding', model: t('stats.embeddingModel'), error: String(models.embedding.error ?? 'unknown error') })
+  }
+  if (models?.classifier?.state === 'error') {
+    warnings.push({ key: 'classifier', model: t('stats.classifierModel'), error: String(models.classifier.error ?? 'unknown error') })
+  }
+  const warning = warnings.length === 0 ? null : (
+    <>
+      {warnings.map((entry) => (
+        <p key={entry.key} style={errorStyle}>{t('logs.modelError', { model: entry.model, error: entry.error })}</p>
+      ))}
+    </>
   )
   if (loading && logs.length === 0) {
     return (
