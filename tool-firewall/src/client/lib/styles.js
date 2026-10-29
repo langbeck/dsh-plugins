@@ -14,8 +14,14 @@ export const sectionStyle = {
   display: 'flex',
   flexDirection: 'column',
   gap: '12px',
-  padding: '12px 0 0',
+  padding: '8px 0 0',
   borderTop: '0.5px solid var(--dsw-alias-border-l3)',
+}
+
+export const tabbedSectionStyle = {
+  ...sectionStyle,
+  padding: 0,
+  borderTop: 'none',
 }
 
 export const sectionTitleStyle = {
@@ -67,8 +73,7 @@ export const footerStyle = {
 export const tabbedFooterStyle = {
   ...footerStyle,
   flex: 'none',
-  padding: '12px 20px',
-  borderTop: '0.5px solid var(--dsw-alias-border-l3)',
+  padding: '10px 16px',
   background: 'var(--dsw-alias-bg-layer-1)',
 }
 
@@ -88,7 +93,7 @@ export const tabbedScrollStyle = {
   flex: '1 1 auto',
   minHeight: 0,
   overflowY: 'auto',
-  padding: '14px 20px 16px',
+  padding: '8px 16px 12px',
 }
 
 export function inputStyle(disabled, width = '96px') {
@@ -326,7 +331,7 @@ export const tabBarStyle = {
   border: '0.5px solid var(--dsw-alias-border-l3)',
   borderRadius: '10px',
   background: 'var(--dsw-alias-bg-layer-2)',
-  marginBottom: '16px',
+  marginBottom: '8px',
   overflowX: 'auto',
   boxSizing: 'border-box',
 }

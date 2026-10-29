@@ -15,6 +15,7 @@ import {
   secondaryButtonStyle,
   sectionStyle,
   sectionTitleStyle,
+  tabbedSectionStyle,
   selectStyle,
   tabBarStyle,
   tabButtonStyle,
@@ -218,7 +219,7 @@ export default function SettingsForm(props) {
         ) : null}
 
         {!tabbed || tab === 'general' ? (
-        <section style={sectionStyle}>
+        <section style={tabbed ? tabbedSectionStyle : sectionStyle}>
           <h3 style={sectionTitleStyle}>{t('section.general')}</h3>
           {checkboxField('enabled')}
           <span style={hintStyle}>{t('field.enabledHint')}</span>
@@ -240,7 +241,7 @@ export default function SettingsForm(props) {
       ) : null}
 
       {!tabbed || tab === 'detection' ? (
-        <section style={sectionStyle}>
+        <section style={tabbed ? tabbedSectionStyle : sectionStyle}>
           <h3 style={sectionTitleStyle}>{t('section.detection')}</h3>
           {numberField('maliceThreshold', 0, 1, 0.01)}
           {numberField('alignmentThreshold', 0, 1, 0.01)}
@@ -261,7 +262,7 @@ export default function SettingsForm(props) {
       ) : null}
 
       {!tabbed || tab === 'models' ? (
-        <section style={sectionStyle}>
+        <section style={tabbed ? tabbedSectionStyle : sectionStyle}>
           <h3 style={sectionTitleStyle}>{t('section.models')}</h3>
           {checkboxField('embeddingEnabled')}
           <span style={hintStyle}>{t('field.embeddingEnabledHint')}</span>
@@ -289,7 +290,7 @@ export default function SettingsForm(props) {
       ) : null}
 
       {!tabbed || tab === 'cache' ? (
-        <section style={sectionStyle}>
+        <section style={tabbed ? tabbedSectionStyle : sectionStyle}>
           <h3 style={sectionTitleStyle}>{t('section.cache')}</h3>
           {numberField('maxCommandChars', 64, 65536, 1)}
           {numberField('maxTextTokens', 16, 512, 1)}

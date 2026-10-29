@@ -169,8 +169,13 @@ var sectionStyle = {
   display: "flex",
   flexDirection: "column",
   gap: "12px",
-  padding: "12px 0 0",
+  padding: "8px 0 0",
   borderTop: "0.5px solid var(--dsw-alias-border-l3)"
+};
+var tabbedSectionStyle = {
+  ...sectionStyle,
+  padding: 0,
+  borderTop: "none"
 };
 var sectionTitleStyle = {
   margin: 0,
@@ -214,8 +219,7 @@ var footerStyle = {
 var tabbedFooterStyle = {
   ...footerStyle,
   flex: "none",
-  padding: "12px 20px",
-  borderTop: "0.5px solid var(--dsw-alias-border-l3)",
+  padding: "10px 16px",
   background: "var(--dsw-alias-bg-layer-1)"
 };
 var tabbedShellStyle = {
@@ -233,7 +237,7 @@ var tabbedScrollStyle = {
   flex: "1 1 auto",
   minHeight: 0,
   overflowY: "auto",
-  padding: "14px 20px 16px"
+  padding: "8px 16px 12px"
 };
 function inputStyle(disabled, width = "96px") {
   return {
@@ -444,7 +448,7 @@ var tabBarStyle = {
   border: "0.5px solid var(--dsw-alias-border-l3)",
   borderRadius: "10px",
   background: "var(--dsw-alias-bg-layer-2)",
-  marginBottom: "16px",
+  marginBottom: "8px",
   overflowX: "auto",
   boxSizing: "border-box"
 };
@@ -800,7 +804,7 @@ function SettingsForm(props) {
         },
         entry.id
       )) }) : null,
-      !tabbed || tab === "general" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+      !tabbed || tab === "general" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.general") }),
         checkboxField("enabled"),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.enabledHint") }),
@@ -823,7 +827,7 @@ function SettingsForm(props) {
         ] }),
         numberField("modelTimeoutMs", 1, 5e3, 1)
       ] }) : null,
-      !tabbed || tab === "detection" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+      !tabbed || tab === "detection" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.detection") }),
         numberField("maliceThreshold", 0, 1, 0.01),
         numberField("alignmentThreshold", 0, 1, 0.01),
@@ -844,7 +848,7 @@ function SettingsForm(props) {
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.shellToolsHint") })
         ] })
       ] }) : null,
-      !tabbed || tab === "models" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+      !tabbed || tab === "models" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.models") }),
         checkboxField("embeddingEnabled"),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.embeddingEnabledHint") }),
@@ -872,7 +876,7 @@ function SettingsForm(props) {
         checkboxField("allowRemoteModels"),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.allowRemoteModelsHint") })
       ] }) : null,
-      !tabbed || tab === "cache" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+      !tabbed || tab === "cache" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.cache") }),
         numberField("maxCommandChars", 64, 65536, 1),
         numberField("maxTextTokens", 16, 512, 1),
