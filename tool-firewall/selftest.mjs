@@ -395,6 +395,7 @@ walkTree(statsTree, (node) => {
 })
 check(offValueStyle !== undefined && String(offValueStyle.color).includes('state-warning'), 'Off values are highlighted in orange')
 check(disabledValueStyle !== undefined && String(disabledValueStyle.color).includes('label-tertiary'), 'Disabled values are muted')
+check(disabledValueStyle !== undefined && disabledValueStyle.fontWeight === 600, 'Disabled values keep the bold weight')
 statsButtons[0].props.onClick()
 equal(overlayInjected.uiStore.getSnapshot().open, true, 'clicking the stats card opens the settings dialog')
 const dialogTree = ReactFake.reset(() => overlayRegistration.component({ t: (key) => key, configForm, ...overlayInjected }))

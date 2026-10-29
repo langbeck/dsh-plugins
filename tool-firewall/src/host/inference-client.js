@@ -70,8 +70,15 @@ export function createInferenceClient(config, options = {}) {
 
   function ensureWorker() {
     if (worker !== undefined) return worker
-    worker = new WorkerCtor(workerUrl, { workerData: workerData() })
-    worker.on('message', (message) => {
+    const current = new WorkerCtor(workerUrl, { workerData: workerData(), stderr: true })
+    worker = current
+    let stderrTail = ''
+    if (current.stderr !== null && current.stderr !== undefined && typeof current.stderr.on === 'function') {
+      current.stderr.on('data', (chunk) => {
+        stderrTail = (stderrTail + String(chunk)).slice(-2000)
+      })
+    }
+    current.on('message', (message) => {
       if (message === null || typeof message !== 'object' || typeof message.id !== 'number') return
       const entry = pending.get(message.id)
       if (entry === undefined) return
@@ -82,14 +89,16 @@ export function createInferenceClient(config, options = {}) {
       }
       entry.resolve(message)
     })
-    worker.on('error', (error) => {
+    current.on('error', (error) => {
+      if (worker !== current) return
       failWorker(error)
     })
-    worker.on('exit', () => {
-      if (disposed) return
-      failWorker(new Error('inference worker exited'))
+    current.on('exit', (code) => {
+      if (worker !== current) return
+      const output = stderrTail.trim()
+      failWorker(new Error('inference worker exited with code ' + String(code) + (output === '' ? '' : ': ' + output.slice(-800))))
     })
-    return worker
+    return current
   }
 
   function failWorker(error) {
@@ -113,7 +122,7 @@ export function createInferenceClient(config, options = {}) {
     }
   }
 
-  function request(type, payload, timeoutMs, signal) {
+  function request(type, payload, timeoutMs, signal, restartOnTimeout = false) {
     const current = ensureWorker()
     const id = nextId++
     return new Promise((resolve, reject) => {
@@ -128,11 +137,11 @@ export function createInferenceClient(config, options = {}) {
       }
       const timer = setTimeout(() => {
         finish(() => reject(new Error('inference timed out')))
-        restart()
+        if (restartOnTimeout) restart()
       }, Math.max(1, timeoutMs))
       const onAbort = () => {
         finish(() => reject(abortError()))
-        restart()
+        if (restartOnTimeout) restart()
       }
       if (signal !== undefined) {
         if (signal.aborted) {
@@ -174,7 +183,7 @@ export function createInferenceClient(config, options = {}) {
     if (ready) return
     if (readyPromise !== undefined) return readyPromise
     readyPromise = (async () => {
-      const response = await request('warmup', {}, warmupTimeoutMs)
+      const response = await request('warmup', {}, warmupTimeoutMs, undefined, true)
       if (response.models !== undefined && response.models !== null && typeof response.models === 'object') {
         modelStates = {
           embedding: response.models.embedding ?? modelStates.embedding,

@@ -243,7 +243,7 @@ export function statsValueStyle(tone) {
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     color,
-    fontWeight: tone === 'muted' ? 500 : 600,
+    fontWeight: 600,
     fontSize: '11px',
     lineHeight: '16px',
   }
