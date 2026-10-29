@@ -1,0 +1,79 @@
+# Container image tasks for the DSH sandbox image built by the Dockerfile
+# beside this justfile.
+#
+#   just build          build the image with podman
+#   just web            serve the Web UI: `dsh --profile web --no-open`, bound
+#                       to HOST:PORT inside the container and published on the
+#                       same host port (HOST defaults to auto = the container's
+#                       own IPv4, PORT to 3080)
+#   just run [args...]  run dsh with arbitrary arguments; publishes no ports
+#   just bash [args...] open a shell in the same container instead of running dsh
+
+set shell := ["bash", "-uc"]
+
+# Expose `*args` to the recipe's command line as "$@" so arguments containing
+# spaces survive; interpolating "{{args}}" would split them on whitespace.
+set positional-arguments
+
+# Image name and tag used by both recipes; override per invocation, e.g.
+# `just image=my-dsh tag=dev build`.
+image := "dsh-sandbox"
+tag := "latest"
+
+# Absolute path of the project root on the host, symlinks resolved. The
+# container mounts it at the very same path, so absolute paths in plugins,
+# settings, and sessions stay valid on both sides.
+project_root := canonicalize(justfile_directory() + "/..")
+
+# Your real host DSH home, bind-mounted at the container's ~/.dsh. The image
+# runs as root, so that target is /root/.dsh; `idmap` carries ownership through
+# the user namespace, so files created inside remain yours on the host.
+dsh_home := home_directory() + "/.dsh"
+
+# Port for the Web UI, the same number inside the container and on the host.
+# Override with the PORT environment variable, e.g. `PORT=8081 just web`.
+# env_var_or_default() is just's equivalent of bash's ${PORT:-3080}.
+port := env_var_or_default("PORT", "3080")
+
+# Address dsh's Web UI binds inside the container. "auto" resolves the
+# container's own non-loopback IPv4 at startup, which is the address podman's
+# published port forwards to; set HOST to a literal IPv4 to pin it instead,
+# e.g. `HOST=127.0.0.1 just web` (rootless podman with pasta) or
+# `HOST=10.88.0.2 just web`. A wildcard is rejected by dsh by design.
+host := env_var_or_default("HOST", "auto")
+
+# Build the image from the Dockerfile in this directory.
+build:
+    podman build --tag {{image}}:{{tag}} .
+
+# Serve the Web UI on the same host port, binding the container's own IPv4.
+web:
+    podman run --rm -it \
+        --publish "{{port}}:{{port}}" \
+        --workdir "{{project_root}}" \
+        --volume "{{project_root}}:{{project_root}}:idmap" \
+        --volume "{{dsh_home}}:/root/.dsh:idmap" \
+        --entrypoint /bin/bash \
+        {{image}}:{{tag}} \
+        -c 'host="{{host}}"; if [ "$host" = auto ]; then host=$(hostname -I 2>/dev/null | tr " " "\n" | grep -v "^127\." | grep -m1 -E "^([0-9]{1,3}\.){3}[0-9]{1,3}$"); fi; if [ -z "$host" ] && command -v ip >/dev/null 2>&1; then host=$(ip -4 -o addr show scope global | awk "{print \$4}" | cut -d/ -f1 | grep -m1 -E "^([0-9]{1,3}\.){3}[0-9]{1,3}$"); fi; if [ -z "$host" ]; then echo "error: could not determine the container IPv4; set HOST=<ip> to override" >&2; exit 1; fi; echo "web: http://127.0.0.1:{{port}} (bound to $host:{{port}} inside)"; exec npx @deepseek-ai/dsh --profile web --no-open --host "$host" --port "{{port}}"'
+
+# Run the image, passing any arguments through to dsh (which requires a profile).
+run *args:
+    if [ $# -eq 0 ]; then \
+        echo "error: 'just run' passes its arguments to dsh, which needs a profile. Try 'just run tui', or 'just web' for the Web UI." >&2; \
+        exit 1; \
+    fi; \
+    podman run --rm -it \
+        --workdir "{{project_root}}" \
+        --volume "{{project_root}}:{{project_root}}:idmap" \
+        --volume "{{dsh_home}}:/root/.dsh:idmap" \
+        {{image}}:{{tag}} "$@"
+
+# Open an interactive bash shell in the container instead of running dsh.
+bash *args:
+    podman run --rm -it \
+        --entrypoint bash \
+        --workdir "{{project_root}}" \
+        --volume "{{project_root}}:{{project_root}}:idmap" \
+        --volume "{{dsh_home}}:/root/.dsh:idmap" \
+        {{image}}:{{tag}} "$@"
