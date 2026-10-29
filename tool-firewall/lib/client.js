@@ -354,15 +354,17 @@ var statsLabelStyle = {
   fontSize: "11px",
   lineHeight: "16px"
 };
-var statsValueStyle = {
-  minWidth: 0,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  color: "var(--dsw-alias-label-primary)",
-  fontWeight: 600,
-  fontSize: "11px",
-  lineHeight: "16px"
-};
+function statsValueStyle(off) {
+  return {
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    color: off ? "var(--dsw-alias-state-error-primary, #d93025)" : "var(--dsw-alias-label-primary)",
+    fontWeight: 600,
+    fontSize: "11px",
+    lineHeight: "16px"
+  };
+}
 var dialogBackdropStyle = {
   position: "fixed",
   inset: 0,
@@ -1106,7 +1108,11 @@ function FirewallStats(props) {
       style: statsCardStyle(true),
       children: stats.map((stat, index) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { style: statsRowStyle, children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: statsLabelStyle, children: typeof stat.label === "string" ? stat.label : t(stat.labelKey) }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: statsValueStyle, children: typeof stat.value === "string" ? stat.value : t(stat.valueKey) })
+        (() => {
+          const value = typeof stat.value === "string" ? stat.value : t(stat.valueKey);
+          const off = stat.tone === "off" || stat.valueKey === "stats.off" || stat.valueKey === "stats.error" || value === t("stats.off") || value === t("stats.error");
+          return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: statsValueStyle(off), children: value });
+        })()
       ] }, String(stat.label ?? stat.labelKey ?? index)))
     }
   );

@@ -220,14 +220,16 @@ export const statsLabelStyle = {
   lineHeight: '16px',
 }
 
-export const statsValueStyle = {
-  minWidth: 0,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  color: 'var(--dsw-alias-label-primary)',
-  fontWeight: 600,
-  fontSize: '11px',
-  lineHeight: '16px',
+export function statsValueStyle(off) {
+  return {
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    color: off ? 'var(--dsw-alias-state-error-primary, #d93025)' : 'var(--dsw-alias-label-primary)',
+    fontWeight: 600,
+    fontSize: '11px',
+    lineHeight: '16px',
+  }
 }
 
 // Settings dialog ----------------------------------------------------------------

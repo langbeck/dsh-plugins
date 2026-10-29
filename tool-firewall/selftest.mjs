@@ -384,6 +384,11 @@ walkTree(statsTree, (node) => {
 })
 check(statsButtons.length === 1, 'sidebar stats card is one button')
 check(statsLabels.includes('stats.blocks'), 'sidebar stats card includes the block count row')
+let offValueStyle
+walkTree(statsTree, (node) => {
+  if (node !== null && typeof node === 'object' && node.props?.children === 'stats.off') offValueStyle = node.props.style
+})
+check(offValueStyle !== undefined && String(offValueStyle.color).includes('state-error'), 'Off values are highlighted in red')
 statsButtons[0].props.onClick()
 equal(overlayInjected.uiStore.getSnapshot().open, true, 'clicking the stats card opens the settings dialog')
 const dialogTree = ReactFake.reset(() => overlayRegistration.component({ t: (key) => key, configForm, ...overlayInjected }))
