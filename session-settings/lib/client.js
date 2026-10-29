@@ -281,6 +281,10 @@ var bodyStyle = {
   overflow: "auto",
   padding: "16px 18px"
 };
+var toolsBodyStyle = {
+  ...bodyStyle,
+  padding: 0
+};
 var footerStyle = {
   display: "flex",
   alignItems: "center",
@@ -479,7 +483,8 @@ var metaBadgeStyle = {
 };
 var toolListStyle = {
   display: "flex",
-  flexDirection: "column"
+  flexDirection: "column",
+  padding: "2px 18px 16px"
 };
 var toolRowStyle = {
   display: "flex",
@@ -578,8 +583,8 @@ var disabledLineStyle = {
   display: "flex",
   flexWrap: "wrap",
   gap: "4px",
-  margin: "0 0 4px",
-  padding: "0 0 10px",
+  margin: 0,
+  padding: "16px 18px 10px",
   borderBottom: "0.5px solid var(--dsw-alias-border-l3)",
   background: "var(--dsw-alias-bg-layer-1)",
   color: "var(--dsw-alias-label-tertiary)",
@@ -788,7 +793,7 @@ function SessionSettingsDialog(props) {
               },
               name
             )) }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: bodyStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tab === "tools" ? toolsBodyStyle : bodyStyle, children: [
               status === "loading" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("common.loading") }) : null,
               status === "error" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
                 /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: errorStyle, children: error === "" ? t("error.load") : error }),

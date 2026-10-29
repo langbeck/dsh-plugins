@@ -13,7 +13,7 @@ import vm from 'node:vm'
 import * as host from './src/index.js'
 import { commandView, foldRecentToolCalls, mergeToolHistory, toolView } from './src/tools.js'
 import { EN, ZH } from './src/client/locale.js'
-import { disabledLineStyle, presetOptionStyle, presetRowStyle, switchKnobStyle, switchTrackStyle, toolRowStyle } from './src/client/lib/styles.js'
+import { disabledLineStyle, presetOptionStyle, presetRowStyle, switchKnobStyle, switchTrackStyle, toolRowStyle, toolsBodyStyle } from './src/client/lib/styles.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 let checks = 0
@@ -168,6 +168,8 @@ check(String(blockedSwitch.background).includes('state-error'), 'blocked switch 
 check(String(switchKnobStyle(true).background).includes('foreground'), 'switch knob stays white')
 equal(disabledLineStyle.display, 'flex', 'disabled-tools summary is a line')
 equal(disabledLineStyle.position, 'sticky', 'disabled-tools summary stays pinned while tools scroll')
+equal(toolsBodyStyle.padding, 0, 'Tools tab removes the body padding so the sticky header covers the top edge')
+check(String(disabledLineStyle.padding).includes('16px'), 'pinned header carries its own top padding')
 equal(EN['tools.disabled'], 'Disabled tools:', 'disabled-tools line has friendly copy')
 equal(ZH['tools.disabled'], '已禁用的工具：', 'disabled-tools line is localized')
 

@@ -97,6 +97,11 @@ export const bodyStyle = {
   padding: '16px 18px',
 }
 
+export const toolsBodyStyle = {
+  ...bodyStyle,
+  padding: 0,
+}
+
 export const footerStyle = {
   display: 'flex',
   alignItems: 'center',
@@ -410,6 +415,7 @@ export const metaBadgeStyle = {
 export const toolListStyle = {
   display: 'flex',
   flexDirection: 'column',
+  padding: '2px 18px 16px',
 }
 
 export const toolRowStyle = {
@@ -521,8 +527,8 @@ export const disabledLineStyle = {
   display: 'flex',
   flexWrap: 'wrap',
   gap: '4px',
-  margin: '0 0 4px',
-  padding: '0 0 10px',
+  margin: 0,
+  padding: '16px 18px 10px',
   borderBottom: '0.5px solid var(--dsw-alias-border-l3)',
   background: 'var(--dsw-alias-bg-layer-1)',
   color: 'var(--dsw-alias-label-tertiary)',

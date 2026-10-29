@@ -44,6 +44,7 @@ import {
   toolListStyle,
   toolNameStyle,
   toolRowStyle,
+  toolsBodyStyle,
   warningStyle,
 } from '../lib/styles.js'
 
@@ -195,7 +196,7 @@ export default function SessionSettingsDialog(props) {
           ))}
         </div>
 
-        <div style={bodyStyle}>
+        <div style={tab === 'tools' ? toolsBodyStyle : bodyStyle}>
           {status === 'loading' ? <p style={hintStyle}>{t('common.loading')}</p> : null}
           {status === 'error' ? (
             <div style={sectionStyle}>
