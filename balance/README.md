@@ -17,6 +17,16 @@ separates the two kinds. Currencies render with their symbol and code (USD `$`,
 CNY `¥`); other currencies fall back to the code. The pill is hidden while the
 account is signed out, still loading, or the balance cannot be read.
 
+## Host cost service
+
+The Host provides a `balanceCost` service for other Host plugins:
+
+- `read(sessionId, signal)` → the same Session-cost snapshot the route returns
+- `pricingState()` → pricing readiness, fetch time, revision, and error
+
+The browser route `/api/balance-session-cost` delegates to this service, so
+other plugins and the Web Client share one pricing cache and one cost fold.
+
 ## Install
 
 The package is its own bundle (`dsh.bundle.patch`), so it installs without

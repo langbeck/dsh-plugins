@@ -13,10 +13,22 @@ header action to the current Session that opens a dialog with three tabs:
   calls). A pinned line at the top lists the disabled tool names and offers
   name/invocation sorting while the rows scroll.
 - **Settings** — switch the Session's permission preset (Read only, Workspace
-  write, Full access) in one row, and inspect the effective sandbox mode and
-  approval policy.
+  write, Full access) in one row, inspect the effective sandbox mode and
+  approval policy, and set a Session cost cap.
 - **Commands** — the Host slash commands visible to the Session's live Agent:
   name, description, input hint, and attachment support.
+
+## Cost cap
+
+Session cost comes from the **Balance** plugin's Host `balanceCost` service.
+When Balance is not installed or enabled, the cost-cap controls are disabled
+and grayed out with a “Requires the Balance plugin” note.
+
+The cap is checked by a Host `agent/pre-step` guard: if the Session's estimated
+cost has reached the cap, the turn pauses and asks the user **Proceed once** or
+**Cancel**. Proceeding allows the rest of that turn; the next turn checks
+again. The cap and the per-turn approval are in-memory and reset when the Host
+process restarts.
 
 Tool policy is enforced by a Host `approval/request` answerer: every request
 resolves `allowed-once` unless the tool name is blocked for that Session, in

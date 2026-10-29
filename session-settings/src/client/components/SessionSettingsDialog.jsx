@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { readSettings, applyPreset, saveBlockList } from '../lib/api.js'
+import { readSettings, applyPreset, saveBlockList, saveCostCap } from '../lib/api.js'
 import { collectSchemaFields, schemaDefaultHint, schemaTypeLabel } from '../lib/schema.js'
 import { sortTools } from '../lib/tools.js'
 import {
@@ -88,6 +88,7 @@ export default function SessionSettingsDialog(props) {
   const [sort, setSort] = useState('name-asc')
   const [detailTool, setDetailTool] = useState('')
   const [pendingPreset, setPendingPreset] = useState('')
+  const [capDraft, setCapDraft] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -97,6 +98,7 @@ export default function SessionSettingsDialog(props) {
       .then((value) => {
         if (cancelled) return
         setSnapshot(value)
+        setCapDraft(value.costCap !== undefined && value.costCap.limitUsd !== null ? String(value.costCap.limitUsd) : '')
         setStatus('ready')
       })
       .catch((failure) => {
@@ -128,6 +130,7 @@ export default function SessionSettingsDialog(props) {
     try {
       const value = await readSettings(sessionId)
       setSnapshot(value)
+      setCapDraft(value.costCap !== undefined && value.costCap.limitUsd !== null ? String(value.costCap.limitUsd) : '')
       setStatus('ready')
     } catch (failure) {
       setActionError(failure instanceof Error ? failure.message : String(failure))
@@ -161,6 +164,29 @@ export default function SessionSettingsDialog(props) {
     } finally {
       setBusy(false)
     }
+  }
+
+  async function changeCostCap(limitUsd) {
+    setBusy(true)
+    setActionError('')
+    try {
+      const value = await saveCostCap(sessionId, limitUsd)
+      setSnapshot(value)
+      setCapDraft(value.costCap.limitUsd === null ? '' : String(value.costCap.limitUsd))
+    } catch (failure) {
+      setActionError(t('cost.saveError'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function saveCostCapValue() {
+    const amount = Number(capDraft)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setActionError(t('cost.invalid'))
+      return
+    }
+    void changeCostCap(amount)
   }
 
   function setToolPolicy(name) {
@@ -244,6 +270,10 @@ export default function SessionSettingsDialog(props) {
                   pendingPreset={pendingPreset}
                   setPendingPreset={setPendingPreset}
                   changePreset={changePreset}
+                  capDraft={capDraft}
+                  setCapDraft={setCapDraft}
+                  onSaveCap={saveCostCapValue}
+                  onClearCap={() => void changeCostCap(null)}
                 />
               ) : null}
               {tab === 'tools' ? (
@@ -284,8 +314,12 @@ export default function SessionSettingsDialog(props) {
 }
 
 function SettingsTab(props) {
-  const { snapshot, t, busy, pendingPreset, setPendingPreset, changePreset } = props
+  const { snapshot, t, busy, pendingPreset, setPendingPreset, changePreset, capDraft, setCapDraft, onSaveCap, onClearCap } = props
   const catalog = snapshot.preset.catalog
+  const cost = snapshot.cost !== undefined ? snapshot.cost : { available: false, totalUsd: 0 }
+  const available = cost.available === true
+  const cap = snapshot.costCap !== undefined ? snapshot.costCap.limitUsd : null
+  const over = available && typeof cap === 'number' && typeof cost.totalUsd === 'number' && cost.totalUsd >= cap
   return (
     <div>
       <section style={sectionStyle}>
@@ -341,6 +375,37 @@ function SettingsTab(props) {
           <span style={metaBadgeStyle}>{t('settings.sandbox')}: {snapshot.knobs.sandbox ?? '—'}</span>
           <span style={metaBadgeStyle}>{t('settings.approval')}: {snapshot.knobs.approval ?? '—'}</span>
         </div>
+      </section>
+
+      <section style={{ ...sectionStyle, opacity: available ? 1 : 0.55 }}>
+        <h3 style={sectionTitleStyle}>{t('cost.title')}</h3>
+        <p style={hintStyle}>{t('cost.current', { amount: available ? formatUsd(cost.totalUsd) : '—' })}</p>
+        {available ? null : <p style={warningStyle}>{t('cost.unavailable')}</p>}
+        {available && cost.error !== undefined ? <p style={errorStyle}>{t('cost.serviceError', { message: cost.error })}</p> : null}
+        {over ? <p style={warningStyle}>{t('cost.over')}</p> : null}
+        <div style={rowStyle}>
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={capDraft}
+            placeholder={t('cost.placeholder')}
+            aria-label={t('cost.title')}
+            disabled={!available || busy}
+            style={{ ...inputStyle(), width: '150px' }}
+            onChange={(event) => setCapDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') onSaveCap()
+            }}
+          />
+          <button type="button" style={primaryButtonStyle(!available || busy || capDraft.trim() === '')} disabled={!available || busy || capDraft.trim() === ''} onClick={onSaveCap}>
+            {t('cost.save')}
+          </button>
+          <button type="button" style={secondaryButtonStyle(!available || busy || cap === null)} disabled={!available || busy || cap === null} onClick={onClearCap}>
+            {t('cost.clear')}
+          </button>
+        </div>
+        <p style={hintStyle}>{t('cost.hint')}</p>
       </section>
     </div>
   )
@@ -599,4 +664,11 @@ function schemaText(schema) {
   } catch (error) {
     return String(schema)
   }
+}
+
+function formatUsd(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return '—'
+  if (value >= 0.01) return '$' + value.toFixed(2)
+  if (value > 0) return '<$0.01'
+  return '$0.00'
 }

@@ -90,25 +90,48 @@ const session = {
 }
 let routeHandler
 let approvalHandler
+let preStepHandler
 let selectedPreset
+let costAvailable = false
+let askAnswer = { answers: [{ id: 'cost-cap', selected: ['Cancel'] }] }
+let askCalls = 0
+let nextCalls = 0
+const agent = { id: 'session-1', session }
 const fakeHost = {
   effect: (callback) => callback(),
   on: (event, listener) => {
     if (event === 'approval/request') approvalHandler = listener
+    if (event === 'agent/pre-step') preStepHandler = listener
     return () => {}
   },
   connection: { fetch: { register: (route) => { routeHandler = route.fetch; return () => {} } } },
-  get: (name) => name === 'sessionQuery' ? {
-    observeSession: async () => ({
-      events: [
-        { type: 'tool/call', seq: 1, time: 1, data: { callId: 'call-1', name: 'plugin_manager', arguments: '{}', turn: 1, step: 1 } },
-        { type: 'tool/result', seq: 2, time: 2, data: { callId: 'call-1', message: { content: [{ type: 'text', text: 'ok' }] } } },
-      ],
-      [Symbol.dispose]() {},
-    }),
-  } : undefined,
+  get: (name) => {
+    if (name === 'sessionQuery') {
+      return {
+        observeSession: async () => ({
+          events: [
+            { type: 'tool/call', seq: 1, time: 1, data: { callId: 'call-1', name: 'plugin_manager', arguments: '{}', turn: 1, step: 1 } },
+            { type: 'tool/result', seq: 2, time: 2, data: { callId: 'call-1', message: { content: [{ type: 'text', text: 'ok' }] } } },
+          ],
+          [Symbol.dispose]() {},
+        }),
+      }
+    }
+    if (name === 'balanceCost' && costAvailable) {
+      return { read: async () => ({ totalUsd: 2.5, ownUsd: 2, subagentsUsd: 0.5, pricing: { ready: true } }) }
+    }
+    if (name === 'userQuestions') {
+      return {
+        ask: async () => {
+          askCalls += 1
+          return askAnswer
+        },
+      }
+    }
+    return undefined
+  },
   sessions: { get: (id) => id === 'session-1' ? session : undefined },
-  agents: { get: (id) => id === 'session-1' ? { id: 'session-1' } : undefined },
+  agents: { get: (id) => id === 'session-1' ? agent : undefined },
   commands: { list: () => [{ name: 'compact', description: 'Compact', input: { hint: '<instructions>' } }] },
   permissionPresets: {
     catalog: () => ({ options: [{ value: 'workspace-write', name: 'Workspace Write' }, { value: 'danger-full-access', name: 'Full Access' }] }),
@@ -119,9 +142,10 @@ const fakeHost = {
   approval: { overrideOf: () => 'ask' },
 }
 const hostPlugin = await import('./src/index.js')
-hostPlugin.apply(fakeHost, { defaultAllowedTools: [] })
+hostPlugin.apply(fakeHost)
 check(typeof routeHandler === 'function', 'Host registers the settings route')
 check(typeof approvalHandler === 'function', 'Host registers the approval answerer')
+check(typeof preStepHandler === 'function', 'Host registers the cost-cap pre-step guard')
 
 async function callHost(body) {
   const response = await routeHandler({ json: async () => body })
@@ -136,6 +160,9 @@ equal(readValue.value.commands[0].name, 'compact', 'read exposes Host commands')
 equal(readValue.value.knobs.sandbox, 'workspace-write', 'read exposes the effective sandbox')
 equal(readValue.value.blockList.session.length, 0, 'read starts with an empty block list')
 equal(readValue.value.defaultPolicy, 'allow', 'read reports the default allow policy')
+equal(readValue.value.cost.available, false, 'read reports the missing Balance cost service')
+const missingCap = await callHost({ sessionId: 'session-1', action: 'costCap', limitUsd: 1 })
+check(missingCap.ok === false, 'cost cap cannot be set without the Balance service')
 const badPreset = await callHost({ sessionId: 'session-1', action: 'preset', preset: 'nope' })
 check(badPreset.ok === false, 'unknown presets are rejected')
 const presetValue = await callHost({ sessionId: 'session-1', action: 'preset', preset: 'danger-full-access' })
@@ -152,6 +179,32 @@ const bashAllowed = await approvalHandler({ toolName: 'bash', agent: { id: 'sess
 equal(bashAllowed, 'allowed-once', 'unlisted tools are allowed by default')
 const resetValue = await callHost({ sessionId: 'session-1', action: 'policies', block: [] })
 equal(resetValue.value.blockList.session.length, 0, 'an empty block list resets the control')
+
+costAvailable = true
+const costRead = await callHost({ sessionId: 'session-1', action: 'read' })
+equal(costRead.value.cost.available, true, 'read reports the Balance cost service')
+equal(costRead.value.cost.totalUsd, 2.5, 'read includes the current Session cost')
+const capValue = await callHost({ sessionId: 'session-1', action: 'costCap', limitUsd: 1 })
+check(capValue.ok === true, 'cost cap write returns ok')
+equal(capValue.value.costCap.limitUsd, 1, 'cost cap persists in memory')
+const next = async () => {
+  nextCalls += 1
+  return { kind: 'enter', messages: [] }
+}
+const preStepPayload = { agent, turn: 1, step: 1, messages: [], signal: new AbortController().signal }
+askAnswer = { answers: [{ id: 'cost-cap', selected: ['Cancel'] }] }
+const cancelled = await preStepHandler(preStepPayload, next)
+equal(cancelled.kind, 'reject', 'a cancelled cost-cap prompt rejects the step')
+equal(askCalls, 1, 'the cost-cap prompt is asked once')
+askAnswer = { answers: [{ id: 'cost-cap', selected: ['Proceed once'] }] }
+const proceeded = await preStepHandler({ ...preStepPayload, step: 2 }, next)
+equal(proceeded.kind, 'enter', 'proceeding once allows the step')
+equal(nextCalls, 1, 'the cost-cap guard delegates when proceeding')
+const subsequent = await preStepHandler({ ...preStepPayload, step: 3 }, next)
+equal(subsequent.kind, 'enter', 'the same turn is not prompted again after proceeding')
+equal(askCalls, 2, 'the approval covers the rest of the turn')
+const clearedCap = await callHost({ sessionId: 'session-1', action: 'costCap', limitUsd: null })
+equal(clearedCap.value.costCap.limitUsd, null, 'clearing the cost cap removes it')
 
 // ---------------------------------------------------------------------------
 // Presentation requirements

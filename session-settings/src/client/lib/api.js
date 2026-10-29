@@ -30,3 +30,7 @@ export function applyPreset(sessionId, preset) {
 export function saveBlockList(sessionId, block) {
   return post({ sessionId, action: 'policies', block })
 }
+
+export function saveCostCap(sessionId, limitUsd) {
+  return post({ sessionId, action: 'costCap', limitUsd })
+}

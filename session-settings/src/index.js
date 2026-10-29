@@ -5,7 +5,12 @@
  *   POST /api/session-settings
  *     { sessionId, action: 'read' }
  *     { sessionId, action: 'preset', preset }
- *     { sessionId, action: 'allowlist', tools: string[] }
+ *     { sessionId, action: 'policies', block: string[] }
+ *     { sessionId, action: 'costCap', limitUsd: number | null }
+ *
+ * Session cost is read from the optional `balanceCost` service provided by the
+ * Balance plugin. When that service is absent the cost-cap controls are
+ * reported as unavailable and no cost-cap enforcement runs.
  *
  * It also owns the small approval answerer behind the block list: every
  * approval request resolves `allowed-once` except a blocked tool name, which
@@ -31,15 +36,51 @@ const ROUTE = '/api/session-settings'
 const MAX_TOOLS = 64
 const MAX_TOOL_NAME = 128
 const RECENT_CALLS = 8
+const MAX_COST_CAP_USD = 1_000_000
 
 export function apply(ctx) {
   const sessionBlockLists = new Map()
+  const sessionCostCaps = new Map()
+  const costApprovedTurns = new Map()
 
   function queryService() {
     try {
       return ctx.get('sessionQuery')
     } catch (error) {
       return undefined
+    }
+  }
+
+  function costService() {
+    try {
+      return ctx.get('balanceCost')
+    } catch (error) {
+      return undefined
+    }
+  }
+
+  function questionService() {
+    try {
+      return ctx.get('userQuestions')
+    } catch (error) {
+      return undefined
+    }
+  }
+
+  async function costSnapshot(sessionId, signal) {
+    const service = costService()
+    if (service === undefined) return { available: false, totalUsd: 0 }
+    try {
+      const value = await service.read(sessionId, signal)
+      return {
+        available: true,
+        totalUsd: value.totalUsd,
+        ownUsd: value.ownUsd,
+        subagentsUsd: value.subagentsUsd,
+        pricing: value.pricing,
+      }
+    } catch (error) {
+      return { available: true, totalUsd: 0, error: describeError(error) }
     }
   }
 
@@ -100,7 +141,7 @@ export function apply(ctx) {
     }
   }
 
-  async function snapshot(sessionId) {
+  async function snapshot(sessionId, signal) {
     const session = sessionOf(sessionId)
     const catalog = ctx.permissionPresets.catalog()
     const current = ctx.permissionPresets.current(session)
@@ -108,6 +149,7 @@ export function apply(ctx) {
     const approval = readApproval(ctx, session)
     const { calls, counts } = await recentCalls(session)
     const tools = toolSchemas(session)
+    const cost = await costSnapshot(sessionId, signal)
     const recentByTool = new Map()
     for (const call of calls) {
       const list = recentByTool.get(call.name) ?? []
@@ -131,15 +173,19 @@ export function apply(ctx) {
       blockList: {
         session: Array.from(sessionBlockLists.get(sessionId) ?? []),
       },
+      cost,
+      costCap: {
+        limitUsd: sessionCostCaps.get(sessionId) ?? null,
+      },
       defaultPolicy: 'allow',
       persistence: 'memory',
     }
   }
 
-  async function handle(body) {
+  async function handle(body, signal) {
     const sessionId = body !== null && typeof body === 'object' ? body.sessionId : undefined
     const action = body !== null && typeof body === 'object' ? body.action : undefined
-    if (action === 'read') return snapshot(sessionId)
+    if (action === 'read') return snapshot(sessionId, signal)
     if (action === 'preset') {
       const session = sessionOf(sessionId)
       const name = body.preset
@@ -147,14 +193,31 @@ export function apply(ctx) {
       const catalog = ctx.permissionPresets.catalog()
       if (!catalog.options.some((option) => option.value === name)) throw new Error('Unknown permission preset: ' + name)
       ctx.permissionPresets.set(session, name)
-      return snapshot(sessionId)
+      return snapshot(sessionId, signal)
     }
     if (action === 'policies') {
       sessionOf(sessionId)
       const blocked = sanitizeTools(body.block)
       if (blocked.length === 0) sessionBlockLists.delete(sessionId)
       else sessionBlockLists.set(sessionId, blocked)
-      return snapshot(sessionId)
+      return snapshot(sessionId, signal)
+    }
+    if (action === 'costCap') {
+      sessionOf(sessionId)
+      const raw = body.limitUsd
+      let limitUsd = null
+      if (raw !== null && raw !== undefined && raw !== '') {
+        const value = Number(raw)
+        if (!Number.isFinite(value) || value < 0 || value > MAX_COST_CAP_USD) throw new Error('limitUsd must be a non-negative number')
+        limitUsd = value <= 0 ? null : Math.round(value * 100) / 100
+      }
+      if (limitUsd !== null && costService() === undefined) {
+        throw new Error('Balance cost service is not available')
+      }
+      if (limitUsd === null) sessionCostCaps.delete(sessionId)
+      else sessionCostCaps.set(sessionId, limitUsd)
+      costApprovedTurns.delete(sessionId)
+      return snapshot(sessionId, signal)
     }
     throw new Error('Unknown action: ' + String(action))
   }
@@ -167,7 +230,7 @@ export function apply(ctx) {
       fetch: async (request) => {
         try {
           const body = await request.json()
-          const value = await handle(body)
+          const value = await handle(body, request.signal)
           return Response.json({ ok: true, value })
         } catch (error) {
           return Response.json({ ok: false, error: { code: 'session-settings-failed', message: describeError(error) } })
@@ -186,6 +249,47 @@ export function apply(ctx) {
     if ((sessionBlockLists.get(sessionId) ?? []).includes(request.toolName)) return 'rejected'
     return 'allowed-once'
   }, true), 'session-settings: approval allow-list')
+
+  ctx.effect(() => ctx.on('agent/pre-step', async (payload, next) => {
+    const sessionId = payload.agent.session.id
+    const cap = sessionCostCaps.get(sessionId)
+    if (typeof cap !== 'number' || cap <= 0) return next()
+    if (costApprovedTurns.get(sessionId) === payload.turn) return next()
+    const service = costService()
+    if (service === undefined) return next()
+    let cost
+    try {
+      cost = await service.read(sessionId, payload.signal)
+    } catch (error) {
+      return next()
+    }
+    if (!(typeof cost.totalUsd === 'number' && cost.totalUsd >= cap)) return next()
+    const questions = questionService()
+    if (questions === undefined || typeof questions.ask !== 'function') return { kind: 'reject' }
+    let answer
+    try {
+      answer = await questions.ask({
+        agent: payload.agent,
+        signal: payload.signal,
+        questions: [{
+          id: 'cost-cap',
+          header: 'Session cost cap',
+          question: 'This Session has reached its $' + cap.toFixed(2) + ' cost cap (current estimate $' + cost.totalUsd.toFixed(2) + '). Continue this turn?',
+          options: [{ label: 'Proceed once' }, { label: 'Cancel' }],
+        }],
+      })
+    } catch (error) {
+      return { kind: 'reject' }
+    }
+    const selected = answer !== null && answer !== undefined && Array.isArray(answer.answers) && Array.isArray(answer.answers[0]?.selected)
+      ? answer.answers[0].selected[0]
+      : undefined
+    if (selected === 'Proceed once') {
+      costApprovedTurns.set(sessionId, payload.turn)
+      return next()
+    }
+    return { kind: 'reject' }
+  }), 'session-settings: cost cap')
 }
 
 /** Normalize a tool block-list: strings only, unique, bounded. */

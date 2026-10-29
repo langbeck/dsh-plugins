@@ -103,6 +103,17 @@ var EN = {
   "settings.memoryWarning": "The block list is kept in Host memory and resets when DSH restarts.",
   "settings.noAllowList": "No tools are auto-approved.",
   "settings.saveError": "Could not save the change.",
+  "cost.title": "Session cost cap",
+  "cost.current": "Current estimate: {amount}",
+  "cost.unavailable": "Requires the Balance plugin.",
+  "cost.hint": "Checked before each model step. The cap is kept in Host memory and resets when DSH restarts.",
+  "cost.placeholder": "USD, e.g. 1.00",
+  "cost.save": "Save cap",
+  "cost.clear": "Clear",
+  "cost.over": "Cap reached.",
+  "cost.invalid": "Enter a positive USD amount.",
+  "cost.saveError": "Could not save the cost cap.",
+  "cost.serviceError": "Balance cost service is unavailable: {message}",
   "tools.block": "Block",
   "tools.blocked": "Blocked",
   "tools.blockTool": "Block {name}",
@@ -179,6 +190,17 @@ var ZH = {
   "settings.memoryWarning": "\u963B\u6B62\u5217\u8868\u4FDD\u5B58\u5728 Host \u5185\u5B58\u4E2D\uFF0CDSH \u91CD\u542F\u540E\u4F1A\u91CD\u7F6E\u3002",
   "settings.noAllowList": "\u6CA1\u6709\u81EA\u52A8\u6279\u51C6\u7684\u5DE5\u5177\u3002",
   "settings.saveError": "\u65E0\u6CD5\u4FDD\u5B58\u66F4\u6539\u3002",
+  "cost.title": "\u4F1A\u8BDD\u8D39\u7528\u4E0A\u9650",
+  "cost.current": "\u5F53\u524D\u4F30\u7B97\uFF1A{amount}",
+  "cost.unavailable": "\u9700\u8981 Balance \u63D2\u4EF6\u3002",
+  "cost.hint": "\u6BCF\u6B21\u6A21\u578B\u6B65\u9AA4\u524D\u68C0\u67E5\u3002\u4E0A\u9650\u4FDD\u5B58\u5728 Host \u5185\u5B58\u4E2D\uFF0CDSH \u91CD\u542F\u540E\u4F1A\u91CD\u7F6E\u3002",
+  "cost.placeholder": "USD\uFF0C\u4F8B\u5982 1.00",
+  "cost.save": "\u4FDD\u5B58\u4E0A\u9650",
+  "cost.clear": "\u6E05\u9664",
+  "cost.over": "\u5DF2\u8FBE\u5230\u4E0A\u9650\u3002",
+  "cost.invalid": "\u8BF7\u8F93\u5165\u6B63\u6570\u7F8E\u5143\u91D1\u989D\u3002",
+  "cost.saveError": "\u65E0\u6CD5\u4FDD\u5B58\u8D39\u7528\u4E0A\u9650\u3002",
+  "cost.serviceError": "Balance \u8D39\u7528\u670D\u52A1\u4E0D\u53EF\u7528\uFF1A{message}",
   "tools.block": "\u963B\u6B62",
   "tools.blocked": "\u5DF2\u963B\u6B62",
   "tools.blockTool": "\u963B\u6B62 {name}",
@@ -807,6 +829,9 @@ function applyPreset(sessionId, preset) {
 function saveBlockList(sessionId, block) {
   return post({ sessionId, action: "policies", block });
 }
+function saveCostCap(sessionId, limitUsd) {
+  return post({ sessionId, action: "costCap", limitUsd });
+}
 
 // src/client/lib/schema.js
 function collectSchemaFields(schema) {
@@ -899,6 +924,7 @@ function SessionSettingsDialog(props) {
   const [sort, setSort] = (0, import_react2.useState)("name-asc");
   const [detailTool, setDetailTool] = (0, import_react2.useState)("");
   const [pendingPreset, setPendingPreset] = (0, import_react2.useState)("");
+  const [capDraft, setCapDraft] = (0, import_react2.useState)("");
   (0, import_react2.useEffect)(() => {
     let cancelled = false;
     setStatus("loading");
@@ -906,6 +932,7 @@ function SessionSettingsDialog(props) {
     readSettings(sessionId).then((value) => {
       if (cancelled) return;
       setSnapshot(value);
+      setCapDraft(value.costCap !== void 0 && value.costCap.limitUsd !== null ? String(value.costCap.limitUsd) : "");
       setStatus("ready");
     }).catch((failure) => {
       if (cancelled) return;
@@ -934,6 +961,7 @@ function SessionSettingsDialog(props) {
     try {
       const value = await readSettings(sessionId);
       setSnapshot(value);
+      setCapDraft(value.costCap !== void 0 && value.costCap.limitUsd !== null ? String(value.costCap.limitUsd) : "");
       setStatus("ready");
     } catch (failure) {
       setActionError(failure instanceof Error ? failure.message : String(failure));
@@ -965,6 +993,27 @@ function SessionSettingsDialog(props) {
     } finally {
       setBusy(false);
     }
+  }
+  async function changeCostCap(limitUsd) {
+    setBusy(true);
+    setActionError("");
+    try {
+      const value = await saveCostCap(sessionId, limitUsd);
+      setSnapshot(value);
+      setCapDraft(value.costCap.limitUsd === null ? "" : String(value.costCap.limitUsd));
+    } catch (failure) {
+      setActionError(t("cost.saveError"));
+    } finally {
+      setBusy(false);
+    }
+  }
+  function saveCostCapValue() {
+    const amount = Number(capDraft);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setActionError(t("cost.invalid"));
+      return;
+    }
+    void changeCostCap(amount);
   }
   function setToolPolicy(name) {
     if (snapshot === void 0 || busy) return;
@@ -1035,7 +1084,11 @@ function SessionSettingsDialog(props) {
                       busy,
                       pendingPreset,
                       setPendingPreset,
-                      changePreset
+                      changePreset,
+                      capDraft,
+                      setCapDraft,
+                      onSaveCap: saveCostCapValue,
+                      onClearCap: () => void changeCostCap(null)
                     }
                   ) : null,
                   tab === "tools" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
@@ -1069,60 +1122,95 @@ function SessionSettingsDialog(props) {
   );
 }
 function SettingsTab(props) {
-  const { snapshot, t, busy, pendingPreset, setPendingPreset, changePreset } = props;
+  const { snapshot, t, busy, pendingPreset, setPendingPreset, changePreset, capDraft, setCapDraft, onSaveCap, onClearCap } = props;
   const catalog = snapshot.preset.catalog;
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("settings.permissions") }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: fieldStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("settings.preset") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: presetRowStyle, children: catalog.map((option) => {
-        const dangerous = option.value === "danger-full-access";
-        const selected = snapshot.preset.current === option.value;
-        const label = PRESET_LABELS[option.value] === void 0 ? option.name : t(PRESET_LABELS[option.value]);
-        return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-          "button",
-          {
-            type: "button",
-            "aria-pressed": selected,
-            disabled: busy,
-            title: option.description,
-            style: presetOptionStyle(selected, dangerous),
-            onClick: () => {
-              if (option.value === snapshot.preset.current) return;
-              if (dangerous) setPendingPreset(option.value);
-              else void changePreset(option.value);
+  const cost = snapshot.cost !== void 0 ? snapshot.cost : { available: false, totalUsd: 0 };
+  const available = cost.available === true;
+  const cap = snapshot.costCap !== void 0 ? snapshot.costCap.limitUsd : null;
+  const over = available && typeof cap === "number" && typeof cost.totalUsd === "number" && cost.totalUsd >= cap;
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("settings.permissions") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: fieldStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("settings.preset") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: presetRowStyle, children: catalog.map((option) => {
+          const dangerous = option.value === "danger-full-access";
+          const selected = snapshot.preset.current === option.value;
+          const label = PRESET_LABELS[option.value] === void 0 ? option.name : t(PRESET_LABELS[option.value]);
+          return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            "button",
+            {
+              type: "button",
+              "aria-pressed": selected,
+              disabled: busy,
+              title: option.description,
+              style: presetOptionStyle(selected, dangerous),
+              onClick: () => {
+                if (option.value === snapshot.preset.current) return;
+                if (dangerous) setPendingPreset(option.value);
+                else void changePreset(option.value);
+              },
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: presetNameStyle, children: label }),
+                option.description === void 0 || option.description === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: dangerous ? { ...presetDescriptionStyle, color: "var(--dsw-alias-state-error-primary, #d93025)" } : presetDescriptionStyle, children: option.description })
+              ]
             },
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: presetNameStyle, children: label }),
-              option.description === void 0 || option.description === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: dangerous ? { ...presetDescriptionStyle, color: "var(--dsw-alias-state-error-primary, #d93025)" } : presetDescriptionStyle, children: option.description })
-            ]
-          },
-          option.value
-        );
-      }) }),
-      snapshot.preset.current === "custom" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("settings.custom") }) : null
-    ] }),
-    pendingPreset === "danger-full-access" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: warningStyle, children: t("settings.fullAccessWarning") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: dangerButtonStyle(busy), disabled: busy, onClick: () => void changePreset("danger-full-access"), children: t("settings.confirmFullAccess") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: secondaryButtonStyle(busy), disabled: busy, onClick: () => setPendingPreset(""), children: t("common.cancel") })
-      ] })
-    ] }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("settings.effective") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: metaBadgeStyle, children: [
-        t("settings.sandbox"),
-        ": ",
-        snapshot.knobs.sandbox ?? "\u2014"
+            option.value
+          );
+        }) }),
+        snapshot.preset.current === "custom" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("settings.custom") }) : null
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: metaBadgeStyle, children: [
-        t("settings.approval"),
-        ": ",
-        snapshot.knobs.approval ?? "\u2014"
+      pendingPreset === "danger-full-access" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: warningStyle, children: t("settings.fullAccessWarning") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: dangerButtonStyle(busy), disabled: busy, onClick: () => void changePreset("danger-full-access"), children: t("settings.confirmFullAccess") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: secondaryButtonStyle(busy), disabled: busy, onClick: () => setPendingPreset(""), children: t("common.cancel") })
+        ] })
+      ] }) : null,
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("settings.effective") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: metaBadgeStyle, children: [
+          t("settings.sandbox"),
+          ": ",
+          snapshot.knobs.sandbox ?? "\u2014"
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: metaBadgeStyle, children: [
+          t("settings.approval"),
+          ": ",
+          snapshot.knobs.approval ?? "\u2014"
+        ] })
       ] })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: { ...sectionStyle, opacity: available ? 1 : 0.55 }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("cost.title") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("cost.current", { amount: available ? formatUsd(cost.totalUsd) : "\u2014" }) }),
+      available ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: warningStyle, children: t("cost.unavailable") }),
+      available && cost.error !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: errorStyle, children: t("cost.serviceError", { message: cost.error }) }) : null,
+      over ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: warningStyle, children: t("cost.over") }) : null,
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+          "input",
+          {
+            type: "number",
+            min: 0,
+            step: "0.01",
+            value: capDraft,
+            placeholder: t("cost.placeholder"),
+            "aria-label": t("cost.title"),
+            disabled: !available || busy,
+            style: { ...inputStyle(), width: "150px" },
+            onChange: (event) => setCapDraft(event.target.value),
+            onKeyDown: (event) => {
+              if (event.key === "Enter") onSaveCap();
+            }
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: primaryButtonStyle(!available || busy || capDraft.trim() === ""), disabled: !available || busy || capDraft.trim() === "", onClick: onSaveCap, children: t("cost.save") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: secondaryButtonStyle(!available || busy || cap === null), disabled: !available || busy || cap === null, onClick: onClearCap, children: t("cost.clear") })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("cost.hint") })
     ] })
-  ] }) });
+  ] });
 }
 function ToolsTab(props) {
   const { snapshot, t, busy, sort, setSort, onOpen, onPolicy } = props;
@@ -1353,6 +1441,12 @@ function schemaText(schema) {
   } catch (error) {
     return String(schema);
   }
+}
+function formatUsd(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "\u2014";
+  if (value >= 0.01) return "$" + value.toFixed(2);
+  if (value > 0) return "<$0.01";
+  return "$0.00";
 }
 
 // src/client/components/SessionSettingsOverlay.jsx

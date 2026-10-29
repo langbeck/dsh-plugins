@@ -35,6 +35,24 @@ export function apply(ctx, config) {
   const costCache = new Map()
   const catalogCache = new Map()
 
+  // Other Host plugins read Session cost through this service; the browser
+  // route below remains the Client-facing transport.
+  const costService = {
+    async read(sessionId, signal) {
+      return readSessionCost(ctx, pricing, catalogCache, costCache, { sessionId }, signal)
+    },
+    pricingState() {
+      return pricing.state()
+    },
+  }
+
+  ctx.effect(() => {
+    const dispose = ctx.provide('balanceCost', costService)
+    return () => {
+      Promise.resolve(dispose()).catch(() => {})
+    }
+  }, 'balance: cost service')
+
   ctx.effect(() => {
     pricing.start()
     return () => pricing.dispose()
@@ -48,7 +66,7 @@ export function apply(ctx, config) {
       fetch: async (request) => {
         try {
           const payload = await request.json()
-          const value = await readSessionCost(ctx, pricing, catalogCache, costCache, payload, request.signal)
+          const value = await costService.read(payload.sessionId, request.signal)
           return Response.json({ ok: true, value })
         } catch (error) {
           return Response.json({ ok: false, error: { code: 'session-cost-failed', message: describeError(error), details: {} } })
