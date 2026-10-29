@@ -9,7 +9,8 @@ export const rowStyle = {
 }
 
 export const rowLabelStyle = {
-  flex: 'none',
+  flex: '0 0 52px',
+  width: '52px',
   fontWeight: 600,
   color: 'var(--dsw-alias-label-tertiary)',
   fontSize: '11px',
@@ -51,6 +52,18 @@ export const timeStyle = {
   fontSize: '10px',
   lineHeight: '16px',
   fontVariantNumeric: 'tabular-nums',
+}
+
+export function remainingStyle(remainingUsd) {
+  return {
+    color: remainingUsd > 0
+      ? 'var(--dsw-alias-state-success-primary, #2ea043)'
+      : 'var(--dsw-alias-state-error-primary, #d93025)',
+    fontSize: '10px',
+    fontWeight: 600,
+    lineHeight: '16px',
+    fontVariantNumeric: 'tabular-nums',
+  }
 }
 
 export function separatorStyle(wide) {

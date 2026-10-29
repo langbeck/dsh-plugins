@@ -605,7 +605,32 @@ check(stylesOk, 'every style prop is an object')
 check(ageStyle !== undefined && ageStyle.alignSelf === 'center', 'the last-update age is vertically centered')
 check(balanceLabelStyle !== undefined && balanceLabelStyle.fontSize === '11px', 'the balance label uses the larger label size')
 check(sessionLabelStyle !== undefined && sessionLabelStyle.fontSize === '11px', 'the session label uses the larger label size')
+check(balanceLabelStyle !== undefined && balanceLabelStyle.width === '52px', 'labels reserve a fixed column for their values')
+check(sessionLabelStyle !== undefined && sessionLabelStyle.width === '52px', 'session and limit labels share the same column')
 check(boldCurrency, 'the currency codes are bold')
+
+injected.costStore.set({ status: 'ready', sessionId: 's1', totalUsd: 1.68, limitUsd: 2, remainingUsd: 0.32, partial: false })
+const capTree = ReactFake.reset(() => pillRegistration.component(pillProps(true)))
+const capText = textOf(capTree).join(' ')
+check(capText.indexOf('row.limit') !== -1, 'wide block labels the limit row')
+check(capText.indexOf('$2.00') !== -1, 'wide block shows the cap amount')
+check(capText.indexOf('$0.32') !== -1, 'wide block shows the remaining amount')
+let remainingNode
+let limitLabelStyle
+walkTree(capTree, (node) => {
+  if (node.props === undefined) return
+  if (typeof node.props.children === 'string' && node.props.children.indexOf('row.remaining') === 0) remainingNode = node
+  if (node.props.children === 'row.limit') limitLabelStyle = node.props.style
+})
+check(remainingNode !== undefined && String(remainingNode.props.style.color).includes('state-success'), 'remaining budget is highlighted')
+check(limitLabelStyle !== undefined && limitLabelStyle.width === '52px', 'limit label aligns with the other labels')
+injected.costStore.set({ status: 'ready', sessionId: 's1', totalUsd: 2.1, limitUsd: 2, remainingUsd: 0, partial: false })
+const exhaustedTree = ReactFake.reset(() => pillRegistration.component(pillProps(true)))
+let exhaustedRemaining
+walkTree(exhaustedTree, (node) => {
+  if (node.props !== undefined && typeof node.props.children === 'string' && node.props.children.indexOf('row.remaining') === 0) exhaustedRemaining = node
+})
+check(exhaustedRemaining !== undefined && String(exhaustedRemaining.props.style.color).includes('state-error'), 'an exhausted budget is highlighted in red')
 
 const narrowTree = ReactFake.reset(() => pillRegistration.component(pillProps(false)))
 const narrowText = textOf(narrowTree).join(' ')

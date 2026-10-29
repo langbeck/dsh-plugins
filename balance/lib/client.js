@@ -175,7 +175,8 @@ var rowStyle = {
   width: "100%"
 };
 var rowLabelStyle = {
-  flex: "none",
+  flex: "0 0 52px",
+  width: "52px",
   fontWeight: 600,
   color: "var(--dsw-alias-label-tertiary)",
   fontSize: "11px",
@@ -213,6 +214,15 @@ var timeStyle = {
   lineHeight: "16px",
   fontVariantNumeric: "tabular-nums"
 };
+function remainingStyle(remainingUsd) {
+  return {
+    color: remainingUsd > 0 ? "var(--dsw-alias-state-success-primary, #2ea043)" : "var(--dsw-alias-state-error-primary, #d93025)",
+    fontSize: "10px",
+    fontWeight: 600,
+    lineHeight: "16px",
+    fontVariantNumeric: "tabular-nums"
+  };
+}
 function separatorStyle(wide) {
   return {
     display: wide ? "inline" : "none",
@@ -441,7 +451,7 @@ function BalanceRow(props) {
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: walletStyle, children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: amountStyle, children: formatUsd(cost.limitUsd) }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: codeStyle, children: "USD" }),
-          typeof cost.remainingUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: codeStyle, children: t("row.remaining", { amount: formatUsd(cost.remainingUsd) }) }) : null
+          typeof cost.remainingUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: remainingStyle(cost.remainingUsd), children: t("row.remaining", { amount: formatUsd(cost.remainingUsd) }) }) : null
         ] })
       ] }) : null
     ] }),

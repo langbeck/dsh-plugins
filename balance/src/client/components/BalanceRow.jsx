@@ -11,6 +11,7 @@ import {
   pillStyle,
   rowLabelStyle,
   rowStyle,
+  remainingStyle,
   separatorStyle,
   timeStyle,
   walletStyle,
@@ -122,7 +123,7 @@ export default function BalanceRow(props) {
               <span style={amountStyle}>{formatUsd(cost.limitUsd)}</span>
               <span style={codeStyle}>USD</span>
               {typeof cost.remainingUsd === 'number' ? (
-                <span style={codeStyle}>{t('row.remaining', { amount: formatUsd(cost.remainingUsd) })}</span>
+                <span style={remainingStyle(cost.remainingUsd)}>{t('row.remaining', { amount: formatUsd(cost.remainingUsd) })}</span>
               ) : null}
             </span>
           </div>
