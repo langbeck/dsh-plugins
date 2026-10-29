@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-import { COST_REFRESH_MS } from '../constants.js'
+import { COST_CHANGED_EVENT, COST_REFRESH_MS } from '../constants.js'
 import { useNow, useSnapshot } from '../lib/hooks.js'
 import { formatUsd, summaryText, visibleWallets, walletAmountText } from '../lib/money.js'
 import { compactTimeLabel, relativeTimeParts } from '../lib/time.js'
@@ -71,6 +71,15 @@ export default function BalanceRow(props) {
       clearInterval(timer)
     }
   }, [sessionId])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return undefined
+    const onCostChanged = () => {
+      if (typeof sessionId === 'string') void refreshCost(sessionId)
+    }
+    window.addEventListener(COST_CHANGED_EVENT, onCostChanged)
+    return () => window.removeEventListener(COST_CHANGED_EVENT, onCostChanged)
+  }, [sessionId, refreshCost])
 
   const wallets = visibleWallets(balance.wallets, config)
   if (balance.status !== 'ready' || wallets.length === 0) return null

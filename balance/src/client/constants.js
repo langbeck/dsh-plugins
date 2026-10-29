@@ -20,6 +20,7 @@ export const CURRENCY_SYMBOLS = { USD: '$', CNY: '¥' }
 
 export const COST_ROUTE = '/api/balance-session-cost'
 export const COST_REFRESH_MS = 60_000
+export const COST_CHANGED_EVENT = 'dsh-plugin-balance:cost-changed'
 
 /**
  * The sidebar footer lays its entries out in a single flex row. Wrapping that

@@ -46,6 +46,7 @@ var ROUTE = "/api/session-settings";
 var INJECT = ["slots", "locale"];
 var TRIGGER_ID = "session-settings";
 var OVERLAY_ID = "session-settings";
+var BALANCE_COST_CHANGED_EVENT = "dsh-plugin-balance:cost-changed";
 
 // src/client/lib/store.js
 function createSnapshotStore(initial) {
@@ -1001,6 +1002,9 @@ function SessionSettingsDialog(props) {
       const value = await saveCostCap(sessionId, limitUsd);
       setSnapshot(value);
       setCapDraft(value.costCap.limitUsd === null ? "" : String(value.costCap.limitUsd));
+      if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+        window.dispatchEvent(new CustomEvent(BALANCE_COST_CHANGED_EVENT, { detail: { sessionId } }));
+      }
     } catch (failure) {
       setActionError(t("cost.saveError"));
     } finally {

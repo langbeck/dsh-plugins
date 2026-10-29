@@ -60,6 +60,7 @@ var CURRENCY_ORDER = ["USD", "CNY"];
 var CURRENCY_SYMBOLS = { USD: "$", CNY: "\xA5" };
 var COST_ROUTE = "/api/balance-session-cost";
 var COST_REFRESH_MS = 6e4;
+var COST_CHANGED_EVENT = "dsh-plugin-balance:cost-changed";
 var LAYOUT_CSS = [
   'div:has(> [data-slot="sidebar.footer.action"] > [data-balance-pill]) {',
   "  flex-wrap: wrap;",
@@ -421,6 +422,14 @@ function BalanceRow(props) {
       clearInterval(timer);
     };
   }, [sessionId]);
+  (0, import_react2.useEffect)(() => {
+    if (typeof window === "undefined" || typeof window.addEventListener !== "function") return void 0;
+    const onCostChanged = () => {
+      if (typeof sessionId === "string") void refreshCost(sessionId);
+    };
+    window.addEventListener(COST_CHANGED_EVENT, onCostChanged);
+    return () => window.removeEventListener(COST_CHANGED_EVENT, onCostChanged);
+  }, [sessionId, refreshCost]);
   const wallets = visibleWallets(balance.wallets, config);
   if (balance.status !== "ready" || wallets.length === 0) return null;
   const ariaLabel = `${t("pill.aria")}: ${summaryText(wallets, config)}`;

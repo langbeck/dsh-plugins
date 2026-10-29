@@ -7,3 +7,4 @@ export const INJECT = ['slots', 'locale']
 
 export const TRIGGER_ID = 'session-settings'
 export const OVERLAY_ID = 'session-settings'
+export const BALANCE_COST_CHANGED_EVENT = 'dsh-plugin-balance:cost-changed'

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
+import { BALANCE_COST_CHANGED_EVENT } from '../constants.js'
 import { readSettings, applyPreset, saveBlockList, saveCostCap } from '../lib/api.js'
 import { collectSchemaFields, schemaDefaultHint, schemaTypeLabel } from '../lib/schema.js'
 import { sortTools } from '../lib/tools.js'
@@ -173,6 +174,9 @@ export default function SessionSettingsDialog(props) {
       const value = await saveCostCap(sessionId, limitUsd)
       setSnapshot(value)
       setCapDraft(value.costCap.limitUsd === null ? '' : String(value.costCap.limitUsd))
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent(BALANCE_COST_CHANGED_EVENT, { detail: { sessionId } }))
+      }
     } catch (failure) {
       setActionError(t('cost.saveError'))
     } finally {
