@@ -799,6 +799,12 @@ function createClient() {
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), "balance: dictionaries");
   const bindT = ctx.locale.bind(NS);
+  ctx.effect(() => ctx.on("command/executed", (sessionId, name) => {
+    if (name !== "limit") return;
+    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+      window.dispatchEvent(new CustomEvent(COST_CHANGED_EVENT, { detail: { sessionId } }));
+    }
+  }), "balance: limit command refresh");
   const configForm = ctx.configForms.get(ROW_ID);
   const configStore = createSnapshotStore(normalizeConfig(readConfigValue(configForm)));
   const balanceStore = createSnapshotStore({ status: "loading", wallets: [], error: void 0, updatedAt: void 0 });

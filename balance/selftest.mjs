@@ -394,8 +394,16 @@ askAnswer = { answers: [{ id: 'cost-cap', selected: ['Proceed once'] }] }
 const proceeded = await preStepHandler({ ...payload, step: 2 }, next)
 equal(proceeded.kind, 'enter', 'proceeding once allows the step')
 equal(nextCalls, 1, 'the guard delegates when proceeding')
-await preStepHandler({ ...payload, step: 3 }, next)
-equal(askCalls, 2, 'the same turn is not prompted again')
+askAnswer = { answers: [{ id: 'cost-cap', selected: ['Cancel'] }] }
+const nextStep = await preStepHandler({ ...payload, step: 3 }, next)
+equal(nextStep.kind, 'reject', 'Proceed once does not cover the rest of the turn')
+equal(askCalls, 3, 'the next step is prompted again')
+askAnswer = { answers: [{ id: 'cost-cap', selected: ['Allow turn'] }] }
+const allowedTurn = await preStepHandler({ ...payload, step: 4 }, next)
+equal(allowedTurn.kind, 'enter', 'Allow turn permits the step')
+const laterStep = await preStepHandler({ ...payload, step: 5 }, next)
+equal(laterStep.kind, 'enter', 'Allow turn covers the rest of the turn')
+equal(askCalls, 4, 'Allow turn does not prompt again in the same turn')
 askAnswers = [
   { answers: [{ id: 'cost-cap', selected: ['Increase limit'] }] },
   { answers: [{ id: 'cost-cap-amount', selected: ['$1.02'] }] },
@@ -516,6 +524,7 @@ const fakeClientContext = {
     if (typeof dispose === 'function') disposers.push(dispose)
     return dispose
   },
+  on: () => () => {},
   locale: {
     register: () => () => {},
     bind: () => (key) => key,

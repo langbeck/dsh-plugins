@@ -1,6 +1,6 @@
 import BalanceRow from './components/BalanceRow.jsx'
 import SettingsForm from './components/SettingsForm.jsx'
-import { CONFIG_KEY, INJECT, LAYOUT_CSS, NS, ROW_ID } from './constants.js'
+import { CONFIG_KEY, COST_CHANGED_EVENT, INJECT, LAYOUT_CSS, NS, ROW_ID } from './constants.js'
 import { normalizeConfig } from './lib/config.js'
 import { createCostTracker } from './lib/cost.js'
 import { sumWallets } from './lib/money.js'
@@ -22,6 +22,13 @@ export default function createClient() {
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), 'balance: dictionaries')
   const bindT = ctx.locale.bind(NS)
+
+  ctx.effect(() => ctx.on('command/executed', (sessionId, name) => {
+    if (name !== 'limit') return
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent(COST_CHANGED_EVENT, { detail: { sessionId } }))
+    }
+  }), 'balance: limit command refresh')
 
   const configForm = ctx.configForms.get(ROW_ID)
   const configStore = createSnapshotStore(normalizeConfig(readConfigValue(configForm)))

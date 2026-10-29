@@ -250,7 +250,7 @@ export function apply(ctx, config) {
         id: 'cost-cap',
         header: 'Session cost cap',
         question: 'This Session has reached its $' + limit.toFixed(2) + ' cost cap (current estimate $' + cost.totalUsd.toFixed(2) + '). Continue this turn?',
-        options: [{ label: 'Proceed once' }, { label: 'Increase limit' }, { label: 'Cancel' }],
+        options: [{ label: 'Proceed once' }, { label: 'Allow turn' }, { label: 'Increase limit' }, { label: 'Cancel' }],
       }])
     } catch (error) {
       return { kind: 'reject' }
@@ -258,7 +258,8 @@ export function apply(ctx, config) {
     const selected = answer !== null && answer !== undefined && Array.isArray(answer.answers) && Array.isArray(answer.answers[0]?.selected)
       ? answer.answers[0].selected[0]
       : undefined
-    if (selected === 'Proceed once') {
+    if (selected === 'Proceed once') return next()
+    if (selected === 'Allow turn') {
       limitApprovedTurns.set(sessionId, payload.turn)
       return next()
     }
@@ -294,7 +295,6 @@ export function apply(ctx, config) {
       } catch (error) {
         return { kind: 'reject' }
       }
-      limitApprovedTurns.set(sessionId, payload.turn)
       return next()
     }
     return { kind: 'reject' }
