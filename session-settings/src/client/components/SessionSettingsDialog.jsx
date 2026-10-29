@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { readSettings, applyPreset, saveAllowList } from '../lib/api.js'
+import { readSettings, applyPreset, savePolicies } from '../lib/api.js'
 import {
   backdropStyle,
   bodyStyle,
-  chipRemoveStyle,
-  chipRowStyle,
-  chipStyle,
   codeBlockStyle,
+  dangerButtonStyle,
   emptyStyle,
   errorStyle,
   fieldStyle,
@@ -21,10 +19,12 @@ import {
   listItemStyle,
   metaBadgeStyle,
   monoNameStyle,
-  optionDescriptionStyle,
-  optionStyle,
-  optionTitleStyle,
   panelStyle,
+  policyButtonStyle,
+  presetDescriptionStyle,
+  presetNameStyle,
+  presetOptionStyle,
+  presetRowStyle,
   primaryButtonStyle,
   rowStyle,
   secondaryButtonStyle,
@@ -39,7 +39,13 @@ import {
 
 const TABS = ['settings', 'tools', 'commands']
 
-/** The tabbed Session Settings dialog. Read-only tool/command inspection plus preset and allow-list writes. */
+const PRESET_LABELS = {
+  'read-only': 'preset.readOnly',
+  'workspace-write': 'preset.workspaceWrite',
+  'danger-full-access': 'preset.fullAccess',
+}
+
+/** The tabbed Session Settings dialog. Read-only inspection plus preset and tool-policy writes. */
 export default function SessionSettingsDialog(props) {
   const { sessionId, t, onClose } = props
   const [tab, setTab] = useState('settings')
@@ -50,7 +56,6 @@ export default function SessionSettingsDialog(props) {
   const [busy, setBusy] = useState(false)
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState('')
-  const [allowDraft, setAllowDraft] = useState('')
   const [pendingPreset, setPendingPreset] = useState('')
 
   useEffect(() => {
@@ -109,11 +114,11 @@ export default function SessionSettingsDialog(props) {
     }
   }
 
-  async function changeAllowList(tools) {
+  async function changePolicies(allow, block) {
     setBusy(true)
     setActionError('')
     try {
-      const value = await saveAllowList(sessionId, tools)
+      const value = await savePolicies(sessionId, allow, block)
       setSnapshot(value)
     } catch (failure) {
       setActionError(t('settings.saveError'))
@@ -122,21 +127,31 @@ export default function SessionSettingsDialog(props) {
     }
   }
 
-  function addAllowed() {
-    const name = allowDraft.trim()
-    if (name === '' || snapshot === undefined) return
-    const current = snapshot.allowList.session
-    if (current.includes(name)) {
-      setAllowDraft('')
-      return
+  function setToolPolicy(name, action) {
+    if (snapshot === undefined || busy) return
+    const allow = new Set(snapshot.allowList.session)
+    const block = new Set(snapshot.blockList.session)
+    const configured = snapshot.allowList.configured.includes(name)
+    const allowed = allow.has(name)
+    const blocked = block.has(name)
+    if (action === 'allow') {
+      if (allowed) allow.delete(name)
+      else if (configured && !blocked) return
+      else {
+        allow.add(name)
+        block.delete(name)
+      }
+    } else if (action === 'block') {
+      if (blocked) block.delete(name)
+      else {
+        block.add(name)
+        allow.delete(name)
+      }
+    } else if (action === 'reset') {
+      allow.delete(name)
+      block.delete(name)
     }
-    setAllowDraft('')
-    void changeAllowList([...current, name])
-  }
-
-  function removeAllowed(name) {
-    if (snapshot === undefined) return
-    void changeAllowList(snapshot.allowList.session.filter((tool) => tool !== name))
+    void changePolicies(Array.from(allow), Array.from(block))
   }
 
   const tools = useMemo(() => {
@@ -219,14 +234,20 @@ export default function SessionSettingsDialog(props) {
                   pendingPreset={pendingPreset}
                   setPendingPreset={setPendingPreset}
                   changePreset={changePreset}
-                  allowDraft={allowDraft}
-                  setAllowDraft={setAllowDraft}
-                  addAllowed={addAllowed}
-                  removeAllowed={removeAllowed}
                 />
               ) : null}
               {tab === 'tools' ? (
-                <ToolsTab snapshot={snapshot} t={t} search={search} setSearch={setSearch} tools={tools} expanded={expanded} setExpanded={setExpanded} />
+                <ToolsTab
+                  snapshot={snapshot}
+                  t={t}
+                  busy={busy}
+                  search={search}
+                  setSearch={setSearch}
+                  tools={tools}
+                  expanded={expanded}
+                  setExpanded={setExpanded}
+                  onPolicy={setToolPolicy}
+                />
               ) : null}
               {tab === 'commands' ? (
                 <CommandsTab snapshot={snapshot} t={t} search={search} setSearch={setSearch} commands={commands} />
@@ -252,7 +273,7 @@ export default function SessionSettingsDialog(props) {
 }
 
 function SettingsTab(props) {
-  const { snapshot, t, busy, pendingPreset, setPendingPreset, changePreset, allowDraft, setAllowDraft, addAllowed, removeAllowed } = props
+  const { snapshot, t, busy, pendingPreset, setPendingPreset, changePreset } = props
   const catalog = snapshot.preset.catalog
   return (
     <div>
@@ -260,25 +281,33 @@ function SettingsTab(props) {
         <h3 style={sectionTitleStyle}>{t('settings.permissions')}</h3>
         <div style={fieldStyle}>
           <span style={labelStyle}>{t('settings.preset')}</span>
-          {catalog.map((option) => (
-            <label key={option.value} style={optionStyle(snapshot.preset.current === option.value)}>
-              <input
-                type="radio"
-                name="permission-preset"
-                checked={snapshot.preset.current === option.value}
-                disabled={busy}
-                onChange={() => {
-                  if (option.value === snapshot.preset.current) return
-                  if (option.value === 'danger-full-access') setPendingPreset(option.value)
-                  else void changePreset(option.value)
-                }}
-              />
-              <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={optionTitleStyle}>{option.name}</span>
-                {option.description === undefined || option.description === '' ? null : <span style={optionDescriptionStyle}>{option.description}</span>}
-              </span>
-            </label>
-          ))}
+          <div style={presetRowStyle}>
+            {catalog.map((option) => {
+              const dangerous = option.value === 'danger-full-access'
+              const selected = snapshot.preset.current === option.value
+              const label = PRESET_LABELS[option.value] === undefined ? option.name : t(PRESET_LABELS[option.value])
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={selected}
+                  disabled={busy}
+                  title={option.description}
+                  style={presetOptionStyle(selected, dangerous)}
+                  onClick={() => {
+                    if (option.value === snapshot.preset.current) return
+                    if (dangerous) setPendingPreset(option.value)
+                    else void changePreset(option.value)
+                  }}
+                >
+                  <span style={presetNameStyle}>{label}</span>
+                  {option.description === undefined || option.description === '' ? null : (
+                    <span style={dangerous ? { ...presetDescriptionStyle, color: 'var(--dsw-alias-state-error-primary, #d93025)' } : presetDescriptionStyle}>{option.description}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
           {snapshot.preset.current === 'custom' ? <p style={hintStyle}>{t('settings.custom')}</p> : null}
         </div>
 
@@ -286,7 +315,7 @@ function SettingsTab(props) {
           <div style={sectionStyle}>
             <p style={warningStyle}>{t('settings.fullAccessWarning')}</p>
             <div style={rowStyle}>
-              <button type="button" style={primaryButtonStyle(busy)} disabled={busy} onClick={() => void changePreset('danger-full-access')}>
+              <button type="button" style={dangerButtonStyle(busy)} disabled={busy} onClick={() => void changePreset('danger-full-access')}>
                 {t('settings.confirmFullAccess')}
               </button>
               <button type="button" style={secondaryButtonStyle(busy)} disabled={busy} onClick={() => setPendingPreset('')}>
@@ -302,70 +331,19 @@ function SettingsTab(props) {
           <span style={metaBadgeStyle}>{t('settings.approval')}: {snapshot.knobs.approval ?? '—'}</span>
         </div>
       </section>
-
-      <section style={sectionStyle}>
-        <h3 style={sectionTitleStyle}>{t('settings.allowList')}</h3>
-        <p style={hintStyle}>{t('settings.allowListHint')}</p>
-        <p style={warningStyle}>{t('settings.allowListWarning')}</p>
-        {snapshot.allowList.configured.length === 0 ? null : (
-          <div style={fieldStyle}>
-            <span style={labelStyle}>{t('settings.configured')}</span>
-            <div style={chipRowStyle}>
-              {snapshot.allowList.configured.map((tool) => (
-                <span key={tool} style={chipStyle}>{tool}</span>
-              ))}
-            </div>
-          </div>
-        )}
-        <div style={fieldStyle}>
-          <span style={labelStyle}>{t('settings.sessionOnly')}</span>
-          {snapshot.allowList.session.length === 0 ? <p style={hintStyle}>{t('settings.noAllowList')}</p> : (
-            <div style={chipRowStyle}>
-              {snapshot.allowList.session.map((tool) => (
-                <span key={tool} style={chipStyle}>
-                  {tool}
-                  <button
-                    type="button"
-                    aria-label={t('settings.remove') + ' ' + tool}
-                    title={t('settings.remove')}
-                    style={chipRemoveStyle}
-                    disabled={busy}
-                    onClick={() => removeAllowed(tool)}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        <div style={rowStyle}>
-          <input
-            type="text"
-            value={allowDraft}
-            placeholder={t('settings.addPlaceholder')}
-            aria-label={t('settings.addPlaceholder')}
-            style={{ ...inputStyle(), flex: '1 1 220px' }}
-            disabled={busy}
-            onChange={(event) => setAllowDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') addAllowed()
-            }}
-          />
-          <button type="button" style={primaryButtonStyle(busy || allowDraft.trim() === '')} disabled={busy || allowDraft.trim() === ''} onClick={addAllowed}>
-            {t('settings.add')}
-          </button>
-        </div>
-        <p style={hintStyle}>{t('settings.memoryWarning')}</p>
-      </section>
     </div>
   )
 }
 
 function ToolsTab(props) {
-  const { t, search, setSearch, tools, expanded, setExpanded } = props
+  const { snapshot, t, busy, search, setSearch, tools, expanded, setExpanded, onPolicy } = props
+  const visibleNames = new Set(snapshot.tools.map((tool) => tool.name))
+  const controlled = Array.from(new Set([...snapshot.allowList.session, ...snapshot.blockList.session])).filter((name) => !visibleNames.has(name))
   return (
     <div style={sectionStyle}>
+      <p style={hintStyle}>{t('settings.allowListHint')}</p>
+      <p style={warningStyle}>{t('settings.allowListWarning')}</p>
+      <p style={hintStyle}>{t('tools.policyHint')}</p>
       <input
         type="search"
         value={search}
@@ -376,13 +354,35 @@ function ToolsTab(props) {
       />
       {tools.length === 0 ? <p style={emptyStyle}>{t('tools.empty')}</p> : tools.map((tool) => {
         const open = expanded === 'tool:' + tool.name
+        const configured = snapshot.allowList.configured.includes(tool.name)
+        const blocked = snapshot.blockList.session.includes(tool.name)
+        const allowed = !blocked && (snapshot.allowList.session.includes(tool.name) || configured)
         return (
           <div key={tool.name} style={listItemStyle(open)}>
             <button type="button" style={itemHeaderStyle} onClick={() => setExpanded(open ? '' : 'tool:' + tool.name)}>
               <span style={monoNameStyle}>{tool.name}</span>
               {tool.deferLoading ? <span style={metaBadgeStyle}>{t('tools.deferLoading')}</span> : null}
+              {configured ? <span style={metaBadgeStyle}>{t('tools.configuredDefault')}</span> : null}
               <span style={itemDescriptionStyle}>{tool.description}</span>
             </button>
+            <div style={rowStyle}>
+              <button
+                type="button"
+                style={policyButtonStyle(allowed, 'allow')}
+                disabled={busy}
+                onClick={() => onPolicy(tool.name, 'allow')}
+              >
+                {t('tools.allow')}
+              </button>
+              <button
+                type="button"
+                style={policyButtonStyle(blocked, 'block')}
+                disabled={busy}
+                onClick={() => onPolicy(tool.name, 'block')}
+              >
+                {t('tools.block')}
+              </button>
+            </div>
             {open ? (
               <div style={sectionStyle}>
                 <span style={labelStyle}>{t('tools.parameters')}</span>
@@ -410,6 +410,29 @@ function ToolsTab(props) {
           </div>
         )
       })}
+      {controlled.length === 0 ? null : (
+        <section style={sectionStyle}>
+          <h3 style={sectionTitleStyle}>{t('tools.controlled')}</h3>
+          {controlled.map((name) => {
+            const blocked = snapshot.blockList.session.includes(name)
+            return (
+              <div key={name} style={rowStyle}>
+                <span style={monoNameStyle}>{name}</span>
+                <button type="button" style={policyButtonStyle(!blocked, 'allow')} disabled={busy} onClick={() => onPolicy(name, 'allow')}>
+                  {t('tools.allow')}
+                </button>
+                <button type="button" style={policyButtonStyle(blocked, 'block')} disabled={busy} onClick={() => onPolicy(name, 'block')}>
+                  {t('tools.block')}
+                </button>
+                <button type="button" style={secondaryButtonStyle(busy)} disabled={busy} onClick={() => onPolicy(name, 'reset')}>
+                  {t('tools.reset')}
+                </button>
+              </div>
+            )
+          })}
+        </section>
+      )}
+      <p style={hintStyle}>{t('settings.memoryWarning')}</p>
     </div>
   )
 }

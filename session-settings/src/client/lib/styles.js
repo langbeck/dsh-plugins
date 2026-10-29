@@ -154,6 +154,83 @@ export function optionStyle(selected) {
   }
 }
 
+export const presetRowStyle = {
+  display: 'flex',
+  flexDirection: 'row',
+  alignItems: 'stretch',
+  gap: '8px',
+  flexWrap: 'nowrap',
+  overflowX: 'auto',
+}
+
+export function presetOptionStyle(selected, dangerous) {
+  const color = dangerous ? 'var(--dsw-alias-state-error-primary, #d93025)' : 'var(--dsw-alias-label-primary)'
+  return {
+    flex: '1 1 0',
+    minWidth: '132px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: '3px',
+    padding: '10px 11px',
+    border: '1px solid ' + (selected ? color : dangerous ? color : 'var(--dsw-alias-border-l3)'),
+    borderRadius: '8px',
+    background: selected ? 'var(--dsw-alias-bg-layer-2)' : 'transparent',
+    color,
+    font: 'inherit',
+    textAlign: 'left',
+    cursor: 'pointer',
+    boxSizing: 'border-box',
+  }
+}
+
+export const presetNameStyle = {
+  fontSize: '12px',
+  lineHeight: '17px',
+  fontWeight: 600,
+}
+
+export const presetDescriptionStyle = {
+  fontSize: '11px',
+  lineHeight: '15px',
+  color: 'var(--dsw-alias-label-tertiary)',
+}
+
+export function policyButtonStyle(active, kind) {
+  const color = kind === 'block'
+    ? 'var(--dsw-alias-state-error-primary, #d93025)'
+    : 'var(--dsw-alias-state-success-primary, #1a7f37)'
+  return {
+    height: '22px',
+    padding: '0 8px',
+    border: '0.5px solid ' + (active ? color : 'var(--dsw-alias-border-l3)'),
+    borderRadius: '6px',
+    background: active ? 'var(--dsw-alias-bg-layer-2)' : 'transparent',
+    color: active ? color : 'var(--dsw-alias-label-tertiary)',
+    font: 'inherit',
+    fontSize: '11px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    opacity: 1,
+  }
+}
+
+export function dangerButtonStyle(disabled) {
+  return {
+    height: '30px',
+    padding: '0 12px',
+    border: '1px solid var(--dsw-alias-state-error-primary, #d93025)',
+    borderRadius: '7px',
+    background: 'transparent',
+    color: 'var(--dsw-alias-state-error-primary, #d93025)',
+    font: 'inherit',
+    fontSize: '12px',
+    fontWeight: 500,
+    cursor: disabled ? 'default' : 'pointer',
+    opacity: disabled ? 0.6 : 1,
+  }
+}
+
 export const optionTitleStyle = {
   fontSize: '13px',
   lineHeight: '18px',

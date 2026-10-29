@@ -12,6 +12,8 @@ import vm from 'node:vm'
 
 import * as host from './src/index.js'
 import { commandView, foldRecentToolCalls, mergeToolHistory, toolView } from './src/tools.js'
+import { EN, ZH } from './src/client/locale.js'
+import { policyButtonStyle, presetOptionStyle, presetRowStyle } from './src/client/lib/styles.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 let checks = 0
@@ -133,15 +135,38 @@ check(badPreset.ok === false, 'unknown presets are rejected')
 const presetValue = await callHost({ sessionId: 'session-1', action: 'preset', preset: 'danger-full-access' })
 check(presetValue.ok === true, 'a configured preset is accepted')
 equal(selectedPreset, 'danger-full-access', 'the preset service receives the selection')
-const allowedValue = await callHost({ sessionId: 'session-1', action: 'allowlist', tools: ['plugin_manager'] })
-check(allowedValue.ok === true, 'allow-list write returns ok')
-equal(allowedValue.value.allowList.session.join(','), 'plugin_manager', 'allow-list write persists in memory')
+const policiesValue = await callHost({ sessionId: 'session-1', action: 'policies', allow: ['plugin_manager'], block: ['read_file'] })
+check(policiesValue.ok === true, 'tool-policy write returns ok')
+equal(policiesValue.value.allowList.session.join(','), 'plugin_manager', 'allow list persists in memory')
+equal(policiesValue.value.blockList.session.join(','), 'read_file', 'block list persists in memory')
 let nextCalled = false
 const allowed = await approvalHandler({ toolName: 'plugin_manager', agent: { id: 'session-1' } }, async () => { nextCalled = true; return 'rejected' })
-equal(allowed, 'allowed-once', 'listed tool approvals resolve allowed-once')
+equal(allowed, 'allowed-once', 'allowed tool approvals resolve allowed-once')
+const blocked = await approvalHandler({ toolName: 'read_file', agent: { id: 'session-1' } }, async () => { nextCalled = true; return 'rejected' })
+equal(blocked, 'rejected', 'blocked tool approvals resolve rejected')
 const unlisted = await approvalHandler({ toolName: 'bash', agent: { id: 'session-1' } }, async () => { nextCalled = true; return 'rejected' })
 equal(unlisted, 'rejected', 'unlisted tool approvals delegate to the next answerer')
 check(nextCalled, 'unlisted approvals call next')
+const resetValue = await callHost({ sessionId: 'session-1', action: 'policies', allow: [], block: [] })
+equal(resetValue.value.allowList.session.length + resetValue.value.blockList.session.length, 0, 'empty policy lists reset both controls')
+
+// ---------------------------------------------------------------------------
+// Presentation requirements
+// ---------------------------------------------------------------------------
+
+equal(EN['preset.readOnly'], 'Read only', 'English friendly name for Read only')
+equal(EN['preset.workspaceWrite'], 'Workspace write', 'English friendly name for Workspace write')
+equal(EN['preset.fullAccess'], 'Full access', 'English friendly name for Full access')
+equal(ZH['preset.fullAccess'], '完全访问', 'Chinese friendly name for Full access')
+equal(presetRowStyle.flexDirection, 'row', 'preset options are laid out in one row')
+equal(presetRowStyle.flexWrap, 'nowrap', 'preset options stay side by side')
+const dangerousStyle = presetOptionStyle(false, true)
+check(String(dangerousStyle.color).includes('state-error'), 'Full access uses the error color for its font')
+check(String(dangerousStyle.border).includes('state-error'), 'Full access uses the error color for its border')
+const allowStyle = policyButtonStyle(true, 'allow')
+const blockStyle = policyButtonStyle(true, 'block')
+check(String(allowStyle.color).includes('state-success'), 'active Allow uses the success color')
+check(String(blockStyle.color).includes('state-error'), 'active Block uses the error color')
 
 // ---------------------------------------------------------------------------
 // Generated Client bundle

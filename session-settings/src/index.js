@@ -41,6 +41,7 @@ const RECENT_CALLS = 8
 export function apply(ctx, config) {
   const defaults = sanitizeTools(config !== null && config !== undefined ? config.defaultAllowedTools : undefined)
   const sessionAllowLists = new Map()
+  const sessionBlockLists = new Map()
 
   function queryService() {
     try {
@@ -143,6 +144,9 @@ export function apply(ctx, config) {
         session: Array.from(sessionAllowLists.get(sessionId) ?? []),
         effective: effectiveAllow(sessionId),
       },
+      blockList: {
+        session: Array.from(sessionBlockLists.get(sessionId) ?? []),
+      },
       persistence: 'memory',
     }
   }
@@ -160,11 +164,14 @@ export function apply(ctx, config) {
       ctx.permissionPresets.set(session, name)
       return snapshot(sessionId)
     }
-    if (action === 'allowlist') {
+    if (action === 'policies') {
       sessionOf(sessionId)
-      const tools = sanitizeTools(body.tools)
-      if (tools.length === 0) sessionAllowLists.delete(sessionId)
-      else sessionAllowLists.set(sessionId, tools)
+      const blocked = new Set(sanitizeTools(body.block))
+      const allowed = sanitizeTools(body.allow).filter((tool) => !blocked.has(tool))
+      if (allowed.length === 0) sessionAllowLists.delete(sessionId)
+      else sessionAllowLists.set(sessionId, allowed)
+      if (blocked.size === 0) sessionBlockLists.delete(sessionId)
+      else sessionBlockLists.set(sessionId, Array.from(blocked))
       return snapshot(sessionId)
     }
     throw new Error('Unknown action: ' + String(action))
@@ -194,6 +201,7 @@ export function apply(ctx, config) {
     if (request === null || request === undefined || typeof request.toolName !== 'string') return next()
     const sessionId = request.agent !== null && request.agent !== undefined ? request.agent.id : undefined
     if (typeof sessionId !== 'string') return next()
+    if ((sessionBlockLists.get(sessionId) ?? []).includes(request.toolName)) return 'rejected'
     return effectiveAllow(sessionId).includes(request.toolName) ? 'allowed-once' : next()
   }, true), 'session-settings: approval allow-list')
 }

@@ -27,6 +27,6 @@ export function applyPreset(sessionId, preset) {
   return post({ sessionId, action: 'preset', preset })
 }
 
-export function saveAllowList(sessionId, tools) {
-  return post({ sessionId, action: 'allowlist', tools })
+export function savePolicies(sessionId, allow, block) {
+  return post({ sessionId, action: 'policies', allow, block })
 }

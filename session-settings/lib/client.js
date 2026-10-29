@@ -81,6 +81,9 @@ var EN = {
   "common.cancel": "Cancel",
   "settings.permissions": "Permissions",
   "settings.preset": "Permission preset",
+  "preset.readOnly": "Read only",
+  "preset.workspaceWrite": "Workspace write",
+  "preset.fullAccess": "Full access",
   "settings.custom": "Custom",
   "settings.effective": "Effective",
   "settings.sandbox": "Sandbox",
@@ -100,6 +103,12 @@ var EN = {
   "settings.memoryWarning": "The allow-list is kept in Host memory and resets when DSH restarts.",
   "settings.noAllowList": "No tools are auto-approved.",
   "settings.saveError": "Could not save the change.",
+  "tools.allow": "Allow",
+  "tools.block": "Block",
+  "tools.configuredDefault": "profile default",
+  "tools.policyHint": "Allow auto-approves this tool for the Session; Block rejects its approval requests. Clicking the active choice resets it to neutral.",
+  "tools.controlled": "Controlled tools not currently visible",
+  "tools.reset": "Reset",
   "tools.search": "Search tools\u2026",
   "tools.empty": "No tools are visible for this Session.",
   "tools.deferLoading": "deferred",
@@ -131,6 +140,9 @@ var ZH = {
   "common.cancel": "\u53D6\u6D88",
   "settings.permissions": "\u6743\u9650",
   "settings.preset": "\u6743\u9650\u9884\u8BBE",
+  "preset.readOnly": "\u53EA\u8BFB",
+  "preset.workspaceWrite": "\u5DE5\u4F5C\u533A\u5199\u5165",
+  "preset.fullAccess": "\u5B8C\u5168\u8BBF\u95EE",
   "settings.custom": "\u81EA\u5B9A\u4E49",
   "settings.effective": "\u5F53\u524D\u751F\u6548",
   "settings.sandbox": "\u6C99\u7BB1",
@@ -150,6 +162,12 @@ var ZH = {
   "settings.memoryWarning": "\u5141\u8BB8\u5217\u8868\u4FDD\u5B58\u5728 Host \u5185\u5B58\u4E2D\uFF0CDSH \u91CD\u542F\u540E\u4F1A\u91CD\u7F6E\u3002",
   "settings.noAllowList": "\u6CA1\u6709\u81EA\u52A8\u6279\u51C6\u7684\u5DE5\u5177\u3002",
   "settings.saveError": "\u65E0\u6CD5\u4FDD\u5B58\u66F4\u6539\u3002",
+  "tools.allow": "\u5141\u8BB8",
+  "tools.block": "\u963B\u6B62",
+  "tools.configuredDefault": "\u914D\u7F6E\u9ED8\u8BA4",
+  "tools.policyHint": "\u5141\u8BB8\u4F1A\u4E3A\u6B64\u4F1A\u8BDD\u81EA\u52A8\u6279\u51C6\u8BE5\u5DE5\u5177\uFF1B\u963B\u6B62\u4F1A\u62D2\u7EDD\u5176\u5BA1\u6279\u8BF7\u6C42\u3002\u518D\u6B21\u70B9\u51FB\u5DF2\u9009\u4E2D\u7684\u9009\u9879\u53EF\u6062\u590D\u4E3A\u4E2D\u6027\u3002",
+  "tools.controlled": "\u5F53\u524D\u4E0D\u53EF\u89C1\u7684\u5DF2\u63A7\u5236\u5DE5\u5177",
+  "tools.reset": "\u91CD\u7F6E",
   "tools.search": "\u641C\u7D22\u5DE5\u5177\u2026",
   "tools.empty": "\u6B64\u4F1A\u8BDD\u6CA1\u6709\u53EF\u89C1\u5DE5\u5177\u3002",
   "tools.deferLoading": "\u5EF6\u8FDF\u52A0\u8F7D",
@@ -295,28 +313,75 @@ var errorStyle = {
   lineHeight: "18px",
   color: "var(--dsw-alias-state-error-primary, #d93025)"
 };
-function optionStyle(selected) {
+var presetRowStyle = {
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "stretch",
+  gap: "8px",
+  flexWrap: "nowrap",
+  overflowX: "auto"
+};
+function presetOptionStyle(selected, dangerous) {
+  const color = dangerous ? "var(--dsw-alias-state-error-primary, #d93025)" : "var(--dsw-alias-label-primary)";
   return {
+    flex: "1 1 0",
+    minWidth: "132px",
     display: "flex",
+    flexDirection: "column",
     alignItems: "flex-start",
-    gap: "9px",
-    padding: "8px 10px",
-    border: "0.5px solid " + (selected ? "var(--dsw-alias-label-primary)" : "var(--dsw-alias-border-l3)"),
+    gap: "3px",
+    padding: "10px 11px",
+    border: "1px solid " + (selected ? color : dangerous ? color : "var(--dsw-alias-border-l3)"),
     borderRadius: "8px",
     background: selected ? "var(--dsw-alias-bg-layer-2)" : "transparent",
-    cursor: "pointer"
+    color,
+    font: "inherit",
+    textAlign: "left",
+    cursor: "pointer",
+    boxSizing: "border-box"
   };
 }
-var optionTitleStyle = {
-  fontSize: "13px",
-  lineHeight: "18px",
-  fontWeight: 500
-};
-var optionDescriptionStyle = {
+var presetNameStyle = {
   fontSize: "12px",
   lineHeight: "17px",
+  fontWeight: 600
+};
+var presetDescriptionStyle = {
+  fontSize: "11px",
+  lineHeight: "15px",
   color: "var(--dsw-alias-label-tertiary)"
 };
+function policyButtonStyle(active, kind) {
+  const color = kind === "block" ? "var(--dsw-alias-state-error-primary, #d93025)" : "var(--dsw-alias-state-success-primary, #1a7f37)";
+  return {
+    height: "22px",
+    padding: "0 8px",
+    border: "0.5px solid " + (active ? color : "var(--dsw-alias-border-l3)"),
+    borderRadius: "6px",
+    background: active ? "var(--dsw-alias-bg-layer-2)" : "transparent",
+    color: active ? color : "var(--dsw-alias-label-tertiary)",
+    font: "inherit",
+    fontSize: "11px",
+    fontWeight: 500,
+    cursor: "pointer",
+    opacity: 1
+  };
+}
+function dangerButtonStyle(disabled) {
+  return {
+    height: "30px",
+    padding: "0 12px",
+    border: "1px solid var(--dsw-alias-state-error-primary, #d93025)",
+    borderRadius: "7px",
+    background: "transparent",
+    color: "var(--dsw-alias-state-error-primary, #d93025)",
+    font: "inherit",
+    fontSize: "12px",
+    fontWeight: 500,
+    cursor: disabled ? "default" : "pointer",
+    opacity: disabled ? 0.6 : 1
+  };
+}
 var fieldStyle = {
   display: "flex",
   flexDirection: "column",
@@ -368,38 +433,6 @@ function secondaryButtonStyle(disabled) {
     opacity: disabled ? 0.6 : 1
   };
 }
-var chipRowStyle = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "6px"
-};
-var chipStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "5px",
-  height: "24px",
-  padding: "0 4px 0 8px",
-  border: "0.5px solid var(--dsw-alias-border-l3)",
-  borderRadius: "12px",
-  background: "var(--dsw-alias-bg-layer-2)",
-  fontSize: "11px",
-  fontFamily: "var(--dsw-font-mono, ui-monospace, monospace)"
-};
-var chipRemoveStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "18px",
-  height: "18px",
-  padding: 0,
-  border: "none",
-  borderRadius: "50%",
-  background: "transparent",
-  color: "var(--dsw-alias-label-tertiary)",
-  cursor: "pointer",
-  fontSize: "14px",
-  lineHeight: "14px"
-};
 var rowStyle = {
   display: "flex",
   alignItems: "center",
@@ -531,13 +564,18 @@ function readSettings(sessionId) {
 function applyPreset(sessionId, preset) {
   return post({ sessionId, action: "preset", preset });
 }
-function saveAllowList(sessionId, tools) {
-  return post({ sessionId, action: "allowlist", tools });
+function savePolicies(sessionId, allow, block) {
+  return post({ sessionId, action: "policies", allow, block });
 }
 
 // src/client/components/SessionSettingsDialog.jsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
 var TABS = ["settings", "tools", "commands"];
+var PRESET_LABELS = {
+  "read-only": "preset.readOnly",
+  "workspace-write": "preset.workspaceWrite",
+  "danger-full-access": "preset.fullAccess"
+};
 function SessionSettingsDialog(props) {
   const { sessionId, t, onClose } = props;
   const [tab, setTab] = (0, import_react2.useState)("settings");
@@ -548,7 +586,6 @@ function SessionSettingsDialog(props) {
   const [busy, setBusy] = (0, import_react2.useState)(false);
   const [search, setSearch] = (0, import_react2.useState)("");
   const [expanded, setExpanded] = (0, import_react2.useState)("");
-  const [allowDraft, setAllowDraft] = (0, import_react2.useState)("");
   const [pendingPreset, setPendingPreset] = (0, import_react2.useState)("");
   (0, import_react2.useEffect)(() => {
     let cancelled = false;
@@ -600,11 +637,11 @@ function SessionSettingsDialog(props) {
       setBusy(false);
     }
   }
-  async function changeAllowList(tools2) {
+  async function changePolicies(allow, block) {
     setBusy(true);
     setActionError("");
     try {
-      const value = await saveAllowList(sessionId, tools2);
+      const value = await savePolicies(sessionId, allow, block);
       setSnapshot(value);
     } catch (failure) {
       setActionError(t("settings.saveError"));
@@ -612,20 +649,31 @@ function SessionSettingsDialog(props) {
       setBusy(false);
     }
   }
-  function addAllowed() {
-    const name = allowDraft.trim();
-    if (name === "" || snapshot === void 0) return;
-    const current = snapshot.allowList.session;
-    if (current.includes(name)) {
-      setAllowDraft("");
-      return;
+  function setToolPolicy(name, action) {
+    if (snapshot === void 0 || busy) return;
+    const allow = new Set(snapshot.allowList.session);
+    const block = new Set(snapshot.blockList.session);
+    const configured = snapshot.allowList.configured.includes(name);
+    const allowed = allow.has(name);
+    const blocked = block.has(name);
+    if (action === "allow") {
+      if (allowed) allow.delete(name);
+      else if (configured && !blocked) return;
+      else {
+        allow.add(name);
+        block.delete(name);
+      }
+    } else if (action === "block") {
+      if (blocked) block.delete(name);
+      else {
+        block.add(name);
+        allow.delete(name);
+      }
+    } else if (action === "reset") {
+      allow.delete(name);
+      block.delete(name);
     }
-    setAllowDraft("");
-    void changeAllowList([...current, name]);
-  }
-  function removeAllowed(name) {
-    if (snapshot === void 0) return;
-    void changeAllowList(snapshot.allowList.session.filter((tool) => tool !== name));
+    void changePolicies(Array.from(allow), Array.from(block));
   }
   const tools = (0, import_react2.useMemo)(() => {
     if (snapshot === void 0) return [];
@@ -694,14 +742,23 @@ function SessionSettingsDialog(props) {
                     busy,
                     pendingPreset,
                     setPendingPreset,
-                    changePreset,
-                    allowDraft,
-                    setAllowDraft,
-                    addAllowed,
-                    removeAllowed
+                    changePreset
                   }
                 ) : null,
-                tab === "tools" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolsTab, { snapshot, t, search, setSearch, tools, expanded, setExpanded }) : null,
+                tab === "tools" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                  ToolsTab,
+                  {
+                    snapshot,
+                    t,
+                    busy,
+                    search,
+                    setSearch,
+                    tools,
+                    expanded,
+                    setExpanded,
+                    onPolicy: setToolPolicy
+                  }
+                ) : null,
                 tab === "commands" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CommandsTab, { snapshot, t, search, setSearch, commands }) : null
               ] }) : null
             ] }),
@@ -719,107 +776,69 @@ function SessionSettingsDialog(props) {
   );
 }
 function SettingsTab(props) {
-  const { snapshot, t, busy, pendingPreset, setPendingPreset, changePreset, allowDraft, setAllowDraft, addAllowed, removeAllowed } = props;
+  const { snapshot, t, busy, pendingPreset, setPendingPreset, changePreset } = props;
   const catalog = snapshot.preset.catalog;
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("settings.permissions") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: fieldStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("settings.preset") }),
-        catalog.map((option) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: optionStyle(snapshot.preset.current === option.value), children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-            "input",
-            {
-              type: "radio",
-              name: "permission-preset",
-              checked: snapshot.preset.current === option.value,
-              disabled: busy,
-              onChange: () => {
-                if (option.value === snapshot.preset.current) return;
-                if (option.value === "danger-full-access") setPendingPreset(option.value);
-                else void changePreset(option.value);
-              }
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: { display: "flex", flexDirection: "column", gap: "2px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: optionTitleStyle, children: option.name }),
-            option.description === void 0 || option.description === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: optionDescriptionStyle, children: option.description })
-          ] })
-        ] }, option.value)),
-        snapshot.preset.current === "custom" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("settings.custom") }) : null
-      ] }),
-      pendingPreset === "danger-full-access" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: warningStyle, children: t("settings.fullAccessWarning") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: primaryButtonStyle(busy), disabled: busy, onClick: () => void changePreset("danger-full-access"), children: t("settings.confirmFullAccess") }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: secondaryButtonStyle(busy), disabled: busy, onClick: () => setPendingPreset(""), children: t("common.cancel") })
-        ] })
-      ] }) : null,
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("settings.effective") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: metaBadgeStyle, children: [
-          t("settings.sandbox"),
-          ": ",
-          snapshot.knobs.sandbox ?? "\u2014"
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: metaBadgeStyle, children: [
-          t("settings.approval"),
-          ": ",
-          snapshot.knobs.approval ?? "\u2014"
-        ] })
-      ] })
-    ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("settings.allowList") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("settings.allowListHint") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: warningStyle, children: t("settings.allowListWarning") }),
-      snapshot.allowList.configured.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: fieldStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("settings.configured") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: chipRowStyle, children: snapshot.allowList.configured.map((tool) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: chipStyle, children: tool }, tool)) })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: fieldStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("settings.sessionOnly") }),
-        snapshot.allowList.session.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("settings.noAllowList") }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: chipRowStyle, children: snapshot.allowList.session.map((tool) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: chipStyle, children: [
-          tool,
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-            "button",
-            {
-              type: "button",
-              "aria-label": t("settings.remove") + " " + tool,
-              title: t("settings.remove"),
-              style: chipRemoveStyle,
-              disabled: busy,
-              onClick: () => removeAllowed(tool),
-              children: "\xD7"
-            }
-          )
-        ] }, tool)) })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-          "input",
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("settings.permissions") }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: fieldStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("settings.preset") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: presetRowStyle, children: catalog.map((option) => {
+        const dangerous = option.value === "danger-full-access";
+        const selected = snapshot.preset.current === option.value;
+        const label = PRESET_LABELS[option.value] === void 0 ? option.name : t(PRESET_LABELS[option.value]);
+        return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+          "button",
           {
-            type: "text",
-            value: allowDraft,
-            placeholder: t("settings.addPlaceholder"),
-            "aria-label": t("settings.addPlaceholder"),
-            style: { ...inputStyle(), flex: "1 1 220px" },
+            type: "button",
+            "aria-pressed": selected,
             disabled: busy,
-            onChange: (event) => setAllowDraft(event.target.value),
-            onKeyDown: (event) => {
-              if (event.key === "Enter") addAllowed();
-            }
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: primaryButtonStyle(busy || allowDraft.trim() === ""), disabled: busy || allowDraft.trim() === "", onClick: addAllowed, children: t("settings.add") })
+            title: option.description,
+            style: presetOptionStyle(selected, dangerous),
+            onClick: () => {
+              if (option.value === snapshot.preset.current) return;
+              if (dangerous) setPendingPreset(option.value);
+              else void changePreset(option.value);
+            },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: presetNameStyle, children: label }),
+              option.description === void 0 || option.description === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: dangerous ? { ...presetDescriptionStyle, color: "var(--dsw-alias-state-error-primary, #d93025)" } : presetDescriptionStyle, children: option.description })
+            ]
+          },
+          option.value
+        );
+      }) }),
+      snapshot.preset.current === "custom" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("settings.custom") }) : null
+    ] }),
+    pendingPreset === "danger-full-access" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: warningStyle, children: t("settings.fullAccessWarning") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: dangerButtonStyle(busy), disabled: busy, onClick: () => void changePreset("danger-full-access"), children: t("settings.confirmFullAccess") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: secondaryButtonStyle(busy), disabled: busy, onClick: () => setPendingPreset(""), children: t("common.cancel") })
+      ] })
+    ] }) : null,
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("settings.effective") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: metaBadgeStyle, children: [
+        t("settings.sandbox"),
+        ": ",
+        snapshot.knobs.sandbox ?? "\u2014"
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("settings.memoryWarning") })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: metaBadgeStyle, children: [
+        t("settings.approval"),
+        ": ",
+        snapshot.knobs.approval ?? "\u2014"
+      ] })
     ] })
-  ] });
+  ] }) });
 }
 function ToolsTab(props) {
-  const { t, search, setSearch, tools, expanded, setExpanded } = props;
+  const { snapshot, t, busy, search, setSearch, tools, expanded, setExpanded, onPolicy } = props;
+  const visibleNames = new Set(snapshot.tools.map((tool) => tool.name));
+  const controlled = Array.from(/* @__PURE__ */ new Set([...snapshot.allowList.session, ...snapshot.blockList.session])).filter((name) => !visibleNames.has(name));
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("settings.allowListHint") }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: warningStyle, children: t("settings.allowListWarning") }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("tools.policyHint") }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
       "input",
       {
@@ -833,11 +852,37 @@ function ToolsTab(props) {
     ),
     tools.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: emptyStyle, children: t("tools.empty") }) : tools.map((tool) => {
       const open = expanded === "tool:" + tool.name;
+      const configured = snapshot.allowList.configured.includes(tool.name);
+      const blocked = snapshot.blockList.session.includes(tool.name);
+      const allowed = !blocked && (snapshot.allowList.session.includes(tool.name) || configured);
       return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: listItemStyle(open), children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("button", { type: "button", style: itemHeaderStyle, onClick: () => setExpanded(open ? "" : "tool:" + tool.name), children: [
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: monoNameStyle, children: tool.name }),
           tool.deferLoading ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: metaBadgeStyle, children: t("tools.deferLoading") }) : null,
+          configured ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: metaBadgeStyle, children: t("tools.configuredDefault") }) : null,
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: itemDescriptionStyle, children: tool.description })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            "button",
+            {
+              type: "button",
+              style: policyButtonStyle(allowed, "allow"),
+              disabled: busy,
+              onClick: () => onPolicy(tool.name, "allow"),
+              children: t("tools.allow")
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            "button",
+            {
+              type: "button",
+              style: policyButtonStyle(blocked, "block"),
+              disabled: busy,
+              onClick: () => onPolicy(tool.name, "block"),
+              children: t("tools.block")
+            }
+          )
         ] }),
         open ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.parameters") }),
@@ -869,7 +914,20 @@ function ToolsTab(props) {
           ] }, call.callId))
         ] }) : null
       ] }, tool.name);
-    })
+    }),
+    controlled.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("tools.controlled") }),
+      controlled.map((name) => {
+        const blocked = snapshot.blockList.session.includes(name);
+        return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: monoNameStyle, children: name }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: policyButtonStyle(!blocked, "allow"), disabled: busy, onClick: () => onPolicy(name, "allow"), children: t("tools.allow") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: policyButtonStyle(blocked, "block"), disabled: busy, onClick: () => onPolicy(name, "block"), children: t("tools.block") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: secondaryButtonStyle(busy), disabled: busy, onClick: () => onPolicy(name, "reset"), children: t("tools.reset") })
+        ] }, name);
+      })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("settings.memoryWarning") })
   ] });
 }
 function CommandsTab(props) {
