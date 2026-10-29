@@ -585,64 +585,78 @@ function numberText(value, digits = 3) {
   return typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "\u2014";
 }
 function LogsPanel(props) {
-  const { logs = [], loading = false, t } = props;
-  if (loading && logs.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: logMutedStyle, children: t("logs.loading") });
-  if (logs.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: logMutedStyle, children: t("logs.empty") });
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: logsListStyle, children: logs.map((log) => {
-    const flags = [];
-    if (log.bypass) flags.push(t("logs.bypass"));
-    if (log.cached) flags.push(t("logs.cached"));
-    if (log.semanticUnavailable) flags.push(t("logs.unavailable"));
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("details", { style: logEntryStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("summary", { style: logSummaryStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logTimeStyle, children: timeText(log.at) }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logToolStyle, children: log.tool }),
-        flags.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logMutedStyle, children: flags.join(" \xB7 ") }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logDecisionStyle(log.blocked), children: t(log.blocked ? "logs.blocked" : "logs.allowed") })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logBodyStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.command") }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { style: logPreStyle, children: log.command === "" ? t("logs.noCommand") : log.command })
+  const { logs = [], loading = false, modelError = null, t } = props;
+  const warning = modelError === null || modelError === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: errorStyle, children: t("logs.modelError", { error: modelError }) });
+  if (loading && logs.length === 0) {
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+      warning,
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: logMutedStyle, children: t("logs.loading") })
+    ] });
+  }
+  if (logs.length === 0) {
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+      warning,
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: logMutedStyle, children: t("logs.empty") })
+    ] });
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+    warning,
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: logsListStyle, children: logs.map((log) => {
+      const flags = [];
+      if (log.bypass) flags.push(t("logs.bypass"));
+      if (log.cached) flags.push(t("logs.cached"));
+      if (log.semanticUnavailable) flags.push(t("logs.unavailable"));
+      return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("details", { style: logEntryStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("summary", { style: logSummaryStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logTimeStyle, children: timeText(log.at) }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logToolStyle, children: log.tool }),
+          flags.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logMutedStyle, children: flags.join(" \xB7 ") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logDecisionStyle(log.blocked), children: t(log.blocked ? "logs.blocked" : "logs.allowed") })
         ] }),
-        typeof log.description === "string" && log.description !== "" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.description") }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { style: logPreStyle, children: log.description })
-        ] }) : null,
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logGridStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.result") }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
-            log.blocked ? t("logs.blocked") : t("logs.allowed"),
-            log.code === void 0 ? "" : " \xB7 " + log.code
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logBodyStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.command") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { style: logPreStyle, children: log.command === "" ? t("logs.noCommand") : log.command })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.kind") }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.kind }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.structural") }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
-            numberText(log.structural),
-            log.hardBlock ? " \xB7 " + t("logs.hardBlock") : ""
+          typeof log.description === "string" && log.description !== "" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.description") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { style: logPreStyle, children: log.description })
+          ] }) : null,
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logGridStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.result") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
+              log.blocked ? t("logs.blocked") : t("logs.allowed"),
+              log.code === void 0 ? "" : " \xB7 " + log.code
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.kind") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.kind }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.structural") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
+              numberText(log.structural),
+              log.hardBlock ? " \xB7 " + t("logs.hardBlock") : ""
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.malice") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
+              numberText(log.malice),
+              log.classifier === void 0 ? "" : " \xB7 " + t("logs.classifier") + " " + numberText(log.classifier)
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.alignment") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.alignment === void 0 ? "\u2014" : numberText(log.alignment) }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.duration") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: typeof log.durationMs === "number" ? String(Math.round(log.durationMs)) + " ms" : "\u2014" })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.malice") }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
-            numberText(log.malice),
-            log.classifier === void 0 ? "" : " \xB7 " + t("logs.classifier") + " " + numberText(log.classifier)
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.alignment") }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.alignment === void 0 ? "\u2014" : numberText(log.alignment) }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.duration") }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: typeof log.durationMs === "number" ? String(Math.round(log.durationMs)) + " ms" : "\u2014" })
-        ] }),
-        Array.isArray(log.reasons) && log.reasons.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.reason") }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.reasons.join(" \xB7 ") })
-        ] }) : null,
-        typeof log.reason === "string" && log.reason !== "" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.reason") }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.reason })
-        ] }) : null
-      ] })
-    ] }, log.id);
-  }) });
+          Array.isArray(log.reasons) && log.reasons.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.reason") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.reasons.join(" \xB7 ") })
+          ] }) : null,
+          typeof log.reason === "string" && log.reason !== "" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.reason") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.reason })
+          ] }) : null
+        ] })
+      ] }, log.id);
+    }) })
+  ] });
 }
 
 // src/client/components/SettingsForm.jsx
@@ -690,7 +704,7 @@ function validDraft(draft) {
   return void 0;
 }
 function SettingsForm(props) {
-  const { view, t, configForm, tabbed = false, logs = [], logsLoading = false } = props;
+  const { view, t, configForm, tabbed = false, logs = [], logsLoading = false, modelError = null } = props;
   const snapshot = useSnapshot(configForm);
   const resolved = normalizeConfig(snapshot.value);
   const [draft, setDraft] = (0, import_react2.useState)(resolved);
@@ -884,7 +898,7 @@ function SettingsForm(props) {
         numberField("cacheEntries", 1, 4096, 1),
         numberField("cacheTtlMs", 1e3, 864e5, 1e3)
       ] }) : null,
-      tabbed && tab === "logs" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LogsPanel, { logs, loading: logsLoading, t }) : null
+      tabbed && tab === "logs" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LogsPanel, { logs, loading: logsLoading, modelError, t }) : null
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedFooterStyle : footerStyle, children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: save, style: primaryButtonStyle(disabled), children: t("config.save") }),
@@ -925,6 +939,7 @@ function FirewallSettingsDialog(props) {
   const ui = useSnapshot(uiStore);
   const [logs, setLogs] = (0, import_react3.useState)([]);
   const [logsLoading, setLogsLoading] = (0, import_react3.useState)(false);
+  const [modelError, setModelError] = (0, import_react3.useState)(null);
   const [size, setSize] = (0, import_react3.useState)(readStoredSize);
   const [offset, setOffset] = (0, import_react3.useState)({ x: 0, y: 0 });
   const panelRef = (0, import_react3.useRef)(null);
@@ -978,6 +993,7 @@ function FirewallSettingsDialog(props) {
         const value = result.value;
         if (value === void 0 || !Array.isArray(value.logs)) return;
         setLogs(value.logs);
+        setModelError(typeof value.modelError === "string" ? value.modelError : null);
         setLogsLoading(false);
       }).catch(() => {
         if (!disposed) setLogsLoading(false);
@@ -1054,7 +1070,7 @@ function FirewallSettingsDialog(props) {
             ]
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: dialogBodyTabbedStyle, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SettingsForm, { view: "page", t, configForm, tabbed: true, logs, logsLoading }) })
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: dialogBodyTabbedStyle, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SettingsForm, { view: "page", t, configForm, tabbed: true, logs, logsLoading, modelError }) })
       ] })
     }
   );
@@ -1125,6 +1141,10 @@ var EN = {
   "stats.embedding": "Embedding",
   "stats.classifier": "Classifier",
   "stats.mode": "Mode",
+  "stats.model": "Model",
+  "stats.ready": "Ready",
+  "stats.loading": "Loading",
+  "stats.error": "Error",
   "stats.blocks": "Blocks / total",
   "stats.on": "On",
   "stats.off": "Off",
@@ -1139,6 +1159,7 @@ var EN = {
   "tab.logs": "Logs",
   "logs.empty": "No tool calls intercepted yet.",
   "logs.loading": "Loading logs\u2026",
+  "logs.modelError": "Inference unavailable: {error}",
   "logs.allowed": "Allowed",
   "logs.blocked": "Blocked",
   "logs.bypass": "Bypass",
@@ -1216,6 +1237,10 @@ var ZH = {
   "stats.embedding": "\u5D4C\u5165",
   "stats.classifier": "\u5206\u7C7B\u5668",
   "stats.mode": "\u6A21\u5F0F",
+  "stats.model": "\u6A21\u578B",
+  "stats.ready": "\u5C31\u7EEA",
+  "stats.loading": "\u52A0\u8F7D\u4E2D",
+  "stats.error": "\u9519\u8BEF",
   "stats.blocks": "\u963B\u6B62 / \u603B\u6570",
   "stats.on": "\u5F00",
   "stats.off": "\u5173",
@@ -1230,6 +1255,7 @@ var ZH = {
   "tab.logs": "\u65E5\u5FD7",
   "logs.empty": "\u5C1A\u672A\u62E6\u622A\u4EFB\u4F55\u5DE5\u5177\u8C03\u7528\u3002",
   "logs.loading": "\u6B63\u5728\u8BFB\u53D6\u65E5\u5FD7\u2026",
+  "logs.modelError": "\u63A8\u7406\u4E0D\u53EF\u7528\uFF1A{error}",
   "logs.allowed": "\u5DF2\u653E\u884C",
   "logs.blocked": "\u5DF2\u963B\u6B62",
   "logs.bypass": "\u8DF3\u8FC7",
@@ -1319,13 +1345,14 @@ function buildStats(value, counters = { blocked: 0, total: 0 }) {
     { labelKey: "stats.embedding", valueKey: config.embeddingEnabled ? "stats.on" : "stats.off" },
     { labelKey: "stats.classifier", valueKey: config.classifierEnabled ? "stats.on" : "stats.off" },
     { labelKey: "stats.mode", valueKey: config.semanticFailure === "closed" ? "stats.closed" : "stats.open" },
+    { labelKey: "stats.model", valueKey: counters.modelReady === true ? "stats.ready" : counters.modelError ? "stats.error" : "stats.loading" },
     { labelKey: "stats.blocks", value: String(counters.blocked ?? 0) + " / " + String(counters.total ?? 0) }
   ];
 }
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), "tool-firewall: dictionaries");
   const configForm = ctx.configForms.get(ROW_ID);
-  const remoteStats = { blocked: 0, total: 0 };
+  const remoteStats = { blocked: 0, total: 0, modelReady: false, modelError: null };
   const statsStore = createValueStore(buildStats(readConfigValue(configForm), remoteStats));
   const uiStore = createValueStore({ open: false });
   const open = () => uiStore.set({ open: true });
@@ -1350,6 +1377,8 @@ function apply(ctx) {
         if (value === null || value === void 0) return;
         remoteStats.blocked = Number.isFinite(value.blocked) ? value.blocked : remoteStats.blocked;
         remoteStats.total = Number.isFinite(value.total) ? value.total : remoteStats.total;
+        remoteStats.modelReady = value.modelReady === true;
+        remoteStats.modelError = typeof value.modelError === "string" ? value.modelError : null;
         refreshStats();
       }).catch(() => {
       });

@@ -25,9 +25,22 @@ export function createInferenceClient(config, options = {}) {
   let disposed = false
   let ready = false
   let readyPromise
+  let lastError
+  let retryTimer
+  let retryDelayMs = 5000
   let nextId = 1
   let pending = new Map()
   let tail = Promise.resolve()
+
+  function scheduleRetry() {
+    if (disposed || retryTimer !== undefined) return
+    const delay = retryDelayMs
+    retryDelayMs = Math.min(60_000, retryDelayMs * 2)
+    retryTimer = setTimeout(() => {
+      retryTimer = undefined
+      start()
+    }, delay)
+  }
 
   function workerData() {
     return {
@@ -71,6 +84,7 @@ export function createInferenceClient(config, options = {}) {
   function failWorker(error) {
     ready = false
     readyPromise = undefined
+    lastError = error instanceof Error ? error.message : String(error)
     const entries = Array.from(pending.values())
     pending = new Map()
     for (const entry of entries) entry.reject(error)
@@ -81,7 +95,10 @@ export function createInferenceClient(config, options = {}) {
         void dead.terminate()
       } catch (failure) {}
     }
-    if (!disposed) onError(error)
+    if (!disposed) {
+      onError(error)
+      scheduleRetry()
+    }
   }
 
   function request(type, payload, timeoutMs, signal) {
@@ -137,6 +154,7 @@ export function createInferenceClient(config, options = {}) {
         void dead.terminate()
       } catch (error) {}
     }
+    scheduleRetry()
   }
 
   async function warmup() {
@@ -146,17 +164,30 @@ export function createInferenceClient(config, options = {}) {
     readyPromise = (async () => {
       await request('warmup', {}, warmupTimeoutMs)
       ready = true
+      lastError = undefined
+      retryDelayMs = 5000
+      if (retryTimer !== undefined) {
+        clearTimeout(retryTimer)
+        retryTimer = undefined
+      }
     })()
     readyPromise.catch((error) => {
       readyPromise = undefined
-      if (!disposed) onError(error)
+      lastError = error instanceof Error ? error.message : String(error)
+      if (!disposed) {
+        onError(error)
+        scheduleRetry()
+      }
     })
     return readyPromise
   }
 
   async function evaluate(command, description, signal) {
     if (disposed) throw new Error('inference client disposed')
-    if (!ready) throw new Error('inference models are not ready')
+    if (!ready) {
+      void warmup().catch(() => {})
+      throw new Error('inference models are not ready')
+    }
     const job = tail.then(async () => request('evaluate', {
       command,
       description: description ?? undefined,
@@ -175,6 +206,10 @@ export function createInferenceClient(config, options = {}) {
     disposed = true
     ready = false
     readyPromise = undefined
+    if (retryTimer !== undefined) {
+      clearTimeout(retryTimer)
+      retryTimer = undefined
+    }
     for (const entry of Array.from(pending.values())) entry.reject(new Error('inference client disposed'))
     pending = new Map()
     const dead = worker
@@ -192,5 +227,6 @@ export function createInferenceClient(config, options = {}) {
     warmup,
     dispose,
     get ready() { return ready },
+    get lastError() { return lastError },
   }
 }

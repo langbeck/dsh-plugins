@@ -33,6 +33,7 @@ function buildStats(value, counters = { blocked: 0, total: 0 }) {
     { labelKey: 'stats.embedding', valueKey: config.embeddingEnabled ? 'stats.on' : 'stats.off' },
     { labelKey: 'stats.classifier', valueKey: config.classifierEnabled ? 'stats.on' : 'stats.off' },
     { labelKey: 'stats.mode', valueKey: config.semanticFailure === 'closed' ? 'stats.closed' : 'stats.open' },
+    { labelKey: 'stats.model', valueKey: counters.modelReady === true ? 'stats.ready' : counters.modelError ? 'stats.error' : 'stats.loading' },
     { labelKey: 'stats.blocks', value: String(counters.blocked ?? 0) + ' / ' + String(counters.total ?? 0) },
   ]
 }
@@ -40,7 +41,7 @@ function buildStats(value, counters = { blocked: 0, total: 0 }) {
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), 'tool-firewall: dictionaries')
   const configForm = ctx.configForms.get(ROW_ID)
-  const remoteStats = { blocked: 0, total: 0 }
+  const remoteStats = { blocked: 0, total: 0, modelReady: false, modelError: null }
   const statsStore = createValueStore(buildStats(readConfigValue(configForm), remoteStats))
   const uiStore = createValueStore({ open: false })
   const open = () => uiStore.set({ open: true })
@@ -71,6 +72,8 @@ function apply(ctx) {
           if (value === null || value === undefined) return
           remoteStats.blocked = Number.isFinite(value.blocked) ? value.blocked : remoteStats.blocked
           remoteStats.total = Number.isFinite(value.total) ? value.total : remoteStats.total
+          remoteStats.modelReady = value.modelReady === true
+          remoteStats.modelError = typeof value.modelError === 'string' ? value.modelError : null
           refreshStats()
         })
         .catch(() => {})

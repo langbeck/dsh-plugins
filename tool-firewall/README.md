@@ -87,6 +87,10 @@ blocks the call instead.
   ships with the plugin; configure a pinned Transformers.js-compatible model
   before enabling it.
 - Models are cached under the DSH home (`tool-firewall/models`).
+- A failed warmup is retried with backoff, and a tool call while the worker is
+  still loading triggers another warmup. The sidebar shows Model
+  Ready/Loading/Error, and the Logs tab shows the inference error when one is
+  present.
 - Model failures are logged without command text and follow `semanticFailure`.
 - The decision cache stores only hashes, scores, and decisions; command text is
   never written to it.

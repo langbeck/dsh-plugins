@@ -1,4 +1,5 @@
 import {
+  errorStyle,
   logBodyStyle,
   logDecisionStyle,
   logEntryStyle,
@@ -26,12 +27,31 @@ function numberText(value, digits = 3) {
 
 /** Recent interceptions, one collapsible row per call. */
 export default function LogsPanel(props) {
-  const { logs = [], loading = false, t } = props
-  if (loading && logs.length === 0) return <p style={logMutedStyle}>{t('logs.loading')}</p>
-  if (logs.length === 0) return <p style={logMutedStyle}>{t('logs.empty')}</p>
+  const { logs = [], loading = false, modelError = null, t } = props
+  const warning = modelError === null || modelError === '' ? null : (
+    <p style={errorStyle}>{t('logs.modelError', { error: modelError })}</p>
+  )
+  if (loading && logs.length === 0) {
+    return (
+      <>
+        {warning}
+        <p style={logMutedStyle}>{t('logs.loading')}</p>
+      </>
+    )
+  }
+  if (logs.length === 0) {
+    return (
+      <>
+        {warning}
+        <p style={logMutedStyle}>{t('logs.empty')}</p>
+      </>
+    )
+  }
   return (
-    <div style={logsListStyle}>
-      {logs.map((log) => {
+    <>
+      {warning}
+      <div style={logsListStyle}>
+        {logs.map((log) => {
         const flags = []
         if (log.bypass) flags.push(t('logs.bypass'))
         if (log.cached) flags.push(t('logs.cached'))
@@ -85,6 +105,7 @@ export default function LogsPanel(props) {
           </details>
         )
       })}
-    </div>
+      </div>
+    </>
   )
 }

@@ -44,6 +44,7 @@ export default function FirewallSettingsDialog(props) {
   const ui = useSnapshot(uiStore)
   const [logs, setLogs] = useState([])
   const [logsLoading, setLogsLoading] = useState(false)
+  const [modelError, setModelError] = useState(null)
   const [size, setSize] = useState(readStoredSize)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const panelRef = useRef(null)
@@ -104,6 +105,7 @@ export default function FirewallSettingsDialog(props) {
           const value = result.value
           if (value === undefined || !Array.isArray(value.logs)) return
           setLogs(value.logs)
+          setModelError(typeof value.modelError === 'string' ? value.modelError : null)
           setLogsLoading(false)
         })
         .catch(() => {
@@ -183,7 +185,7 @@ export default function FirewallSettingsDialog(props) {
           </button>
         </div>
         <div style={dialogBodyTabbedStyle}>
-          <SettingsForm view="page" t={t} configForm={configForm} tabbed logs={logs} logsLoading={logsLoading} />
+          <SettingsForm view="page" t={t} configForm={configForm} tabbed logs={logs} logsLoading={logsLoading} modelError={modelError} />
         </div>
       </div>
     </div>
