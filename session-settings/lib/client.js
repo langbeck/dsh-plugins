@@ -552,7 +552,7 @@ function switchTrackStyle(checked, disabled) {
     padding: "2px",
     border: "none",
     borderRadius: "11px",
-    background: checked ? "var(--dsw-alias-brand-primary, #4d6bfe)" : "var(--dsw-alias-bg-layer-4, rgba(127, 127, 127, 0.4))",
+    background: checked ? "var(--dsw-alias-state-success-primary, #2ea043)" : "var(--dsw-alias-state-error-primary, #d93025)",
     cursor: disabled ? "default" : "pointer",
     opacity: disabled ? 0.6 : 1,
     boxSizing: "border-box",
@@ -565,7 +565,7 @@ function switchKnobStyle(checked) {
     width: "18px",
     height: "18px",
     borderRadius: "50%",
-    background: checked ? "var(--dsw-alias-state-success-primary, #2ea043)" : "var(--dsw-alias-state-error-primary, #d93025)",
+    background: "var(--dsw-alias-label-primary-foreground, #ffffff)",
     boxShadow: "0 1px 2px rgba(0, 0, 0, 0.25)",
     transform: checked ? "translateX(16px)" : "translateX(0)",
     transition: "transform 120ms ease"

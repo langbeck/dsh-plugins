@@ -8,8 +8,9 @@ header action to the current Session that opens a dialog with three tabs:
   approval policy.
 - **Tools** — a Plugin-Manager-style list of the Session's tools (from its last
   request header, or its tool history before the first request): icon, name,
-  description, and an enable/disable switch on the right. The switch knob is
-  green when enabled (auto-approved) and red when blocked. Clicking a row
+  description, and an enable/disable switch on the right. The switch track is
+  green when enabled (auto-approved) and red when blocked; the knob stays
+  white. Clicking a row
   expands its parameter schema and recent calls. A final line lists the
   disabled tool names.
 - **Commands** — the Host slash commands visible to the Session's live Agent:
