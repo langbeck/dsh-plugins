@@ -91,9 +91,9 @@ export const tabbedScrollStyle = {
   display: 'flex',
   flexDirection: 'column',
   flex: '1 1 auto',
-  minHeight: 0,
+  minHeight: '100px',
   overflowY: 'auto',
-  padding: '8px 16px 12px',
+  padding: '4px 16px 12px',
 }
 
 export function inputStyle(disabled, width = '96px') {
@@ -251,7 +251,7 @@ export const dialogPanelStyle = {
   width: 'min(760px, 100%)',
   minWidth: '460px',
   height: 'min(620px, 86vh)',
-  minHeight: '320px',
+  minHeight: '420px',
   maxWidth: 'calc(100vw - 40px)',
   maxHeight: 'calc(100vh - 40px)',
   border: '0.5px solid var(--dsw-alias-border-l3)',
@@ -326,12 +326,13 @@ export const tabBarStyle = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: '4px',
-  maxWidth: '100%',
+  flex: 'none',
+  maxWidth: 'calc(100% - 32px)',
   padding: '4px',
   border: '0.5px solid var(--dsw-alias-border-l3)',
   borderRadius: '10px',
   background: 'var(--dsw-alias-bg-layer-2)',
-  marginBottom: '8px',
+  margin: '8px 16px 0',
   overflowX: 'auto',
   boxSizing: 'border-box',
 }

@@ -200,27 +200,27 @@ export default function SettingsForm(props) {
 
   return (
     <div style={tabbed ? tabbedShellStyle : pageStyle}>
-      <div style={tabbed ? tabbedScrollStyle : { display: 'contents' }}>
-        {tabbed ? (
-          <div style={tabBarStyle}>
-            {TABS.map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                style={tabButtonStyle(tab === entry.id)}
-                aria-pressed={tab === entry.id}
-                onClick={() => setTab(entry.id)}
-              >
-                <TabIcon paths={entry.icon} />
-                {t(entry.labelKey)}
-              </button>
-            ))}
-          </div>
-        ) : null}
+      {tabbed ? (
+        <div style={tabBarStyle}>
+          {TABS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              style={tabButtonStyle(tab === entry.id)}
+              aria-pressed={tab === entry.id}
+              onClick={() => setTab(entry.id)}
+            >
+              <TabIcon paths={entry.icon} />
+              {t(entry.labelKey)}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
+      <div style={tabbed ? tabbedScrollStyle : { display: 'contents' }}>
         {!tabbed || tab === 'general' ? (
         <section style={tabbed ? tabbedSectionStyle : sectionStyle}>
-          <h3 style={sectionTitleStyle}>{t('section.general')}</h3>
+          {tabbed ? null : <h3 style={sectionTitleStyle}>{t('section.general')}</h3>}
           {checkboxField('enabled')}
           <span style={hintStyle}>{t('field.enabledHint')}</span>
           <label style={fieldStyle}>
@@ -242,7 +242,7 @@ export default function SettingsForm(props) {
 
       {!tabbed || tab === 'detection' ? (
         <section style={tabbed ? tabbedSectionStyle : sectionStyle}>
-          <h3 style={sectionTitleStyle}>{t('section.detection')}</h3>
+          {tabbed ? null : <h3 style={sectionTitleStyle}>{t('section.detection')}</h3>}
           {numberField('maliceThreshold', 0, 1, 0.01)}
           {numberField('alignmentThreshold', 0, 1, 0.01)}
           {textField('bypassRegex', '100%')}
@@ -263,7 +263,7 @@ export default function SettingsForm(props) {
 
       {!tabbed || tab === 'models' ? (
         <section style={tabbed ? tabbedSectionStyle : sectionStyle}>
-          <h3 style={sectionTitleStyle}>{t('section.models')}</h3>
+          {tabbed ? null : <h3 style={sectionTitleStyle}>{t('section.models')}</h3>}
           {checkboxField('embeddingEnabled')}
           <span style={hintStyle}>{t('field.embeddingEnabledHint')}</span>
           {textField('embeddingModel', '100%', undefined, !draft.embeddingEnabled)}
@@ -291,7 +291,7 @@ export default function SettingsForm(props) {
 
       {!tabbed || tab === 'cache' ? (
         <section style={tabbed ? tabbedSectionStyle : sectionStyle}>
-          <h3 style={sectionTitleStyle}>{t('section.cache')}</h3>
+          {tabbed ? null : <h3 style={sectionTitleStyle}>{t('section.cache')}</h3>}
           {numberField('maxCommandChars', 64, 65536, 1)}
           {numberField('maxTextTokens', 16, 512, 1)}
           {numberField('cacheEntries', 1, 4096, 1)}

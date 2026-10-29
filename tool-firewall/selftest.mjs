@@ -393,6 +393,7 @@ const dialogLabels = collectStrings(tabbedTree)
 for (const key of ['section.general', 'section.detection', 'section.models', 'section.cache', 'tab.logs']) {
   check(dialogLabels.includes(key), 'settings dialog exposes tab ' + key)
 }
+equal(dialogLabels.filter((label) => label === 'section.general').length, 1, 'tabbed content omits the duplicate section heading')
 overlayInjected.close()
 equal(overlayInjected.uiStore.getSnapshot().open, false, 'closing the settings dialog updates state')
 

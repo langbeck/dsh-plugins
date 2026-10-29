@@ -235,9 +235,9 @@ var tabbedScrollStyle = {
   display: "flex",
   flexDirection: "column",
   flex: "1 1 auto",
-  minHeight: 0,
+  minHeight: "100px",
   overflowY: "auto",
-  padding: "8px 16px 12px"
+  padding: "4px 16px 12px"
 };
 function inputStyle(disabled, width = "96px") {
   return {
@@ -381,7 +381,7 @@ var dialogPanelStyle = {
   width: "min(760px, 100%)",
   minWidth: "460px",
   height: "min(620px, 86vh)",
-  minHeight: "320px",
+  minHeight: "420px",
   maxWidth: "calc(100vw - 40px)",
   maxHeight: "calc(100vh - 40px)",
   border: "0.5px solid var(--dsw-alias-border-l3)",
@@ -443,12 +443,13 @@ var tabBarStyle = {
   display: "inline-flex",
   alignItems: "center",
   gap: "4px",
-  maxWidth: "100%",
+  flex: "none",
+  maxWidth: "calc(100% - 32px)",
   padding: "4px",
   border: "0.5px solid var(--dsw-alias-border-l3)",
   borderRadius: "10px",
   background: "var(--dsw-alias-bg-layer-2)",
-  marginBottom: "8px",
+  margin: "8px 16px 0",
   overflowX: "auto",
   boxSizing: "border-box"
 };
@@ -789,23 +790,23 @@ function SettingsForm(props) {
   }
   const noticeText = validation !== void 0 ? t(validation) : notice === "saved" ? t("config.saved") : notice === "error" ? t("config.saveError") : notice === "saving" ? t("config.saving") : "";
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedShellStyle : pageStyle, children: [
+    tabbed ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: tabBarStyle, children: TABS.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+      "button",
+      {
+        type: "button",
+        style: tabButtonStyle(tab === entry.id),
+        "aria-pressed": tab === entry.id,
+        onClick: () => setTab(entry.id),
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(TabIcon, { paths: entry.icon }),
+          t(entry.labelKey)
+        ]
+      },
+      entry.id
+    )) }) : null,
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedScrollStyle : { display: "contents" }, children: [
-      tabbed ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: tabBarStyle, children: TABS.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-        "button",
-        {
-          type: "button",
-          style: tabButtonStyle(tab === entry.id),
-          "aria-pressed": tab === entry.id,
-          onClick: () => setTab(entry.id),
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(TabIcon, { paths: entry.icon }),
-            t(entry.labelKey)
-          ]
-        },
-        entry.id
-      )) }) : null,
       !tabbed || tab === "general" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.general") }),
+        tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.general") }),
         checkboxField("enabled"),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.enabledHint") }),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
@@ -828,7 +829,7 @@ function SettingsForm(props) {
         numberField("modelTimeoutMs", 1, 5e3, 1)
       ] }) : null,
       !tabbed || tab === "detection" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.detection") }),
+        tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.detection") }),
         numberField("maliceThreshold", 0, 1, 0.01),
         numberField("alignmentThreshold", 0, 1, 0.01),
         textField("bypassRegex", "100%"),
@@ -849,7 +850,7 @@ function SettingsForm(props) {
         ] })
       ] }) : null,
       !tabbed || tab === "models" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.models") }),
+        tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.models") }),
         checkboxField("embeddingEnabled"),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.embeddingEnabledHint") }),
         textField("embeddingModel", "100%", void 0, !draft.embeddingEnabled),
@@ -877,7 +878,7 @@ function SettingsForm(props) {
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.allowRemoteModelsHint") })
       ] }) : null,
       !tabbed || tab === "cache" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.cache") }),
+        tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.cache") }),
         numberField("maxCommandChars", 64, 65536, 1),
         numberField("maxTextTokens", 16, 512, 1),
         numberField("cacheEntries", 1, 4096, 1),
