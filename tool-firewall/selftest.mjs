@@ -389,10 +389,7 @@ equal(overlayInjected.uiStore.getSnapshot().open, true, 'clicking the stats card
 const dialogTree = ReactFake.reset(() => overlayRegistration.component({ t: (key) => key, configForm, ...overlayInjected }))
 check(dialogTree !== null && typeof dialogTree === 'object', 'settings dialog renders when open')
 const tabbedTree = ReactFake.reset(() => rowConfig.component({ view: 'page', t: (key) => key, configForm, tabbed: true, logs: [] }))
-const dialogLabels = []
-walkTree(tabbedTree, (node) => {
-  if (node !== null && typeof node === 'object' && typeof node.props?.children === 'string') dialogLabels.push(node.props.children)
-})
+const dialogLabels = collectStrings(tabbedTree)
 for (const key of ['section.general', 'section.detection', 'section.models', 'section.cache', 'tab.logs']) {
   check(dialogLabels.includes(key), 'settings dialog exposes tab ' + key)
 }
@@ -405,6 +402,18 @@ function walkTree(node, visit) {
   if (node === null || typeof node !== 'object') return
   visit(node)
   if (node.props !== undefined) walkTree(node.props.children, visit)
+}
+function collectStrings(node, out = []) {
+  if (typeof node === 'string') {
+    out.push(node)
+    return out
+  }
+  if (Array.isArray(node)) {
+    node.forEach((child) => collectStrings(child, out))
+    return out
+  }
+  if (node !== null && typeof node === 'object' && node.props !== undefined) collectStrings(node.props.children, out)
+  return out
 }
 const labels = []
 const buttons = []

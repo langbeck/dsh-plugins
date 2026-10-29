@@ -216,15 +216,19 @@ export const dialogBackdropStyle = {
 export const dialogPanelStyle = {
   display: 'flex',
   flexDirection: 'column',
-  width: 'min(720px, 100%)',
-  maxHeight: 'min(780px, 88vh)',
-  minHeight: '240px',
+  width: 'min(760px, 100%)',
+  minWidth: '460px',
+  height: 'min(620px, 86vh)',
+  minHeight: '320px',
+  maxWidth: 'calc(100vw - 40px)',
+  maxHeight: 'calc(100vh - 40px)',
   border: '0.5px solid var(--dsw-alias-border-l3)',
   borderRadius: 'var(--dsw-radius-lg, 12px)',
   background: 'var(--dsw-alias-bg-layer-1)',
   color: 'var(--dsw-alias-label-primary)',
   boxShadow: '0 18px 60px rgba(0, 0, 0, 0.28)',
   overflow: 'hidden',
+  resize: 'both',
   boxSizing: 'border-box',
 }
 
@@ -234,6 +238,9 @@ export const dialogHeaderStyle = {
   gap: '12px',
   padding: '16px 18px 10px',
   borderBottom: '0.5px solid var(--dsw-alias-border-l3)',
+  cursor: 'move',
+  userSelect: 'none',
+  touchAction: 'none',
 }
 
 export const dialogTitleStyle = {
@@ -275,29 +282,45 @@ export function dialogCloseStyle() {
 }
 
 export const tabBarStyle = {
-  display: 'flex',
+  display: 'inline-flex',
   alignItems: 'center',
-  gap: '2px',
-  flexWrap: 'wrap',
-  padding: '0 0 10px',
-  borderBottom: '0.5px solid var(--dsw-alias-border-l3)',
-  marginBottom: '14px',
+  gap: '4px',
+  maxWidth: '100%',
+  padding: '4px',
+  border: '0.5px solid var(--dsw-alias-border-l3)',
+  borderRadius: '10px',
+  background: 'var(--dsw-alias-bg-layer-2)',
+  marginBottom: '16px',
+  overflowX: 'auto',
+  boxSizing: 'border-box',
 }
 
 export function tabButtonStyle(active) {
   return {
-    height: '30px',
-    padding: '0 10px',
-    border: 'none',
-    borderBottom: active ? '2px solid var(--dsw-alias-label-primary)' : '2px solid transparent',
-    borderRadius: 0,
-    background: 'transparent',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    flex: 'none',
+    height: '32px',
+    padding: '0 12px',
+    border: active ? '0.5px solid var(--dsw-alias-border-l3)' : '0.5px solid transparent',
+    borderRadius: '8px',
+    background: active ? 'var(--dsw-alias-bg-layer-1)' : 'transparent',
     color: active ? 'var(--dsw-alias-label-primary)' : 'var(--dsw-alias-label-tertiary)',
     font: 'inherit',
     fontSize: '12px',
     fontWeight: active ? 600 : 500,
     cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    boxShadow: active ? '0 1px 3px rgba(0, 0, 0, 0.12)' : 'none',
+    transition: 'background 120ms ease, color 120ms ease, box-shadow 120ms ease',
   }
+}
+
+export const tabIconStyle = {
+  flex: 'none',
+  width: '14px',
+  height: '14px',
 }
 
 export const logsListStyle = {

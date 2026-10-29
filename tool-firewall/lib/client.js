@@ -350,15 +350,19 @@ var dialogBackdropStyle = {
 var dialogPanelStyle = {
   display: "flex",
   flexDirection: "column",
-  width: "min(720px, 100%)",
-  maxHeight: "min(780px, 88vh)",
-  minHeight: "240px",
+  width: "min(760px, 100%)",
+  minWidth: "460px",
+  height: "min(620px, 86vh)",
+  minHeight: "320px",
+  maxWidth: "calc(100vw - 40px)",
+  maxHeight: "calc(100vh - 40px)",
   border: "0.5px solid var(--dsw-alias-border-l3)",
   borderRadius: "var(--dsw-radius-lg, 12px)",
   background: "var(--dsw-alias-bg-layer-1)",
   color: "var(--dsw-alias-label-primary)",
   boxShadow: "0 18px 60px rgba(0, 0, 0, 0.28)",
   overflow: "hidden",
+  resize: "both",
   boxSizing: "border-box"
 };
 var dialogHeaderStyle = {
@@ -366,7 +370,10 @@ var dialogHeaderStyle = {
   alignItems: "flex-start",
   gap: "12px",
   padding: "16px 18px 10px",
-  borderBottom: "0.5px solid var(--dsw-alias-border-l3)"
+  borderBottom: "0.5px solid var(--dsw-alias-border-l3)",
+  cursor: "move",
+  userSelect: "none",
+  touchAction: "none"
 };
 var dialogTitleStyle = {
   margin: 0,
@@ -403,29 +410,44 @@ function dialogCloseStyle() {
   };
 }
 var tabBarStyle = {
-  display: "flex",
+  display: "inline-flex",
   alignItems: "center",
-  gap: "2px",
-  flexWrap: "wrap",
-  padding: "0 0 10px",
-  borderBottom: "0.5px solid var(--dsw-alias-border-l3)",
-  marginBottom: "14px"
+  gap: "4px",
+  maxWidth: "100%",
+  padding: "4px",
+  border: "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "10px",
+  background: "var(--dsw-alias-bg-layer-2)",
+  marginBottom: "16px",
+  overflowX: "auto",
+  boxSizing: "border-box"
 };
 function tabButtonStyle(active) {
   return {
-    height: "30px",
-    padding: "0 10px",
-    border: "none",
-    borderBottom: active ? "2px solid var(--dsw-alias-label-primary)" : "2px solid transparent",
-    borderRadius: 0,
-    background: "transparent",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    flex: "none",
+    height: "32px",
+    padding: "0 12px",
+    border: active ? "0.5px solid var(--dsw-alias-border-l3)" : "0.5px solid transparent",
+    borderRadius: "8px",
+    background: active ? "var(--dsw-alias-bg-layer-1)" : "transparent",
     color: active ? "var(--dsw-alias-label-primary)" : "var(--dsw-alias-label-tertiary)",
     font: "inherit",
     fontSize: "12px",
     fontWeight: active ? 600 : 500,
-    cursor: "pointer"
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    boxShadow: active ? "0 1px 3px rgba(0, 0, 0, 0.12)" : "none",
+    transition: "background 120ms ease, color 120ms ease, box-shadow 120ms ease"
   };
 }
+var tabIconStyle = {
+  flex: "none",
+  width: "14px",
+  height: "14px"
+};
 var logsListStyle = {
   display: "flex",
   flexDirection: "column",
@@ -596,12 +618,15 @@ function LogsPanel(props) {
 var import_jsx_runtime2 = require("react/jsx-runtime");
 var FIELDS = Object.keys(DEFAULT_CONFIG);
 var TABS = [
-  { id: "general", labelKey: "section.general" },
-  { id: "detection", labelKey: "section.detection" },
-  { id: "models", labelKey: "section.models" },
-  { id: "cache", labelKey: "section.cache" },
-  { id: "logs", labelKey: "tab.logs" }
+  { id: "general", labelKey: "section.general", icon: ["M4 7h16", "M4 12h16", "M4 17h16"] },
+  { id: "detection", labelKey: "section.detection", icon: ["M12 3l7 3v5c0 4.6-3 8-7 10-4-2-7-5.4-7-10V6l7-3Z", "m9 12 2 2 4-4"] },
+  { id: "models", labelKey: "section.models", icon: ["M7 7h10v10H7z", "M9 3v4", "M15 3v4", "M9 17v4", "M15 17v4", "M3 9h4", "M3 15h4", "M17 9h4", "M17 15h4"] },
+  { id: "cache", labelKey: "section.cache", icon: ["M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Z", "M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6", "M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"] },
+  { id: "logs", labelKey: "tab.logs", icon: ["M9 6h11", "M9 12h11", "M9 18h11", "M4 6h1", "M4 12h1", "M4 18h1"] }
 ];
+function TabIcon({ paths }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { style: tabIconStyle, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: paths.map((path) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: path }, path)) });
+}
 function listToText(list) {
   return Array.isArray(list) ? list.join(", ") : "";
 }
@@ -734,14 +759,17 @@ function SettingsForm(props) {
   }
   const noticeText = validation !== void 0 ? t(validation) : notice === "saved" ? t("config.saved") : notice === "error" ? t("config.saveError") : notice === "saving" ? t("config.saving") : "";
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: pageStyle, children: [
-    tabbed ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: tabBarStyle, children: TABS.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    tabbed ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: tabBarStyle, children: TABS.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
       "button",
       {
         type: "button",
         style: tabButtonStyle(tab === entry.id),
         "aria-pressed": tab === entry.id,
         onClick: () => setTab(entry.id),
-        children: t(entry.labelKey)
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(TabIcon, { paths: entry.icon }),
+          t(entry.labelKey)
+        ]
       },
       entry.id
     )) }) : null,
@@ -836,11 +864,38 @@ function SettingsForm(props) {
 
 // src/client/components/FirewallSettingsDialog.jsx
 var import_jsx_runtime3 = require("react/jsx-runtime");
+var SIZE_KEY = "dsh-plugin-tool-firewall:dialog-size";
+function readStoredSize() {
+  if (typeof window === "undefined") return void 0;
+  try {
+    const raw = window.localStorage.getItem(SIZE_KEY);
+    if (raw === null) return void 0;
+    const parsed = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== "object") return void 0;
+    const width = Number(parsed.width);
+    const height = Number(parsed.height);
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width < 420 || height < 280) return void 0;
+    return { width: Math.round(width), height: Math.round(height) };
+  } catch (error) {
+    return void 0;
+  }
+}
+function writeStoredSize(size) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SIZE_KEY, JSON.stringify(size));
+  } catch (error) {
+  }
+}
 function FirewallSettingsDialog(props) {
   const { uiStore, close, t, configForm } = props;
   const ui = useSnapshot(uiStore);
   const [logs, setLogs] = (0, import_react3.useState)([]);
   const [logsLoading, setLogsLoading] = (0, import_react3.useState)(false);
+  const [size, setSize] = (0, import_react3.useState)(readStoredSize);
+  const [offset, setOffset] = (0, import_react3.useState)({ x: 0, y: 0 });
+  const panelRef = (0, import_react3.useRef)(null);
+  const dragRef = (0, import_react3.useRef)(void 0);
   (0, import_react3.useEffect)(() => {
     if (!ui.open) return void 0;
     const onKey = (event) => {
@@ -849,6 +904,31 @@ function FirewallSettingsDialog(props) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [ui.open, close]);
+  (0, import_react3.useEffect)(() => {
+    if (!ui.open) return void 0;
+    setOffset({ x: 0, y: 0 });
+    return void 0;
+  }, [ui.open]);
+  (0, import_react3.useEffect)(() => {
+    if (!ui.open || panelRef.current === null || typeof ResizeObserver === "undefined") return void 0;
+    let saveTimer;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry === void 0) return;
+      const box = Array.isArray(entry.borderBoxSize) ? entry.borderBoxSize[0] : entry.borderBoxSize;
+      const width = Math.round(box?.inlineSize ?? entry.contentRect.width);
+      const height = Math.round(box?.blockSize ?? entry.contentRect.height);
+      if (width <= 0 || height <= 0) return;
+      setSize((current) => current !== void 0 && current.width === width && current.height === height ? current : { width, height });
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => writeStoredSize({ width, height }), 200);
+    });
+    observer.observe(panelRef.current);
+    return () => {
+      clearTimeout(saveTimer);
+      observer.disconnect();
+    };
+  }, [ui.open]);
   (0, import_react3.useEffect)(() => {
     if (!ui.open || typeof window === "undefined" || typeof fetch !== "function") return void 0;
     let disposed = false;
@@ -877,7 +957,45 @@ function FirewallSettingsDialog(props) {
       clearInterval(timer);
     };
   }, [ui.open]);
+  function startDrag(event) {
+    if (event.button !== 0) return;
+    const target = event.target;
+    if (target !== null && target !== void 0 && typeof target.closest === "function" && target.closest("button") !== null) return;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: offset.x,
+      originY: offset.y
+    };
+  }
+  function moveDrag(event) {
+    const drag = dragRef.current;
+    if (drag === void 0 || drag.pointerId !== event.pointerId) return;
+    setOffset({
+      x: drag.originX + event.clientX - drag.startX,
+      y: drag.originY + event.clientY - drag.startY
+    });
+  }
+  function endDrag(event) {
+    const drag = dragRef.current;
+    if (drag === void 0 || drag.pointerId !== event.pointerId) return;
+    dragRef.current = void 0;
+    try {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    } catch (error) {
+    }
+  }
   if (!ui.open) return null;
+  const panelStyle = {
+    ...dialogPanelStyle,
+    transform: `translate(${offset.x}px, ${offset.y}px)`
+  };
+  if (size !== void 0) {
+    panelStyle.width = String(size.width) + "px";
+    panelStyle.height = String(size.height) + "px";
+  }
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
     "div",
     {
@@ -885,14 +1003,24 @@ function FirewallSettingsDialog(props) {
       onMouseDown: (event) => {
         if (event.target === event.currentTarget) close();
       },
-      children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: dialogPanelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("config.title"), children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: dialogHeaderStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { minWidth: 0 }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h2", { style: dialogTitleStyle, children: t("config.title") }),
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: dialogSubtitleStyle, children: t("config.summary") })
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", style: dialogCloseStyle(), "aria-label": t("dialog.close"), title: t("dialog.close"), onClick: close, children: "\xD7" })
-        ] }),
+      children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { ref: panelRef, style: panelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("config.title"), children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+          "div",
+          {
+            style: dialogHeaderStyle,
+            onPointerDown: startDrag,
+            onPointerMove: moveDrag,
+            onPointerUp: endDrag,
+            onPointerCancel: endDrag,
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { minWidth: 0 }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h2", { style: dialogTitleStyle, children: t("config.title") }),
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: dialogSubtitleStyle, children: t("config.summary") })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", style: dialogCloseStyle(), "aria-label": t("dialog.close"), title: t("dialog.close"), onClick: close, children: "\xD7" })
+            ]
+          }
+        ),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: dialogBodyStyle, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SettingsForm, { view: "page", t, configForm, tabbed: true, logs, logsLoading }) })
       ] })
     }

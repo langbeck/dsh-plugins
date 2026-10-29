@@ -18,17 +18,26 @@ import {
   selectStyle,
   tabBarStyle,
   tabButtonStyle,
+  tabIconStyle,
 } from '../lib/styles.js'
 import LogsPanel from './LogsPanel.jsx'
 
 const FIELDS = Object.keys(DEFAULT_CONFIG)
 const TABS = [
-  { id: 'general', labelKey: 'section.general' },
-  { id: 'detection', labelKey: 'section.detection' },
-  { id: 'models', labelKey: 'section.models' },
-  { id: 'cache', labelKey: 'section.cache' },
-  { id: 'logs', labelKey: 'tab.logs' },
+  { id: 'general', labelKey: 'section.general', icon: ['M4 7h16', 'M4 12h16', 'M4 17h16'] },
+  { id: 'detection', labelKey: 'section.detection', icon: ['M12 3l7 3v5c0 4.6-3 8-7 10-4-2-7-5.4-7-10V6l7-3Z', 'm9 12 2 2 4-4'] },
+  { id: 'models', labelKey: 'section.models', icon: ['M7 7h10v10H7z', 'M9 3v4', 'M15 3v4', 'M9 17v4', 'M15 17v4', 'M3 9h4', 'M3 15h4', 'M17 9h4', 'M17 15h4'] },
+  { id: 'cache', labelKey: 'section.cache', icon: ['M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Z', 'M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6', 'M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6'] },
+  { id: 'logs', labelKey: 'tab.logs', icon: ['M9 6h11', 'M9 12h11', 'M9 18h11', 'M4 6h1', 'M4 12h1', 'M4 18h1'] },
 ]
+
+function TabIcon({ paths }) {
+  return (
+    <svg style={tabIconStyle} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {paths.map((path) => <path key={path} d={path} />)}
+    </svg>
+  )
+}
 
 function listToText(list) {
   return Array.isArray(list) ? list.join(', ') : ''
@@ -197,6 +206,7 @@ export default function SettingsForm(props) {
               aria-pressed={tab === entry.id}
               onClick={() => setTab(entry.id)}
             >
+              <TabIcon paths={entry.icon} />
               {t(entry.labelKey)}
             </button>
           ))}
