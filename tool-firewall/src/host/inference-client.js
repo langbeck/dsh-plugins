@@ -13,6 +13,14 @@ function messageOf(error) {
   return error instanceof Error ? error.message : String(error)
 }
 
+function modelErrorOf(error) {
+  const message = messageOf(error)
+  if (message.includes('Module did not self-register')) {
+    return message + ' — restart DSH once so the ONNX native binding loads in the Host process'
+  }
+  return message
+}
+
 function withDeadline(work, timeoutMs, signal) {
   return new Promise((resolve, reject) => {
     let settled = false
@@ -69,7 +77,7 @@ export function createInferenceClient(config, options = {}) {
       try {
         module = await loadTransformers()
       } catch (error) {
-        const message = messageOf(error)
+        const message = modelErrorOf(error)
         for (const key of ['embedding', 'classifier']) {
           if (modelStates[key].state !== 'disabled') modelStates[key] = { state: 'error', error: message }
         }
@@ -95,7 +103,7 @@ export function createInferenceClient(config, options = {}) {
           modelStates.embedding = { state: 'ready', error: null }
         } catch (error) {
           embeddingPipeline = undefined
-          modelStates.embedding = { state: 'error', error: messageOf(error) }
+          modelStates.embedding = { state: 'error', error: modelErrorOf(error) }
         }
       }
       if (config.classifierEnabled) {
@@ -113,7 +121,7 @@ export function createInferenceClient(config, options = {}) {
             modelStates.classifier = { state: 'ready', error: null }
           } catch (error) {
             classifierPipeline = undefined
-            modelStates.classifier = { state: 'error', error: messageOf(error) }
+            modelStates.classifier = { state: 'error', error: modelErrorOf(error) }
           }
         }
       }

@@ -98,6 +98,15 @@ blocks the call instead.
 - The decision cache stores only hashes, scores, and decisions; command text is
   never written to it.
 
+### Upgrading from the worker build
+
+Earlier builds ran Transformers.js in a worker thread. ONNX Runtime’s native
+binding cannot be loaded again by the Host process after that worker has
+registered it, producing `Module did not self-register`. The current build runs
+inference in the Host process, but a DSH process that already loaded the worker
+build must be **restarted once** to clear the stale native binding. Plugin
+reloads after that no longer create workers.
+
 ## Security scope
 
 This is an input firewall, not a sandbox. Structural checks are deterministic
