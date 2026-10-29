@@ -249,6 +249,55 @@ close(inferenceValue.maliceScore, 0.1, 'inference client forwards the worker res
 fakeClient.dispose()
 
 // ---------------------------------------------------------------------------
+// Host wiring: counters, logs, and routes
+// ---------------------------------------------------------------------------
+
+let wiredHandler
+const wiredRoutes = {}
+const wiredDisposers = []
+const wiredContext = {
+  tools: { get: (name) => ({ description: name, parameters: {} }) },
+  logger: { warn() {} },
+  effect(callback) {
+    const dispose = callback()
+    if (typeof dispose === 'function') wiredDisposers.push(dispose)
+    return dispose
+  },
+  on(event, handler) {
+    if (event === 'tools/pre-execute') wiredHandler = handler
+    return () => {}
+  },
+  connection: {
+    fetch: {
+      register(route) {
+        wiredRoutes[route.path] = route.fetch
+        return () => {}
+      },
+    },
+  },
+}
+host.apply(wiredContext, { embeddingEnabled: false, classifierEnabled: false, bypassRegex: '' })
+check(typeof wiredHandler === 'function', 'Host apply registers the pre-execute handler')
+const wiredNext = async () => ({ kind: 'enter' })
+const denied = await wiredHandler({ name: 'bash', arguments: { command: 'rm -rf /' }, agent: {}, signal: new AbortController().signal }, wiredNext)
+equal(denied.kind, 'deny', 'wired Host denies a hard-blocked command')
+await wiredHandler({ name: 'bash', arguments: { command: 'git status' }, agent: {}, signal: new AbortController().signal }, wiredNext)
+check(wiredRoutes['/api/tool-firewall-stats'] !== undefined, 'Host registers the stats route')
+check(wiredRoutes['/api/tool-firewall-logs'] !== undefined, 'Host registers the logs route')
+const statsResponse = await wiredRoutes['/api/tool-firewall-stats']({})
+const statsValue = await statsResponse.json()
+equal(statsValue.value.total, 2, 'stats route counts intercepted calls')
+equal(statsValue.value.blocked, 1, 'stats route counts firewall blocks')
+const logsResponse = await wiredRoutes['/api/tool-firewall-logs']({})
+const logsValue = await logsResponse.json()
+equal(logsValue.value.logs.length, 2, 'logs route returns one row per interception')
+const blockedLog = logsValue.value.logs.find((log) => log.blocked)
+check(blockedLog !== undefined, 'logs route includes the blocked call')
+check(blockedLog.command.includes('rm -rf /'), 'log row keeps a bounded command preview')
+check(Array.isArray(blockedLog.reasons), 'log row carries structural reasons')
+wiredDisposers.reverse().forEach((dispose) => dispose())
+
+// ---------------------------------------------------------------------------
 // Client bundle and configure form
 // ---------------------------------------------------------------------------
 
@@ -339,6 +388,14 @@ statsButtons[0].props.onClick()
 equal(overlayInjected.uiStore.getSnapshot().open, true, 'clicking the stats card opens the settings dialog')
 const dialogTree = ReactFake.reset(() => overlayRegistration.component({ t: (key) => key, configForm, ...overlayInjected }))
 check(dialogTree !== null && typeof dialogTree === 'object', 'settings dialog renders when open')
+const tabbedTree = ReactFake.reset(() => rowConfig.component({ view: 'page', t: (key) => key, configForm, tabbed: true, logs: [] }))
+const dialogLabels = []
+walkTree(tabbedTree, (node) => {
+  if (node !== null && typeof node === 'object' && typeof node.props?.children === 'string') dialogLabels.push(node.props.children)
+})
+for (const key of ['section.general', 'section.detection', 'section.models', 'section.cache', 'tab.logs']) {
+  check(dialogLabels.includes(key), 'settings dialog exposes tab ' + key)
+}
 overlayInjected.close()
 equal(overlayInjected.uiStore.getSnapshot().open, false, 'closing the settings dialog updates state')
 

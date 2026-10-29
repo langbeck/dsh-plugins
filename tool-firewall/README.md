@@ -51,6 +51,13 @@ declared in `src/index.js`/`src/config.js` apply again. Config fields are
 volatile: saves are applied live and rebuild the evaluator without restarting
 the Host.
 
+The settings dialog splits the sections into **General**, **Detection**,
+**Models**, **Bounds and cache**, and **Logs** tabs. The Logs tab polls the Host
+and shows one collapsible row per intercepted tool call with a bounded,
+basic-redacted command/description preview, structural and model scores,
+decision, reason, cache/bypass state, and duration. Logs are kept in memory
+(ring of 200) and reset when the plugin reloads.
+
 Important fields:
 
 - `enabled`

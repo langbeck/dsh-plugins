@@ -10,6 +10,7 @@ export const INJECT = ['slots', 'locale', 'configForms']
 export const STATS_ID = 'tool-firewall'
 export const OVERLAY_ID = 'tool-firewall-settings'
 export const STATS_ROUTE = '/api/tool-firewall-stats'
+export const LOGS_ROUTE = '/api/tool-firewall-logs'
 
 /**
  * Footer entries lay out in one flex row. Wrapping while this card is present

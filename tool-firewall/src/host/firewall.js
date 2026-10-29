@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 
 import { analyzeStructural } from './structural.js'
 
-function decisionBlocked(reason, detail, extra = {}) {
+function decisionBlocked(reason, detail, extra = {}, meta = {}) {
   return {
     blocked: true,
     reason,
@@ -14,6 +14,7 @@ function decisionBlocked(reason, detail, extra = {}) {
       ...detail === undefined ? {} : { reason: detail },
       ...extra,
     },
+    ...meta,
   }
 }
 
@@ -21,15 +22,18 @@ function decisionAllowed(extra = {}) {
   return { blocked: false, ...extra }
 }
 
-function failureDecision(config, message) {
+function failureDecision(config, message, structural = undefined) {
   if (config.semanticFailure === 'closed') {
     return {
       blocked: true,
       reason: 'Tool firewall is unavailable; the call was blocked by fail-closed policy.',
       info: { name: 'ToolFirewallError', code: 'TOOL_FIREWALL_UNAVAILABLE', reason: message },
+      structural,
+      semanticUnavailable: true,
+      error: message,
     }
   }
-  return { blocked: false, semanticUnavailable: true, error: message }
+  return { blocked: false, semanticUnavailable: true, error: message, structural }
 }
 
 /** Dot product is cosine similarity because embeddings are normalized. */
@@ -90,6 +94,7 @@ export async function evaluatePayload(payload, config, deps, signal) {
       `Tool firewall blocked tool "${payload.name}": ${structural.reasons[0] ?? 'dangerous command structure'}.`,
       `structural risk ${Math.round(structural.score * 100)}%`,
       { code: 'TOOL_FIREWALL_BLOCKED' },
+      { structural },
     )
   }
   if (allowedByBypass(payload, config) && structural.score === 0) {
@@ -105,13 +110,13 @@ export async function evaluatePayload(payload, config, deps, signal) {
   let modelResult
   if (needsClassifier || needsAlignment) {
     if (!deps.inference.ready) {
-      return failureDecision(config, 'inference models are not ready')
+      return failureDecision(config, 'inference models are not ready', structural)
     }
     try {
       modelResult = await deps.inference.evaluate(payload.command, needsAlignment ? payload.description : undefined, signal)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      return failureDecision(config, message)
+      return failureDecision(config, message, structural)
     }
   }
 
@@ -121,7 +126,7 @@ export async function evaluatePayload(payload, config, deps, signal) {
     ? cosineSimilarity(modelResult?.commandEmbedding, modelResult?.descriptionEmbedding)
     : 1
   if (needsAlignment && similarity === undefined) {
-    return failureDecision(config, 'embedding output was malformed')
+    return failureDecision(config, 'embedding output was malformed', structural)
   }
   const malicious = maliceScore > config.maliceThreshold
   const mismatch = needsAlignment && similarity < config.alignmentThreshold
@@ -137,6 +142,7 @@ export async function evaluatePayload(payload, config, deps, signal) {
       `Tool firewall blocked tool "${payload.name}": ${malicious ? 'high malice score' : 'command/description mismatch'}.`,
       `malice=${scores.malice.toFixed(3)} alignment=${scores.alignment.toFixed(3)}`,
       { code: 'TOOL_FIREWALL_BLOCKED' },
+      { structural, scores },
     )
     : decisionAllowed({ structural, scores })
   deps.cache.set(key, decision)

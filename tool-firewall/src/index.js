@@ -33,6 +33,17 @@ export const name = 'tool-firewall'
 export const inject = ['tools', 'connection']
 
 const STATS_ROUTE = '/api/tool-firewall-stats'
+const LOGS_ROUTE = '/api/tool-firewall-logs'
+const LOG_LIMIT = 200
+const LOG_PREVIEW_CHARS = 400
+
+function preview(value) {
+  if (typeof value !== 'string' || value === '') return ''
+  return value
+    .slice(0, LOG_PREVIEW_CHARS)
+    .replace(/\b(?:sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,})\b/g, '[redacted]')
+    .replace(/((?:password|passwd|token|secret|api[_-]?key|authorization)\s*[=:]\s*)(["']?)[^\s"']+/gi, '$1$2[redacted]')
+}
 
 export const Config = Schema.object({
   enabled: Schema.boolean().default(DEFAULT_CONFIG.enabled).volatile(),
@@ -75,7 +86,36 @@ export function apply(ctx, config) {
   const logger = ctx.logger
   const startedAt = Date.now()
   const counters = { total: 0, blocked: 0 }
+  const logs = []
+  let logSeq = 0
   let runtime
+
+  function recordInspection({ payload, decision, durationMs }) {
+    const scores = decision.scores ?? {}
+    const structural = decision.structural ?? {}
+    logs.unshift({
+      id: ++logSeq,
+      at: Date.now(),
+      tool: payload.name,
+      kind: payload.kind,
+      command: preview(payload.command),
+      description: payload.description === null ? '' : preview(payload.description),
+      blocked: decision.blocked === true,
+      code: decision.info?.code,
+      reason: preview(decision.reason ?? decision.error ?? ''),
+      structural: typeof scores.structural === 'number' ? scores.structural : structural.score,
+      hardBlock: structural.hardBlock === true,
+      reasons: Array.isArray(structural.reasons) ? structural.reasons.slice(0, 6) : [],
+      malice: scores.malice,
+      alignment: scores.alignment,
+      classifier: scores.classifier,
+      bypass: decision.bypass === true,
+      cached: decision.cached === true,
+      semanticUnavailable: decision.semanticUnavailable === true,
+      durationMs: Math.max(0, Math.round(durationMs)),
+    })
+    if (logs.length > LOG_LIMIT) logs.length = LOG_LIMIT
+  }
 
   function currentConfig() {
     try {
@@ -114,6 +154,7 @@ export function apply(ctx, config) {
       inference: next.inference,
       cache: next.cache,
       logger,
+      onInspected: recordInspection,
     })
     if (previous !== undefined) {
       previous.inference.dispose()
@@ -173,4 +214,24 @@ export function apply(ctx, config) {
       Promise.resolve(dispose()).catch(() => {})
     }
   }, 'tool-firewall: stats route')
+
+  ctx.effect(() => {
+    const dispose = ctx.connection.fetch.register({
+      path: LOGS_ROUTE,
+      methods: ['POST'],
+      requestBody: 'buffered',
+      fetch: async () => Response.json({
+        ok: true,
+        value: {
+          logs,
+          total: counters.total,
+          blocked: counters.blocked,
+          startedAt,
+        },
+      }),
+    })
+    return () => {
+      Promise.resolve(dispose()).catch(() => {})
+    }
+  }, 'tool-firewall: logs route')
 }

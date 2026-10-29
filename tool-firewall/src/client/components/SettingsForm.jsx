@@ -16,9 +16,19 @@ import {
   sectionStyle,
   sectionTitleStyle,
   selectStyle,
+  tabBarStyle,
+  tabButtonStyle,
 } from '../lib/styles.js'
+import LogsPanel from './LogsPanel.jsx'
 
 const FIELDS = Object.keys(DEFAULT_CONFIG)
+const TABS = [
+  { id: 'general', labelKey: 'section.general' },
+  { id: 'detection', labelKey: 'section.detection' },
+  { id: 'models', labelKey: 'section.models' },
+  { id: 'cache', labelKey: 'section.cache' },
+  { id: 'logs', labelKey: 'tab.logs' },
+]
 
 function listToText(list) {
   return Array.isArray(list) ? list.join(', ') : ''
@@ -56,12 +66,13 @@ function validDraft(draft) {
 }
 
 export default function SettingsForm(props) {
-  const { view, t, configForm } = props
+  const { view, t, configForm, tabbed = false, logs = [], logsLoading = false } = props
   const snapshot = useSnapshot(configForm)
   const resolved = normalizeConfig(snapshot.value)
   const [draft, setDraft] = useState(resolved)
   const [notice, setNotice] = useState('idle')
   const [validation, setValidation] = useState(undefined)
+  const [tab, setTab] = useState('general')
   const revision = snapshot.revision
 
   useEffect(() => {
@@ -176,78 +187,104 @@ export default function SettingsForm(props) {
 
   return (
     <div style={pageStyle}>
-      <section style={sectionStyle}>
-        <h3 style={sectionTitleStyle}>{t('section.general')}</h3>
-        {checkboxField('enabled')}
-        <span style={hintStyle}>{t('field.enabledHint')}</span>
-        <label style={fieldStyle}>
-          <span style={labelStyle}>{t('field.semanticFailure')}</span>
-          <select
-            value={draft.semanticFailure}
-            disabled={disabled}
-            onChange={(event) => update('semanticFailure', event.target.value)}
-            style={selectStyle(disabled)}
-          >
-            <option value="open">{t('option.open')}</option>
-            <option value="closed">{t('option.closed')}</option>
-          </select>
-          <span style={hintStyle}>{t('field.semanticFailureHint')}</span>
-        </label>
-        {numberField('modelTimeoutMs', 1, 5000, 1)}
-      </section>
+      {tabbed ? (
+        <div style={tabBarStyle}>
+          {TABS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              style={tabButtonStyle(tab === entry.id)}
+              aria-pressed={tab === entry.id}
+              onClick={() => setTab(entry.id)}
+            >
+              {t(entry.labelKey)}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
-      <section style={sectionStyle}>
-        <h3 style={sectionTitleStyle}>{t('section.detection')}</h3>
-        {numberField('maliceThreshold', 0, 1, 0.01)}
-        {numberField('alignmentThreshold', 0, 1, 0.01)}
-        {textField('bypassRegex', '100%')}
-        <label style={fieldStyle}>
-          <span style={labelStyle}>{t('field.shellTools')}</span>
-          <input
-            type="text"
-            value={listToText(draft.shellTools)}
-            disabled={disabled}
-            aria-label={t('field.shellTools')}
-            onChange={(event) => update('shellTools', textToList(event.target.value))}
-            style={inputStyle(disabled, '100%')}
-          />
-          <span style={hintStyle}>{t('field.shellToolsHint')}</span>
-        </label>
-      </section>
+      {!tabbed || tab === 'general' ? (
+        <section style={sectionStyle}>
+          <h3 style={sectionTitleStyle}>{t('section.general')}</h3>
+          {checkboxField('enabled')}
+          <span style={hintStyle}>{t('field.enabledHint')}</span>
+          <label style={fieldStyle}>
+            <span style={labelStyle}>{t('field.semanticFailure')}</span>
+            <select
+              value={draft.semanticFailure}
+              disabled={disabled}
+              onChange={(event) => update('semanticFailure', event.target.value)}
+              style={selectStyle(disabled)}
+            >
+              <option value="open">{t('option.open')}</option>
+              <option value="closed">{t('option.closed')}</option>
+            </select>
+            <span style={hintStyle}>{t('field.semanticFailureHint')}</span>
+          </label>
+          {numberField('modelTimeoutMs', 1, 5000, 1)}
+        </section>
+      ) : null}
 
-      <section style={sectionStyle}>
-        <h3 style={sectionTitleStyle}>{t('section.models')}</h3>
-        {checkboxField('embeddingEnabled')}
-        <span style={hintStyle}>{t('field.embeddingEnabledHint')}</span>
-        {textField('embeddingModel', '100%', undefined, !draft.embeddingEnabled)}
-        {textField('embeddingRevision', '100%', undefined, !draft.embeddingEnabled)}
-        {checkboxField('classifierEnabled')}
-        <span style={hintStyle}>{t('field.classifierEnabledHint')}</span>
-        {textField('classifierModel', '100%', undefined, !draft.classifierEnabled)}
-        {textField('classifierRevision', '100%', undefined, !draft.classifierEnabled)}
-        <label style={fieldStyle}>
-          <span style={labelStyle}>{t('field.classifierLabels')}</span>
-          <input
-            type="text"
-            value={listToText(draft.classifierLabels)}
-            disabled={disabled || !draft.classifierEnabled}
-            aria-label={t('field.classifierLabels')}
-            onChange={(event) => update('classifierLabels', textToList(event.target.value))}
-            style={inputStyle(disabled || !draft.classifierEnabled, '100%')}
-          />
-          <span style={hintStyle}>{t('field.classifierLabelsHint')}</span>
-        </label>
-        {checkboxField('allowRemoteModels')}
-        <span style={hintStyle}>{t('field.allowRemoteModelsHint')}</span>
-      </section>
+      {!tabbed || tab === 'detection' ? (
+        <section style={sectionStyle}>
+          <h3 style={sectionTitleStyle}>{t('section.detection')}</h3>
+          {numberField('maliceThreshold', 0, 1, 0.01)}
+          {numberField('alignmentThreshold', 0, 1, 0.01)}
+          {textField('bypassRegex', '100%')}
+          <label style={fieldStyle}>
+            <span style={labelStyle}>{t('field.shellTools')}</span>
+            <input
+              type="text"
+              value={listToText(draft.shellTools)}
+              disabled={disabled}
+              aria-label={t('field.shellTools')}
+              onChange={(event) => update('shellTools', textToList(event.target.value))}
+              style={inputStyle(disabled, '100%')}
+            />
+            <span style={hintStyle}>{t('field.shellToolsHint')}</span>
+          </label>
+        </section>
+      ) : null}
 
-      <section style={sectionStyle}>
-        <h3 style={sectionTitleStyle}>{t('section.cache')}</h3>
-        {numberField('maxCommandChars', 64, 65536, 1)}
-        {numberField('maxTextTokens', 16, 512, 1)}
-        {numberField('cacheEntries', 1, 4096, 1)}
-        {numberField('cacheTtlMs', 1000, 86400000, 1000)}
-      </section>
+      {!tabbed || tab === 'models' ? (
+        <section style={sectionStyle}>
+          <h3 style={sectionTitleStyle}>{t('section.models')}</h3>
+          {checkboxField('embeddingEnabled')}
+          <span style={hintStyle}>{t('field.embeddingEnabledHint')}</span>
+          {textField('embeddingModel', '100%', undefined, !draft.embeddingEnabled)}
+          {textField('embeddingRevision', '100%', undefined, !draft.embeddingEnabled)}
+          {checkboxField('classifierEnabled')}
+          <span style={hintStyle}>{t('field.classifierEnabledHint')}</span>
+          {textField('classifierModel', '100%', undefined, !draft.classifierEnabled)}
+          {textField('classifierRevision', '100%', undefined, !draft.classifierEnabled)}
+          <label style={fieldStyle}>
+            <span style={labelStyle}>{t('field.classifierLabels')}</span>
+            <input
+              type="text"
+              value={listToText(draft.classifierLabels)}
+              disabled={disabled || !draft.classifierEnabled}
+              aria-label={t('field.classifierLabels')}
+              onChange={(event) => update('classifierLabels', textToList(event.target.value))}
+              style={inputStyle(disabled || !draft.classifierEnabled, '100%')}
+            />
+            <span style={hintStyle}>{t('field.classifierLabelsHint')}</span>
+          </label>
+          {checkboxField('allowRemoteModels')}
+          <span style={hintStyle}>{t('field.allowRemoteModelsHint')}</span>
+        </section>
+      ) : null}
+
+      {!tabbed || tab === 'cache' ? (
+        <section style={sectionStyle}>
+          <h3 style={sectionTitleStyle}>{t('section.cache')}</h3>
+          {numberField('maxCommandChars', 64, 65536, 1)}
+          {numberField('maxTextTokens', 16, 512, 1)}
+          {numberField('cacheEntries', 1, 4096, 1)}
+          {numberField('cacheTtlMs', 1000, 86400000, 1000)}
+        </section>
+      ) : null}
+
+      {tabbed && tab === 'logs' ? <LogsPanel logs={logs} loading={logsLoading} t={t} /> : null}
 
       <div style={footerStyle}>
         <button type="button" disabled={disabled} onClick={save} style={primaryButtonStyle(disabled)}>

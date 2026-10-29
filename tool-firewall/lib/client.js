@@ -43,6 +43,107 @@ module.exports = __toCommonJS(index_exports);
 // src/client/components/FirewallSettingsDialog.jsx
 var import_react3 = require("react");
 
+// src/config.js
+var DEFAULT_CONFIG = Object.freeze({
+  enabled: true,
+  maliceThreshold: 0.85,
+  alignmentThreshold: 0.35,
+  bypassRegex: "^(?:ls|git status|git branch|pwd)$",
+  shellTools: Object.freeze(["bash", "pwsh", "terminal_send", "run_code"]),
+  maxCommandChars: 8192,
+  maxTextTokens: 256,
+  embeddingEnabled: true,
+  embeddingModel: "Xenova/all-MiniLM-L6-v2",
+  embeddingRevision: "751bff37182d3f1213fa05d7196b954e230abad9",
+  classifierEnabled: false,
+  classifierModel: "",
+  classifierRevision: "",
+  classifierLabels: Object.freeze(["MALICIOUS", "LABEL_1"]),
+  modelTimeoutMs: 50,
+  semanticFailure: "open",
+  cacheEntries: 256,
+  cacheTtlMs: 6e5,
+  allowRemoteModels: true
+});
+var SEMANTIC_FAILURE_MODES = Object.freeze(["open", "closed"]);
+var MAX_COMMAND_CHARS = 65536;
+var MAX_TEXT_TOKENS = 512;
+var MAX_TIMEOUT_MS = 5e3;
+var MAX_CACHE_ENTRIES = 4096;
+var MAX_CACHE_TTL_MS = 864e5;
+function unrefConfig(value) {
+  const source = value !== null && typeof value === "object" ? value : {};
+  const out = {};
+  for (const key of Object.keys(DEFAULT_CONFIG)) {
+    const raw = source[key];
+    out[key] = raw !== null && raw !== void 0 && typeof raw.get === "function" ? raw.get() : raw;
+  }
+  return out;
+}
+function clampNumber(value, fallback, min, max, integer = false) {
+  const numeric2 = Number(value);
+  if (!Number.isFinite(numeric2)) return fallback;
+  const rounded = integer ? Math.round(numeric2) : numeric2;
+  return Math.min(max, Math.max(min, rounded));
+}
+function normalizeString(value, fallback) {
+  return typeof value === "string" ? value : fallback;
+}
+function normalizeStringList(value, fallback) {
+  let entries;
+  if (Array.isArray(value)) entries = value;
+  else if (typeof value === "string") entries = value.split(",");
+  else entries = fallback;
+  const out = [];
+  for (const entry of entries) {
+    if (typeof entry !== "string") continue;
+    const trimmed = entry.trim();
+    if (trimmed === "") continue;
+    if (!out.includes(trimmed)) out.push(trimmed);
+  }
+  return out.length > 0 ? out : [...fallback];
+}
+function normalizeConfig(value) {
+  const source = unrefConfig(value);
+  return {
+    enabled: source.enabled !== false,
+    maliceThreshold: clampNumber(source.maliceThreshold, DEFAULT_CONFIG.maliceThreshold, 0, 1),
+    alignmentThreshold: clampNumber(source.alignmentThreshold, DEFAULT_CONFIG.alignmentThreshold, 0, 1),
+    bypassRegex: normalizeString(source.bypassRegex, DEFAULT_CONFIG.bypassRegex),
+    shellTools: normalizeStringList(source.shellTools, DEFAULT_CONFIG.shellTools),
+    maxCommandChars: clampNumber(source.maxCommandChars, DEFAULT_CONFIG.maxCommandChars, 64, MAX_COMMAND_CHARS, true),
+    maxTextTokens: clampNumber(source.maxTextTokens, DEFAULT_CONFIG.maxTextTokens, 16, MAX_TEXT_TOKENS, true),
+    embeddingEnabled: source.embeddingEnabled !== false,
+    embeddingModel: normalizeString(source.embeddingModel, DEFAULT_CONFIG.embeddingModel),
+    embeddingRevision: normalizeString(source.embeddingRevision, DEFAULT_CONFIG.embeddingRevision),
+    classifierEnabled: source.classifierEnabled === true,
+    classifierModel: normalizeString(source.classifierModel, DEFAULT_CONFIG.classifierModel),
+    classifierRevision: normalizeString(source.classifierRevision, DEFAULT_CONFIG.classifierRevision),
+    classifierLabels: normalizeStringList(source.classifierLabels, DEFAULT_CONFIG.classifierLabels),
+    modelTimeoutMs: clampNumber(source.modelTimeoutMs, DEFAULT_CONFIG.modelTimeoutMs, 1, MAX_TIMEOUT_MS, true),
+    semanticFailure: SEMANTIC_FAILURE_MODES.includes(source.semanticFailure) ? source.semanticFailure : DEFAULT_CONFIG.semanticFailure,
+    cacheEntries: clampNumber(source.cacheEntries, DEFAULT_CONFIG.cacheEntries, 1, MAX_CACHE_ENTRIES, true),
+    cacheTtlMs: clampNumber(source.cacheTtlMs, DEFAULT_CONFIG.cacheTtlMs, 1e3, MAX_CACHE_TTL_MS, true),
+    allowRemoteModels: source.allowRemoteModels !== false
+  };
+}
+
+// src/client/constants.js
+var NS = "toolFirewall";
+var PACKAGE = "dsh-plugin-tool-firewall";
+var ROW_ID = "tool-firewall";
+var CONFIG_KEY = `${PACKAGE}#${ROW_ID}`;
+var INJECT = ["slots", "locale", "configForms"];
+var STATS_ID = "tool-firewall";
+var OVERLAY_ID = "tool-firewall-settings";
+var STATS_ROUTE = "/api/tool-firewall-stats";
+var LOGS_ROUTE = "/api/tool-firewall-logs";
+var LAYOUT_CSS = [
+  'div:has(> [data-slot="sidebar.footer.action"] > [data-tool-firewall-pill]) {',
+  "  flex-wrap: wrap;",
+  "}"
+].join("\n");
+
 // src/client/lib/hooks.js
 var import_react = __toESM(require("react"), 1);
 function useSnapshot(store) {
@@ -301,98 +402,206 @@ function dialogCloseStyle() {
     cursor: "pointer"
   };
 }
+var tabBarStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "2px",
+  flexWrap: "wrap",
+  padding: "0 0 10px",
+  borderBottom: "0.5px solid var(--dsw-alias-border-l3)",
+  marginBottom: "14px"
+};
+function tabButtonStyle(active) {
+  return {
+    height: "30px",
+    padding: "0 10px",
+    border: "none",
+    borderBottom: active ? "2px solid var(--dsw-alias-label-primary)" : "2px solid transparent",
+    borderRadius: 0,
+    background: "transparent",
+    color: active ? "var(--dsw-alias-label-primary)" : "var(--dsw-alias-label-tertiary)",
+    font: "inherit",
+    fontSize: "12px",
+    fontWeight: active ? 600 : 500,
+    cursor: "pointer"
+  };
+}
+var logsListStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "6px"
+};
+var logEntryStyle = {
+  border: "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "var(--dsw-radius-md, 8px)",
+  background: "var(--dsw-alias-bg-layer-2)",
+  overflow: "hidden"
+};
+var logSummaryStyle = {
+  display: "flex",
+  alignItems: "baseline",
+  gap: "8px",
+  padding: "7px 10px",
+  cursor: "pointer",
+  fontSize: "12px",
+  lineHeight: "18px",
+  listStyle: "none"
+};
+var logTimeStyle = {
+  flex: "none",
+  color: "var(--dsw-alias-label-tertiary)",
+  fontSize: "11px",
+  fontVariantNumeric: "tabular-nums"
+};
+var logToolStyle = {
+  flex: "1 1 auto",
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  fontWeight: 600
+};
+function logDecisionStyle(blocked) {
+  return {
+    flex: "none",
+    fontWeight: 600,
+    fontSize: "11px",
+    color: blocked ? "var(--dsw-alias-state-error-primary, #d93025)" : "var(--dsw-alias-state-success-primary, #2ea043)"
+  };
+}
+var logMutedStyle = {
+  flex: "none",
+  color: "var(--dsw-alias-label-tertiary)",
+  fontSize: "11px"
+};
+var logBodyStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  padding: "4px 10px 10px 10px",
+  borderTop: "0.5px solid var(--dsw-alias-border-l3)"
+};
+var logSectionStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "3px"
+};
+var logKeyStyle = {
+  color: "var(--dsw-alias-label-tertiary)",
+  fontSize: "11px",
+  fontWeight: 600
+};
+var logPreStyle = {
+  margin: 0,
+  padding: "6px 8px",
+  borderRadius: "var(--dsw-radius-md, 8px)",
+  background: "var(--dsw-alias-bg-layer-3)",
+  color: "var(--dsw-alias-label-primary)",
+  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontSize: "11px",
+  lineHeight: "16px",
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  maxHeight: "140px",
+  overflow: "auto"
+};
+var logGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "max-content minmax(0, 1fr)",
+  gap: "2px 10px",
+  fontSize: "11px",
+  lineHeight: "17px"
+};
+var logLabelStyle = {
+  color: "var(--dsw-alias-label-tertiary)"
+};
+var logValueStyle = {
+  color: "var(--dsw-alias-label-primary)",
+  fontVariantNumeric: "tabular-nums"
+};
 
 // src/client/components/SettingsForm.jsx
 var import_react2 = require("react");
 
-// src/config.js
-var DEFAULT_CONFIG = Object.freeze({
-  enabled: true,
-  maliceThreshold: 0.85,
-  alignmentThreshold: 0.35,
-  bypassRegex: "^(?:ls|git status|git branch|pwd)$",
-  shellTools: Object.freeze(["bash", "pwsh", "terminal_send", "run_code"]),
-  maxCommandChars: 8192,
-  maxTextTokens: 256,
-  embeddingEnabled: true,
-  embeddingModel: "Xenova/all-MiniLM-L6-v2",
-  embeddingRevision: "751bff37182d3f1213fa05d7196b954e230abad9",
-  classifierEnabled: false,
-  classifierModel: "",
-  classifierRevision: "",
-  classifierLabels: Object.freeze(["MALICIOUS", "LABEL_1"]),
-  modelTimeoutMs: 50,
-  semanticFailure: "open",
-  cacheEntries: 256,
-  cacheTtlMs: 6e5,
-  allowRemoteModels: true
-});
-var SEMANTIC_FAILURE_MODES = Object.freeze(["open", "closed"]);
-var MAX_COMMAND_CHARS = 65536;
-var MAX_TEXT_TOKENS = 512;
-var MAX_TIMEOUT_MS = 5e3;
-var MAX_CACHE_ENTRIES = 4096;
-var MAX_CACHE_TTL_MS = 864e5;
-function unrefConfig(value) {
-  const source = value !== null && typeof value === "object" ? value : {};
-  const out = {};
-  for (const key of Object.keys(DEFAULT_CONFIG)) {
-    const raw = source[key];
-    out[key] = raw !== null && raw !== void 0 && typeof raw.get === "function" ? raw.get() : raw;
-  }
-  return out;
+// src/client/components/LogsPanel.jsx
+var import_jsx_runtime = require("react/jsx-runtime");
+function timeText(at) {
+  if (typeof at !== "number" || !Number.isFinite(at)) return "";
+  return new Date(at).toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
-function clampNumber(value, fallback, min, max, integer = false) {
-  const numeric2 = Number(value);
-  if (!Number.isFinite(numeric2)) return fallback;
-  const rounded = integer ? Math.round(numeric2) : numeric2;
-  return Math.min(max, Math.max(min, rounded));
+function numberText(value, digits = 3) {
+  return typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "\u2014";
 }
-function normalizeString(value, fallback) {
-  return typeof value === "string" ? value : fallback;
-}
-function normalizeStringList(value, fallback) {
-  let entries;
-  if (Array.isArray(value)) entries = value;
-  else if (typeof value === "string") entries = value.split(",");
-  else entries = fallback;
-  const out = [];
-  for (const entry of entries) {
-    if (typeof entry !== "string") continue;
-    const trimmed = entry.trim();
-    if (trimmed === "") continue;
-    if (!out.includes(trimmed)) out.push(trimmed);
-  }
-  return out.length > 0 ? out : [...fallback];
-}
-function normalizeConfig(value) {
-  const source = unrefConfig(value);
-  return {
-    enabled: source.enabled !== false,
-    maliceThreshold: clampNumber(source.maliceThreshold, DEFAULT_CONFIG.maliceThreshold, 0, 1),
-    alignmentThreshold: clampNumber(source.alignmentThreshold, DEFAULT_CONFIG.alignmentThreshold, 0, 1),
-    bypassRegex: normalizeString(source.bypassRegex, DEFAULT_CONFIG.bypassRegex),
-    shellTools: normalizeStringList(source.shellTools, DEFAULT_CONFIG.shellTools),
-    maxCommandChars: clampNumber(source.maxCommandChars, DEFAULT_CONFIG.maxCommandChars, 64, MAX_COMMAND_CHARS, true),
-    maxTextTokens: clampNumber(source.maxTextTokens, DEFAULT_CONFIG.maxTextTokens, 16, MAX_TEXT_TOKENS, true),
-    embeddingEnabled: source.embeddingEnabled !== false,
-    embeddingModel: normalizeString(source.embeddingModel, DEFAULT_CONFIG.embeddingModel),
-    embeddingRevision: normalizeString(source.embeddingRevision, DEFAULT_CONFIG.embeddingRevision),
-    classifierEnabled: source.classifierEnabled === true,
-    classifierModel: normalizeString(source.classifierModel, DEFAULT_CONFIG.classifierModel),
-    classifierRevision: normalizeString(source.classifierRevision, DEFAULT_CONFIG.classifierRevision),
-    classifierLabels: normalizeStringList(source.classifierLabels, DEFAULT_CONFIG.classifierLabels),
-    modelTimeoutMs: clampNumber(source.modelTimeoutMs, DEFAULT_CONFIG.modelTimeoutMs, 1, MAX_TIMEOUT_MS, true),
-    semanticFailure: SEMANTIC_FAILURE_MODES.includes(source.semanticFailure) ? source.semanticFailure : DEFAULT_CONFIG.semanticFailure,
-    cacheEntries: clampNumber(source.cacheEntries, DEFAULT_CONFIG.cacheEntries, 1, MAX_CACHE_ENTRIES, true),
-    cacheTtlMs: clampNumber(source.cacheTtlMs, DEFAULT_CONFIG.cacheTtlMs, 1e3, MAX_CACHE_TTL_MS, true),
-    allowRemoteModels: source.allowRemoteModels !== false
-  };
+function LogsPanel(props) {
+  const { logs = [], loading = false, t } = props;
+  if (loading && logs.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: logMutedStyle, children: t("logs.loading") });
+  if (logs.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: logMutedStyle, children: t("logs.empty") });
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: logsListStyle, children: logs.map((log) => {
+    const flags = [];
+    if (log.bypass) flags.push(t("logs.bypass"));
+    if (log.cached) flags.push(t("logs.cached"));
+    if (log.semanticUnavailable) flags.push(t("logs.unavailable"));
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("details", { style: logEntryStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("summary", { style: logSummaryStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logTimeStyle, children: timeText(log.at) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logToolStyle, children: log.tool }),
+        flags.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logMutedStyle, children: flags.join(" \xB7 ") }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logDecisionStyle(log.blocked), children: t(log.blocked ? "logs.blocked" : "logs.allowed") })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logBodyStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.command") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { style: logPreStyle, children: log.command === "" ? t("logs.noCommand") : log.command })
+        ] }),
+        typeof log.description === "string" && log.description !== "" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.description") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { style: logPreStyle, children: log.description })
+        ] }) : null,
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logGridStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.result") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
+            log.blocked ? t("logs.blocked") : t("logs.allowed"),
+            log.code === void 0 ? "" : " \xB7 " + log.code
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.kind") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.kind }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.structural") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
+            numberText(log.structural),
+            log.hardBlock ? " \xB7 " + t("logs.hardBlock") : ""
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.malice") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
+            numberText(log.malice),
+            log.classifier === void 0 ? "" : " \xB7 " + t("logs.classifier") + " " + numberText(log.classifier)
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.alignment") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.alignment === void 0 ? "\u2014" : numberText(log.alignment) }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.duration") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: typeof log.durationMs === "number" ? String(Math.round(log.durationMs)) + " ms" : "\u2014" })
+        ] }),
+        Array.isArray(log.reasons) && log.reasons.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.reason") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.reasons.join(" \xB7 ") })
+        ] }) : null,
+        typeof log.reason === "string" && log.reason !== "" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.reason") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.reason })
+        ] }) : null
+      ] })
+    ] }, log.id);
+  }) });
 }
 
 // src/client/components/SettingsForm.jsx
-var import_jsx_runtime = require("react/jsx-runtime");
+var import_jsx_runtime2 = require("react/jsx-runtime");
 var FIELDS = Object.keys(DEFAULT_CONFIG);
+var TABS = [
+  { id: "general", labelKey: "section.general" },
+  { id: "detection", labelKey: "section.detection" },
+  { id: "models", labelKey: "section.models" },
+  { id: "cache", labelKey: "section.cache" },
+  { id: "logs", labelKey: "tab.logs" }
+];
 function listToText(list) {
   return Array.isArray(list) ? list.join(", ") : "";
 }
@@ -425,21 +634,22 @@ function validDraft(draft) {
   return void 0;
 }
 function SettingsForm(props) {
-  const { view, t, configForm } = props;
+  const { view, t, configForm, tabbed = false, logs = [], logsLoading = false } = props;
   const snapshot = useSnapshot(configForm);
   const resolved = normalizeConfig(snapshot.value);
   const [draft, setDraft] = (0, import_react2.useState)(resolved);
   const [notice, setNotice] = (0, import_react2.useState)("idle");
   const [validation, setValidation] = (0, import_react2.useState)(void 0);
+  const [tab, setTab] = (0, import_react2.useState)("general");
   const revision = snapshot.revision;
   (0, import_react2.useEffect)(() => {
     setDraft(normalizeConfig(configForm.getSnapshot().value));
     setNotice("idle");
     setValidation(void 0);
   }, [revision]);
-  if (view === "summary") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: t("config.summary") });
-  if (snapshot.status === "loading") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: hintStyle, children: t("config.loading") });
-  if (snapshot.status === "unavailable") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: hintStyle, children: t("config.unavailable") });
+  if (view === "summary") return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("config.summary") });
+  if (snapshot.status === "loading") return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.loading") });
+  if (snapshot.status === "unavailable") return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.unavailable") });
   const writable = snapshot.writable === true;
   const saving = notice === "saving";
   const disabled = !writable || saving;
@@ -472,9 +682,9 @@ function SettingsForm(props) {
     submit(FIELDS.map((field) => ({ op: "unset", path: [field] })));
   }
   function textField(field, width = "320px", hint = void 0, extraDisabled = false) {
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { style: fieldStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: labelStyle, children: t("field." + field) }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field." + field) }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
         "input",
         {
           type: "text",
@@ -485,13 +695,13 @@ function SettingsForm(props) {
           style: inputStyle(disabled || extraDisabled, width)
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: hintStyle, children: t("field." + field + "Hint") })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field." + field + "Hint") })
     ] });
   }
   function numberField(field, min, max, step, hint = void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { style: fieldStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: labelStyle, children: t("field." + field) }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field." + field) }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
         "input",
         {
           type: "number",
@@ -505,12 +715,12 @@ function SettingsForm(props) {
           style: inputStyle(disabled)
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: hintStyle, children: t("field." + field + "Hint") })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field." + field + "Hint") })
     ] });
   }
   function checkboxField(field, extraDisabled = false) {
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { style: checkboxStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: checkboxStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
         "input",
         {
           type: "checkbox",
@@ -519,18 +729,29 @@ function SettingsForm(props) {
           onChange: (event) => update(field, event.target.checked)
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: labelStyle, children: t("field." + field) })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field." + field) })
     ] });
   }
   const noticeText = validation !== void 0 ? t(validation) : notice === "saved" ? t("config.saved") : notice === "error" ? t("config.saveError") : notice === "saving" ? t("config.saving") : "";
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: pageStyle, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { style: sectionStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", { style: sectionTitleStyle, children: t("section.general") }),
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: pageStyle, children: [
+    tabbed ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: tabBarStyle, children: TABS.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+      "button",
+      {
+        type: "button",
+        style: tabButtonStyle(tab === entry.id),
+        "aria-pressed": tab === entry.id,
+        onClick: () => setTab(entry.id),
+        children: t(entry.labelKey)
+      },
+      entry.id
+    )) }) : null,
+    !tabbed || tab === "general" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.general") }),
       checkboxField("enabled"),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: hintStyle, children: t("field.enabledHint") }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { style: fieldStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: labelStyle, children: t("field.semanticFailure") }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.enabledHint") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.semanticFailure") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
           "select",
           {
             value: draft.semanticFailure,
@@ -538,23 +759,23 @@ function SettingsForm(props) {
             onChange: (event) => update("semanticFailure", event.target.value),
             style: selectStyle(disabled),
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "open", children: t("option.open") }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { value: "closed", children: t("option.closed") })
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "open", children: t("option.open") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "closed", children: t("option.closed") })
             ]
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: hintStyle, children: t("field.semanticFailureHint") })
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.semanticFailureHint") })
       ] }),
       numberField("modelTimeoutMs", 1, 5e3, 1)
-    ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { style: sectionStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", { style: sectionTitleStyle, children: t("section.detection") }),
+    ] }) : null,
+    !tabbed || tab === "detection" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.detection") }),
       numberField("maliceThreshold", 0, 1, 0.01),
       numberField("alignmentThreshold", 0, 1, 0.01),
       textField("bypassRegex", "100%"),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { style: fieldStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: labelStyle, children: t("field.shellTools") }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.shellTools") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
           "input",
           {
             type: "text",
@@ -565,22 +786,22 @@ function SettingsForm(props) {
             style: inputStyle(disabled, "100%")
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: hintStyle, children: t("field.shellToolsHint") })
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.shellToolsHint") })
       ] })
-    ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { style: sectionStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", { style: sectionTitleStyle, children: t("section.models") }),
+    ] }) : null,
+    !tabbed || tab === "models" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.models") }),
       checkboxField("embeddingEnabled"),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: hintStyle, children: t("field.embeddingEnabledHint") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.embeddingEnabledHint") }),
       textField("embeddingModel", "100%", void 0, !draft.embeddingEnabled),
       textField("embeddingRevision", "100%", void 0, !draft.embeddingEnabled),
       checkboxField("classifierEnabled"),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: hintStyle, children: t("field.classifierEnabledHint") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierEnabledHint") }),
       textField("classifierModel", "100%", void 0, !draft.classifierEnabled),
       textField("classifierRevision", "100%", void 0, !draft.classifierEnabled),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { style: fieldStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: labelStyle, children: t("field.classifierLabels") }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.classifierLabels") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
           "input",
           {
             type: "text",
@@ -591,32 +812,35 @@ function SettingsForm(props) {
             style: inputStyle(disabled || !draft.classifierEnabled, "100%")
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: hintStyle, children: t("field.classifierLabelsHint") })
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierLabelsHint") })
       ] }),
       checkboxField("allowRemoteModels"),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: hintStyle, children: t("field.allowRemoteModelsHint") })
-    ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { style: sectionStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", { style: sectionTitleStyle, children: t("section.cache") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.allowRemoteModelsHint") })
+    ] }) : null,
+    !tabbed || tab === "cache" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.cache") }),
       numberField("maxCommandChars", 64, 65536, 1),
       numberField("maxTextTokens", 16, 512, 1),
       numberField("cacheEntries", 1, 4096, 1),
       numberField("cacheTtlMs", 1e3, 864e5, 1e3)
+    ] }) : null,
+    tabbed && tab === "logs" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LogsPanel, { logs, loading: logsLoading, t }) : null,
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: footerStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: save, style: primaryButtonStyle(disabled), children: t("config.save") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: reset, style: secondaryButtonStyle(disabled), children: t("config.reset") }),
+      noticeText === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { role: notice === "error" ? "alert" : "status", style: notice === "error" ? errorStyle : hintStyle, children: noticeText })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: footerStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", disabled, onClick: save, style: primaryButtonStyle(disabled), children: t("config.save") }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", disabled, onClick: reset, style: secondaryButtonStyle(disabled), children: t("config.reset") }),
-      noticeText === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { role: notice === "error" ? "alert" : "status", style: notice === "error" ? errorStyle : hintStyle, children: noticeText })
-    ] }),
-    writable ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: hintStyle, children: t("config.readOnly") })
+    writable ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.readOnly") })
   ] });
 }
 
 // src/client/components/FirewallSettingsDialog.jsx
-var import_jsx_runtime2 = require("react/jsx-runtime");
+var import_jsx_runtime3 = require("react/jsx-runtime");
 function FirewallSettingsDialog(props) {
   const { uiStore, close, t, configForm } = props;
   const ui = useSnapshot(uiStore);
+  const [logs, setLogs] = (0, import_react3.useState)([]);
+  const [logsLoading, setLogsLoading] = (0, import_react3.useState)(false);
   (0, import_react3.useEffect)(() => {
     if (!ui.open) return void 0;
     const onKey = (event) => {
@@ -625,35 +849,63 @@ function FirewallSettingsDialog(props) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [ui.open, close]);
+  (0, import_react3.useEffect)(() => {
+    if (!ui.open || typeof window === "undefined" || typeof fetch !== "function") return void 0;
+    let disposed = false;
+    let timer;
+    if (logs.length === 0) setLogsLoading(true);
+    const tick = () => {
+      if (disposed) return;
+      Promise.resolve().then(() => fetch(LOGS_ROUTE, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}"
+      })).then((response) => response.ok ? response.json() : void 0).then((result) => {
+        if (disposed || result === void 0 || result.ok !== true) return;
+        const value = result.value;
+        if (value === void 0 || !Array.isArray(value.logs)) return;
+        setLogs(value.logs);
+        setLogsLoading(false);
+      }).catch(() => {
+        if (!disposed) setLogsLoading(false);
+      });
+    };
+    tick();
+    timer = setInterval(tick, 3e3);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+    };
+  }, [ui.open]);
   if (!ui.open) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
     "div",
     {
       style: dialogBackdropStyle,
       onMouseDown: (event) => {
         if (event.target === event.currentTarget) close();
       },
-      children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: dialogPanelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("config.title"), children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: dialogHeaderStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { minWidth: 0 }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { style: dialogTitleStyle, children: t("config.title") }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: dialogSubtitleStyle, children: t("config.summary") })
+      children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: dialogPanelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("config.title"), children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: dialogHeaderStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { minWidth: 0 }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h2", { style: dialogTitleStyle, children: t("config.title") }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: dialogSubtitleStyle, children: t("config.summary") })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: dialogCloseStyle(), "aria-label": t("dialog.close"), title: t("dialog.close"), onClick: close, children: "\xD7" })
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", style: dialogCloseStyle(), "aria-label": t("dialog.close"), title: t("dialog.close"), onClick: close, children: "\xD7" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: dialogBodyStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SettingsForm, { view: "page", t, configForm }) })
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: dialogBodyStyle, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SettingsForm, { view: "page", t, configForm, tabbed: true, logs, logsLoading }) })
       ] })
     }
   );
 }
 
 // src/client/components/FirewallStats.jsx
-var import_jsx_runtime3 = require("react/jsx-runtime");
+var import_jsx_runtime4 = require("react/jsx-runtime");
 function FirewallStats(props) {
   const { wide = true, t, statsStore, open } = props;
   const stats = useSnapshot(statsStore);
   if (!wide) {
-    return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
       "button",
       {
         type: "button",
@@ -666,7 +918,7 @@ function FirewallStats(props) {
       }
     );
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
     "button",
     {
       type: "button",
@@ -675,28 +927,13 @@ function FirewallStats(props) {
       title: t("stats.aria"),
       onClick: open,
       style: statsCardStyle(true),
-      children: stats.map((stat, index) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { style: statsRowStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: statsLabelStyle, children: typeof stat.label === "string" ? stat.label : t(stat.labelKey) }),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: statsValueStyle, children: typeof stat.value === "string" ? stat.value : t(stat.valueKey) })
+      children: stats.map((stat, index) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { style: statsRowStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: statsLabelStyle, children: typeof stat.label === "string" ? stat.label : t(stat.labelKey) }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: statsValueStyle, children: typeof stat.value === "string" ? stat.value : t(stat.valueKey) })
       ] }, String(stat.label ?? stat.labelKey ?? index)))
     }
   );
 }
-
-// src/client/constants.js
-var NS = "toolFirewall";
-var PACKAGE = "dsh-plugin-tool-firewall";
-var ROW_ID = "tool-firewall";
-var CONFIG_KEY = `${PACKAGE}#${ROW_ID}`;
-var INJECT = ["slots", "locale", "configForms"];
-var STATS_ID = "tool-firewall";
-var OVERLAY_ID = "tool-firewall-settings";
-var STATS_ROUTE = "/api/tool-firewall-stats";
-var LAYOUT_CSS = [
-  'div:has(> [data-slot="sidebar.footer.action"] > [data-tool-firewall-pill]) {',
-  "  flex-wrap: wrap;",
-  "}"
-].join("\n");
 
 // src/client/lib/store.js
 function createValueStore(initial) {
@@ -738,6 +975,26 @@ var EN = {
   "section.detection": "Detection",
   "section.models": "Models",
   "section.cache": "Bounds and cache",
+  "tab.logs": "Logs",
+  "logs.empty": "No tool calls intercepted yet.",
+  "logs.loading": "Loading logs\u2026",
+  "logs.allowed": "Allowed",
+  "logs.blocked": "Blocked",
+  "logs.bypass": "Bypass",
+  "logs.cached": "Cached",
+  "logs.unavailable": "Models unavailable",
+  "logs.command": "Command",
+  "logs.description": "Description",
+  "logs.result": "Result",
+  "logs.reason": "Reason",
+  "logs.structural": "Structural",
+  "logs.malice": "Malice",
+  "logs.alignment": "Alignment",
+  "logs.classifier": "Classifier",
+  "logs.duration": "Duration",
+  "logs.kind": "Kind",
+  "logs.noCommand": "(no command text)",
+  "logs.hardBlock": "Hard block",
   "field.enabled": "Enable firewall",
   "field.enabledHint": "When disabled, all tool calls pass through without inspection.",
   "field.semanticFailure": "When models are unavailable",
@@ -809,6 +1066,26 @@ var ZH = {
   "section.detection": "\u68C0\u6D4B",
   "section.models": "\u6A21\u578B",
   "section.cache": "\u8FB9\u754C\u4E0E\u7F13\u5B58",
+  "tab.logs": "\u65E5\u5FD7",
+  "logs.empty": "\u5C1A\u672A\u62E6\u622A\u4EFB\u4F55\u5DE5\u5177\u8C03\u7528\u3002",
+  "logs.loading": "\u6B63\u5728\u8BFB\u53D6\u65E5\u5FD7\u2026",
+  "logs.allowed": "\u5DF2\u653E\u884C",
+  "logs.blocked": "\u5DF2\u963B\u6B62",
+  "logs.bypass": "\u8DF3\u8FC7",
+  "logs.cached": "\u7F13\u5B58",
+  "logs.unavailable": "\u6A21\u578B\u4E0D\u53EF\u7528",
+  "logs.command": "\u547D\u4EE4",
+  "logs.description": "\u63CF\u8FF0",
+  "logs.result": "\u7ED3\u679C",
+  "logs.reason": "\u539F\u56E0",
+  "logs.structural": "\u7ED3\u6784",
+  "logs.malice": "\u6076\u610F",
+  "logs.alignment": "\u5BF9\u9F50",
+  "logs.classifier": "\u5206\u7C7B\u5668",
+  "logs.duration": "\u8017\u65F6",
+  "logs.kind": "\u7C7B\u578B",
+  "logs.noCommand": "\uFF08\u65E0\u547D\u4EE4\u6587\u672C\uFF09",
+  "logs.hardBlock": "\u786C\u963B\u6B62",
   "field.enabled": "\u542F\u7528\u9632\u706B\u5899",
   "field.enabledHint": "\u5173\u95ED\u540E\u6240\u6709\u5DE5\u5177\u8C03\u7528\u90FD\u4F1A\u76F4\u63A5\u901A\u8FC7\u3002",
   "field.semanticFailure": "\u6A21\u578B\u4E0D\u53EF\u7528\u65F6",

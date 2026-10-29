@@ -274,3 +274,138 @@ export function dialogCloseStyle() {
   }
 }
 
+export const tabBarStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '2px',
+  flexWrap: 'wrap',
+  padding: '0 0 10px',
+  borderBottom: '0.5px solid var(--dsw-alias-border-l3)',
+  marginBottom: '14px',
+}
+
+export function tabButtonStyle(active) {
+  return {
+    height: '30px',
+    padding: '0 10px',
+    border: 'none',
+    borderBottom: active ? '2px solid var(--dsw-alias-label-primary)' : '2px solid transparent',
+    borderRadius: 0,
+    background: 'transparent',
+    color: active ? 'var(--dsw-alias-label-primary)' : 'var(--dsw-alias-label-tertiary)',
+    font: 'inherit',
+    fontSize: '12px',
+    fontWeight: active ? 600 : 500,
+    cursor: 'pointer',
+  }
+}
+
+export const logsListStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6px',
+}
+
+export const logEntryStyle = {
+  border: '0.5px solid var(--dsw-alias-border-l3)',
+  borderRadius: 'var(--dsw-radius-md, 8px)',
+  background: 'var(--dsw-alias-bg-layer-2)',
+  overflow: 'hidden',
+}
+
+export const logSummaryStyle = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: '8px',
+  padding: '7px 10px',
+  cursor: 'pointer',
+  fontSize: '12px',
+  lineHeight: '18px',
+  listStyle: 'none',
+}
+
+export const logTimeStyle = {
+  flex: 'none',
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontSize: '11px',
+  fontVariantNumeric: 'tabular-nums',
+}
+
+export const logToolStyle = {
+  flex: '1 1 auto',
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  fontWeight: 600,
+}
+
+export function logDecisionStyle(blocked) {
+  return {
+    flex: 'none',
+    fontWeight: 600,
+    fontSize: '11px',
+    color: blocked
+      ? 'var(--dsw-alias-state-error-primary, #d93025)'
+      : 'var(--dsw-alias-state-success-primary, #2ea043)',
+  }
+}
+
+export const logMutedStyle = {
+  flex: 'none',
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontSize: '11px',
+}
+
+export const logBodyStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+  padding: '4px 10px 10px 10px',
+  borderTop: '0.5px solid var(--dsw-alias-border-l3)',
+}
+
+export const logSectionStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '3px',
+}
+
+export const logKeyStyle = {
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontSize: '11px',
+  fontWeight: 600,
+}
+
+export const logPreStyle = {
+  margin: 0,
+  padding: '6px 8px',
+  borderRadius: 'var(--dsw-radius-md, 8px)',
+  background: 'var(--dsw-alias-bg-layer-3)',
+  color: 'var(--dsw-alias-label-primary)',
+  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+  fontSize: '11px',
+  lineHeight: '16px',
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+  maxHeight: '140px',
+  overflow: 'auto',
+}
+
+export const logGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'max-content minmax(0, 1fr)',
+  gap: '2px 10px',
+  fontSize: '11px',
+  lineHeight: '17px',
+}
+
+export const logLabelStyle = {
+  color: 'var(--dsw-alias-label-tertiary)',
+}
+
+export const logValueStyle = {
+  color: 'var(--dsw-alias-label-primary)',
+  fontVariantNumeric: 'tabular-nums',
+}
+
+

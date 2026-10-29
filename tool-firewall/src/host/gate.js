@@ -9,16 +9,24 @@ function describeError(error) {
 
 /**
  * Build the `tools/pre-execute` handler.
- * @param {object} deps - { tools, config, inference, cache, logger }
+ * @param {object} deps - { tools, config, inference, cache, logger, onInspected }
  */
 export function createGateHandler(deps) {
-  const { tools, config, inference, cache, logger } = deps
+  const { tools, config, inference, cache, logger, onInspected } = deps
   return async function handlePreExecute(exec, next) {
     if (!config.enabled) return next()
     if (exec.signal !== undefined && exec.signal.aborted) return { kind: 'cancel' }
+    const startedAt = Date.now()
     try {
       const payload = extractToolPayload(exec, tools, config)
       const decision = await evaluatePayload(payload, config, { inference, cache, logger }, exec.signal)
+      try {
+        onInspected?.({
+          payload,
+          decision,
+          durationMs: Date.now() - startedAt,
+        })
+      } catch (error) {}
       if (decision.blocked) {
         return { kind: 'deny', reason: decision.reason, info: decision.info }
       }
