@@ -440,12 +440,12 @@ function ToolDetailDialog(props) {
           <button type="button" role="tab" aria-selected={tab === 'schema'} style={tabStyle(tab === 'schema')} onClick={() => setTab('schema')}>
             {t('tools.tabSchema')}
           </button>
-          <button type="button" role="tab" aria-selected={tab === 'history'} style={tabStyle(tab === 'history')} onClick={() => setTab('history')}>
-            {t('tools.tabHistory', { n: callCount })}
+          <button type="button" role="tab" aria-selected={tab === 'recent'} style={tabStyle(tab === 'recent')} onClick={() => setTab('recent')}>
+            {t('tools.tabRecent', { n: callCount })}
           </button>
         </div>
         <div style={detailBodyStyle}>
-          {tab === 'schema' ? <ToolSchema tool={tool} t={t} /> : <ToolHistory tool={tool} t={t} />}
+          {tab === 'schema' ? <ToolSchema tool={tool} t={t} /> : <ToolRecent tool={tool} t={t} />}
         </div>
       </div>
     </div>
@@ -464,7 +464,7 @@ function ToolSchema(props) {
   )
 }
 
-function ToolHistory(props) {
+function ToolRecent(props) {
   const { tool, t } = props
   return (
     <div style={toolDetailsStyle}>

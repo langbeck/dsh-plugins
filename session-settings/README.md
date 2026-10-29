@@ -9,7 +9,7 @@ header action to the current Session that opens a dialog with three tabs:
   green when enabled (auto-approved) and red when blocked; the knob stays
   white. The second line shows the Session invocation count and blocked state.
   Clicking a row opens a wider detail dialog with two tabs: **Schema**
-  (disabled form preview plus raw JSON Schema) and **History (N)** (recent
+  (disabled form preview plus raw JSON Schema) and **Recent (N)** (recent
   calls). A pinned line at the top lists the disabled tool names and offers
   name/invocation sorting while the rows scroll.
 - **Settings** — switch the Session's permission preset (Read only, Workspace

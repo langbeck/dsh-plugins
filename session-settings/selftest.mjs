@@ -180,8 +180,8 @@ check(String(disabledLineStyle.padding).includes('16px'), 'pinned header carries
 equal(EN['tools.disabled'], 'Disabled tools:', 'disabled-tools line has friendly copy')
 equal(ZH['tools.disabled'], '已禁用的工具：', 'disabled-tools line is localized')
 equal(EN['tools.tabSchema'], 'Schema', 'detail dialog has a Schema tab label')
-equal(EN['tools.tabHistory'], 'History ({n})', 'detail dialog history tab carries a count')
-equal(ZH['tools.tabHistory'], '历史 ({n})', 'detail dialog history tab is localized')
+equal(EN['tools.tabRecent'], 'Recent ({n})', 'detail dialog recent tab carries a count')
+equal(ZH['tools.tabRecent'], '最近 ({n})', 'detail dialog recent tab is localized')
 
 const dialogSource = readFileSync(join(here, 'src', 'client', 'components', 'SessionSettingsDialog.jsx'), 'utf8')
 const importedStyles = new Set(
