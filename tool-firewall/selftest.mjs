@@ -380,7 +380,7 @@ walkTree(statsTree, (node) => {
   if (node !== null && typeof node === 'object' && node.props?.children === 'stats.off') offValueStyle = node.props.style
   if (node !== null && typeof node === 'object' && node.props?.children === 'stats.disabled') disabledValueStyle = node.props.style
 })
-check(offValueStyle !== undefined && String(offValueStyle.color).includes('state-warning'), 'Off values are highlighted in orange')
+check(offValueStyle !== undefined && String(offValueStyle.color).includes('#f59e0b'), 'Off values are highlighted in bright orange')
 check(disabledValueStyle !== undefined && String(disabledValueStyle.color).includes('label-tertiary'), 'Disabled values are muted')
 check(disabledValueStyle !== undefined && disabledValueStyle.fontWeight === 600, 'Disabled values keep the bold weight')
 statsButtons[0].props.onClick()

@@ -364,7 +364,7 @@ var statsLabelStyle = {
   lineHeight: "16px"
 };
 function statsValueStyle(tone) {
-  const color = tone === "error" ? "var(--dsw-alias-state-error-primary, #d93025)" : tone === "off" ? "var(--dsw-alias-state-warning-primary, #d97706)" : tone === "muted" ? "var(--dsw-alias-label-tertiary)" : "var(--dsw-alias-label-primary)";
+  const color = tone === "error" ? "var(--dsw-alias-state-error-primary, #d93025)" : tone === "off" ? "#f59e0b" : tone === "muted" ? "var(--dsw-alias-label-tertiary)" : "var(--dsw-alias-label-primary)";
   return {
     minWidth: 0,
     overflow: "hidden",

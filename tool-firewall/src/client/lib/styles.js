@@ -234,7 +234,7 @@ export function statsValueStyle(tone) {
   const color = tone === 'error'
     ? 'var(--dsw-alias-state-error-primary, #d93025)'
     : tone === 'off'
-      ? 'var(--dsw-alias-state-warning-primary, #d97706)'
+      ? '#f59e0b'
       : tone === 'muted'
         ? 'var(--dsw-alias-label-tertiary)'
         : 'var(--dsw-alias-label-primary)'
