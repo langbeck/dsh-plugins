@@ -1,0 +1,7 @@
+# The Tool Firewall bundle layer.
+#
+# One Host-plane row. Its Config schema supplies the Plugin Manager configure
+# page; the client half renders the form and writes through DSH configForms.
+- insert:
+    - id: tool-firewall
+      name: 'dsh-plugin-tool-firewall'

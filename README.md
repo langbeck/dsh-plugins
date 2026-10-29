@@ -11,6 +11,7 @@ client half, and tests in its own directory.
 | [Slot Explorer](slot-explorer/) | Pills every additive Web UI slot with its key and styles those pills live in a draggable **Slot Explorer** dialog. |
 | [Balance](balance/) | Shows the DeepSeek account balance as a full-width row in the sidebar footer, summed per currency, with a Configure page in the Plugin Manager. |
 | [Session Settings](session-settings/) | Header action opening a tabbed dialog for the Session's permission preset, approval allow-list, tools, and commands. |
+| [Tool Firewall](tool-firewall/) | Inspects every tool call before execution with local structural checks and optional semantic models, configurable in the Plugin Manager. |
 
 ## Install
 
@@ -26,13 +27,17 @@ dsh plugin --profile web add 'github:langbeck/dsh-plugins#main&path:/balance'
 
 # Session Settings
 dsh plugin --profile web add 'github:langbeck/dsh-plugins#main&path:/session-settings'
+
+# Tool Firewall
+dsh plugin --profile web add 'github:langbeck/dsh-plugins#main&path:/tool-firewall'
 ```
 
 The `&path:<directory>` part is required because each plugin is a package
 inside this multi-plugin repository; replace `#main` with a tag or commit to
 pin a version. Once published to npm, the package names work instead
-(`dsh-plugin-slot-explorer`, `dsh-plugin-balance`, `dsh-plugin-session-settings`). See each plugin's README
-for configuration and uninstall steps.
+(`dsh-plugin-slot-explorer`, `dsh-plugin-balance`, `dsh-plugin-session-settings`,
+`dsh-plugin-tool-firewall`). See each plugin's README for configuration and
+uninstall steps.
 
 ## Layout
 
@@ -41,6 +46,7 @@ for configuration and uninstall steps.
 | `slot-explorer/` | Slot Explorer plugin. |
 | `balance/` | Balance plugin. |
 | `session-settings/` | Session Settings plugin. |
+| `tool-firewall/` | Tool Firewall plugin. |
 | `wip/` | Local scratch packages, git-ignored. |
 
 ## Build

@@ -1,0 +1,12 @@
+# Tool Firewall plugin tasks.
+
+set shell := ["bash", "-uc"]
+
+build:
+    npm run build
+
+test:
+    npm test
+
+bench:
+    npm run bench

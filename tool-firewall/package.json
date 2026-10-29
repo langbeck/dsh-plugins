@@ -1,0 +1,47 @@
+{
+  "name": "dsh-plugin-tool-firewall",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tool Firewall: inspects DSH tool calls before execution with local structural and semantic checks.",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./lib/client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node build.mjs && node selftest.mjs",
+    "bench": "node bench/latency.mjs"
+  },
+  "files": [
+    "src",
+    "lib",
+    "cordis.patch.yml",
+    "build.mjs",
+    "selftest.mjs",
+    "bench",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "dependencies": {
+    "@deepseek-ai/dsh-home-paths": "0.2.1-rc.2",
+    "@deepseek-ai/schemastery": "~3.18.5",
+    "@huggingface/transformers": "3.8.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

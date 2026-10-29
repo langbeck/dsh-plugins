@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Tool Firewall",
+    "description": "Inspects every tool call before execution and blocks risky commands with local structural and semantic checks."
+  }
+}
