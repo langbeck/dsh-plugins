@@ -297,6 +297,7 @@ let commandDefinition
 let preStepHandler
 let routeHandler
 let askAnswer = { answers: [{ id: 'cost-cap', selected: ['Cancel'] }] }
+let askAnswers = null
 let askCalls = 0
 let nextCalls = 0
 const provided = {}
@@ -327,7 +328,13 @@ const fakeCapContext = {
   get(name) {
     if (name === 'sessionQuery') return capQuery
     if (name === 'userQuestions') {
-      return { ask: async () => { askCalls += 1; return askAnswer } }
+      return {
+        ask: async () => {
+          askCalls += 1
+          if (askAnswers !== null && askAnswers.length > 0) return askAnswers.shift()
+          return askAnswer
+        },
+      }
     }
     return undefined
   },
@@ -356,9 +363,9 @@ check(provided.balanceCost !== undefined, 'Host provides the balanceCost service
 check(typeof commandDefinition === 'object', 'Host registers the limit command')
 check(typeof preStepHandler === 'function', 'Host registers the pre-step cost guard')
 const service = provided.balanceCost
-const commandResult = commandDefinition.handler({ agent: capAgent, rawInput: ' 0.01 ' })
+const commandResult = await commandDefinition.handler({ agent: capAgent, rawInput: ' 0.01 ' })
 equal(commandResult.kind, 'success', 'limit command sets a cap')
-equal(service.limitOf('root'), 0.01, 'the service exposes the cap')
+equal(await service.limitOf('root'), 0.01, 'the service exposes the cap')
 const capRoute = await routeHandler({ json: async () => ({ sessionId: 'root' }), signal: new AbortController().signal })
 const capValue = await capRoute.json()
 equal(capValue.value.limitUsd, 0.01, 'the cost route carries the cap')
@@ -372,7 +379,7 @@ const eventsReader = eventsResponse.body.getReader()
 const eventDecoder = new TextDecoder()
 const readyEvent = await eventsReader.read()
 check(eventDecoder.decode(readyEvent.value).includes('"type":"ready"'), 'the cost event stream opens')
-commandDefinition.handler({ agent: capAgent, rawInput: '0.02' })
+await commandDefinition.handler({ agent: capAgent, rawInput: '0.02' })
 const limitEvent = await eventsReader.read()
 check(eventDecoder.decode(limitEvent.value).includes('"type":"limit"'), 'setting a cap emits a limit event')
 check(eventDecoder.decode(limitEvent.value).includes('"limitUsd":0.02'), 'the limit event carries the cap')
@@ -389,9 +396,16 @@ equal(proceeded.kind, 'enter', 'proceeding once allows the step')
 equal(nextCalls, 1, 'the guard delegates when proceeding')
 await preStepHandler({ ...payload, step: 3 }, next)
 equal(askCalls, 2, 'the same turn is not prompted again')
-const clearResult = commandDefinition.handler({ agent: capAgent, rawInput: 'off' })
+askAnswers = [
+  { answers: [{ id: 'cost-cap', selected: ['Increase limit'] }] },
+  { answers: [{ id: 'cost-cap-amount', selected: ['$1.02'] }] },
+]
+const increased = await preStepHandler({ ...payload, turn: 2, step: 1 }, next)
+equal(increased.kind, 'enter', 'increasing the cap allows the step')
+equal(await service.limitOf('root'), 1.02, 'the increased cap is saved through the service')
+const clearResult = await commandDefinition.handler({ agent: capAgent, rawInput: 'off' })
 equal(clearResult.kind, 'success', 'limit command clears the cap')
-equal(service.limitOf('root'), null, 'the service clears the cap')
+equal(await service.limitOf('root'), null, 'the service clears the cap')
 capDisposers.reverse().forEach((dispose) => dispose())
 globalThis.fetch = originalCapFetch
 

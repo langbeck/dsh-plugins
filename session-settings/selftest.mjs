@@ -116,8 +116,8 @@ const fakeHost = {
     if (name === 'balanceCost' && costAvailable) {
       return {
         read: async () => ({ totalUsd: 2.5, ownUsd: 2, subagentsUsd: 0.5, limitUsd: costLimit, pricing: { ready: true } }),
-        limitOf: () => costLimit,
-        setLimit: (_sessionId, value) => { costLimit = value },
+        limitOf: async () => costLimit,
+        setLimit: async (_sessionId, value) => { costLimit = value },
       }
     }
     return undefined

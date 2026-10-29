@@ -141,7 +141,7 @@ export function apply(ctx) {
     const tools = toolSchemas(session)
     const cost = await costSnapshot(sessionId, signal)
     const costProvider = costService()
-    const limitUsd = costProvider !== undefined && typeof costProvider.limitOf === 'function' ? costProvider.limitOf(sessionId) : null
+    const limitUsd = costProvider !== undefined && typeof costProvider.limitOf === 'function' ? await costProvider.limitOf(sessionId) : null
     const recentByTool = new Map()
     for (const call of calls) {
       const list = recentByTool.get(call.name) ?? []
@@ -210,7 +210,7 @@ export function apply(ctx) {
       if (provider === undefined || typeof provider.setLimit !== 'function') {
         throw new Error('Balance cost service is not available')
       }
-      provider.setLimit(sessionId, limitUsd)
+      await provider.setLimit(sessionId, limitUsd)
       return snapshot(sessionId, signal)
     }
     throw new Error('Unknown action: ' + String(action))

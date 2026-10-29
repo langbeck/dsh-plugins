@@ -26,9 +26,9 @@ is not installed or enabled, the cost-cap controls are disabled and grayed out
 with a “Requires the Balance plugin” note; all other settings still work.
 
 Balance owns enforcement: `/limit` and its `agent/pre-step` guard pause an
-over-cap turn with a **Proceed once** / **Cancel** prompt, and its sidebar row
-shows the remaining budget. The cap and per-turn approval live in Balance's
-Host memory and reset when the process restarts.
+over-cap turn with **Proceed once** / **Increase limit** / **Cancel**, and its
+sidebar row shows the remaining budget. Balance persists caps in a storage
+domain so they survive reloads and restarts; per-turn approvals are ephemeral.
 
 Tool policy is enforced by a Host `approval/request` answerer: every request
 resolves `allowed-once` unless the tool name is blocked for that Session, in

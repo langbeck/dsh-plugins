@@ -22,20 +22,27 @@ account is signed out, still loading, or the balance cannot be read.
 The Host provides a `balanceCost` service for other Host plugins:
 
 - `read(sessionId, signal)` → the same Session-cost snapshot the route returns
-- `limitOf(sessionId)` / `setLimit(sessionId, limitUsd | null)`
+- `await limitOf(sessionId)` / `await setLimit(sessionId, limitUsd | null)`
 - `pricingState()` → pricing readiness, fetch time, revision, and error
 
 The browser route `/api/balance-session-cost` delegates to this service, so
 other plugins and the Web Client share one pricing cache and one cost fold.
-The route also returns `limitUsd` and `remainingUsd`.
+The route also returns `limitUsd`, `remainingUsd`, and `limitPersistence`.
 
 ### Cost cap
 
 `/limit <usd>` sets the current Session's cap, `/limit off` clears it, and
-`/limit` reports it. A Host `agent/pre-step` guard pauses an over-cap turn and
-asks **Proceed once** / **Cancel**; proceeding covers the rest of that turn.
+`/limit` reports it. Caps are stored in a `balance` storage domain keyed by
+Session id and survive plugin reloads and DSH restarts; if the storage domain
+is unavailable the plugin falls back to memory.
+
+A Host `agent/pre-step` guard pauses an over-cap turn and asks **Proceed once**
+/ **Increase limit** / **Cancel**. Increase opens a second question with
+defaults (`+$1`, `+$5`, `+$10`, double) plus a custom amount; the new cap is
+saved before the turn proceeds. Per-turn approvals remain ephemeral.
+
 The sidebar's Session block gains a `Limit $5.00 ($2.50 left)` row while a cap
-is set. Caps and per-turn approvals are in-memory and reset on restart.
+is set.
 
 ## Install
 
