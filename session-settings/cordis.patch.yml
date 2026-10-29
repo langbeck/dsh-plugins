@@ -1,0 +1,7 @@
+# The Session Settings bundle layer.
+#
+# One Host-plane row. It owns the settings route and the approval allow-list;
+# the Client half renders the header action and the settings dialog.
+- insert:
+    - id: session-settings
+      name: 'dsh-plugin-session-settings'

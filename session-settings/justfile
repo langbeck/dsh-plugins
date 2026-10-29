@@ -1,0 +1,11 @@
+# Session Settings plugin tasks.
+
+set shell := ["bash", "-uc"]
+
+# Build the Web GUI client bundle.
+build:
+    npm run build
+
+# Build and run the Host/Client selftest.
+test:
+    npm test

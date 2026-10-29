@@ -10,7 +10,7 @@
 set shell := ["bash", "-uc"]
 
 # Plugins built by the bare `just build` / `just test` invocation.
-plugins := "balance slot-explorer"
+plugins := "balance session-settings slot-explorer"
 
 # Build every plugin, or only the named ones.
 build *targets:
