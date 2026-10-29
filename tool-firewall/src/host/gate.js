@@ -1,4 +1,4 @@
-/** Cordis-facing pre-execute gate, kept separate from model and worker setup. */
+/** Cordis-facing pre-execute gate, kept separate from model setup. */
 
 import { extractToolPayload } from './extract.js'
 import { evaluatePayload } from './firewall.js'

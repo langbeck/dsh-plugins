@@ -2,7 +2,7 @@
 
 Inspects DSH tool calls before they execute. The plugin runs entirely
 in-process: a deterministic structural analyzer always runs, and an optional
-local Transformers.js worker adds semantic alignment and a text-classifier
+local Transformers.js pipeline adds semantic alignment and a text-classifier
 signal.
 
 ## What it does
@@ -82,18 +82,18 @@ blocks the call instead.
 ## Models and caching
 
 - Embedding model: `Xenova/all-MiniLM-L6-v2`, pinned revision, quantized ONNX,
-  CPU inference in a Node worker thread.
+  CPU inference in the Host process.
 - Transformers.js in Node uses its prebuilt ONNX Runtime CPU backend; this
-  plugin does not compile native code. The worker keeps inference off the DSH
-  event loop and lets deadlines terminate stuck sessions.
+  plugin does not compile native code. The ONNX native binding cannot be
+  loaded by a replacement worker after a plugin reload, so inference stays in
+  the Host process. Cached models load in well under a second.
 - The text classifier is optional and disabled by default. No classifier model
   ships with the plugin; configure a pinned Transformers.js-compatible model
   before enabling it.
 - Models are cached under the DSH home (`tool-firewall/models`).
-- A failed warmup is retried with backoff, and a tool call while the worker is
-  still loading triggers another warmup. The sidebar shows Model
-  Ready/Loading/Error, and the Logs tab shows the inference error when one is
-  present.
+- A tool call while models are loading triggers another warmup. The sidebar
+  shows Model Ready/Loading/Disabled/Error, and the Logs tab shows the
+  inference error when one is present.
 - Model failures are logged without command text and follow `semanticFailure`.
 - The decision cache stores only hashes, scores, and decisions; command text is
   never written to it.

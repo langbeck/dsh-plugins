@@ -3,7 +3,7 @@
  *
  * Inspects every `tools/pre-execute` call before the tool body runs. A
  * deterministic structural analyzer always runs; optional Transformers.js
- * embeddings/classification run in an in-process worker.
+ * embeddings/classification run in the Host process.
  *
  * The entire Config object is volatile: the Plugin Manager form writes fields
  * live, and `loader/volatile-update` rebuilds the evaluator without restarting

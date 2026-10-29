@@ -1,221 +1,138 @@
 /**
- * Parent-side client for the in-process inference worker.
+ * Main-thread Transformers.js client.
  *
- * The worker owns Transformers.js and model loading. This client owns warmup,
- * one-at-a-time evaluation, deadlines, cancellation, and worker restarts.
+ * ONNX Runtime's native Node binding cannot be loaded by a second worker
+ * isolate after a plugin reload; keeping the pipelines in the Host process
+ * avoids that failure. The model load is short for cached models; evaluation
+ * stays inside the configured deadline and never crashes the Host on timeout.
  */
 
-import { Worker } from 'node:worker_threads'
+const DEFAULT_MODEL_TIMEOUT_MS = 50
 
-const WARMUP_TIMEOUT_MS = 180_000
+function messageOf(error) {
+  return error instanceof Error ? error.message : String(error)
+}
 
-function abortError() {
-  const error = new Error('inference cancelled')
-  error.name = 'AbortError'
-  return error
+function withDeadline(work, timeoutMs, signal) {
+  return new Promise((resolve, reject) => {
+    let settled = false
+    const finish = (fn) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      if (signal !== undefined) signal.removeEventListener('abort', onAbort)
+      fn()
+    }
+    const onAbort = () => finish(() => reject(Object.assign(new Error('inference cancelled'), { name: 'AbortError' })))
+    const timer = setTimeout(() => finish(() => reject(new Error('inference timed out'))), Math.max(1, timeoutMs))
+    if (signal !== undefined) {
+      if (signal.aborted) {
+        finish(() => reject(Object.assign(new Error('inference cancelled'), { name: 'AbortError' })))
+        return
+      }
+      signal.addEventListener('abort', onAbort, { once: true })
+    }
+    Promise.resolve(work).then(
+      (value) => finish(() => resolve(value)),
+      (error) => finish(() => reject(error)),
+    )
+  })
+}
+
+function tensorData(output) {
+  if (output === null || output === undefined) return undefined
+  if (output.data !== null && output.data !== undefined) return Array.from(output.data)
+  if (Array.isArray(output)) return output
+  return undefined
 }
 
 export function createInferenceClient(config, options = {}) {
-  const WorkerCtor = options.Worker ?? Worker
-  const workerUrl = options.workerUrl ?? new URL('./inference-worker.js', import.meta.url)
-  const warmupTimeoutMs = Number.isFinite(options.warmupTimeoutMs) ? options.warmupTimeoutMs : WARMUP_TIMEOUT_MS
+  const loadTransformers = options.loadTransformers ?? (() => import('@huggingface/transformers'))
   const onError = typeof options.onError === 'function' ? options.onError : () => {}
+  const modelTimeoutMs = Number.isFinite(config.modelTimeoutMs) ? config.modelTimeoutMs : DEFAULT_MODEL_TIMEOUT_MS
 
-  let worker
   let disposed = false
   let ready = false
-  let readyPromise
+  let loading
   let lastError
-  let retryTimer
-  let retryDelayMs = 5000
-  let nextId = 1
-  let pending = new Map()
-  let tail = Promise.resolve()
+  let embeddingPipeline
+  let classifierPipeline
   let modelStates = {
     embedding: { state: config.embeddingEnabled === false ? 'disabled' : 'loading', error: null },
     classifier: { state: config.classifierEnabled === true ? 'loading' : 'disabled', error: null },
   }
 
-  function setModelError(error) {
-    const message = error instanceof Error ? error.message : String(error)
-    for (const key of ['embedding', 'classifier']) {
-      if (modelStates[key].state !== 'disabled') modelStates[key] = { state: 'error', error: message }
-    }
-  }
-
-  function scheduleRetry() {
-    if (disposed || retryTimer !== undefined) return
-    const delay = retryDelayMs
-    retryDelayMs = Math.min(60_000, retryDelayMs * 2)
-    retryTimer = setTimeout(() => {
-      retryTimer = undefined
-      start()
-    }, delay)
-  }
-
-  function workerData() {
-    return {
-      embeddingEnabled: config.embeddingEnabled,
-      embeddingModel: config.embeddingModel,
-      embeddingRevision: config.embeddingRevision,
-      classifierEnabled: config.classifierEnabled,
-      classifierModel: config.classifierModel,
-      classifierRevision: config.classifierRevision,
-      classifierLabels: config.classifierLabels,
-      maxTextTokens: config.maxTextTokens,
-      allowRemoteModels: config.allowRemoteModels,
-      cacheDir: options.cacheDir,
-    }
-  }
-
-  function ensureWorker() {
-    if (worker !== undefined) return worker
-    const current = new WorkerCtor(workerUrl, { workerData: workerData(), stderr: true })
-    worker = current
-    let stderrTail = ''
-    if (current.stderr !== null && current.stderr !== undefined && typeof current.stderr.on === 'function') {
-      current.stderr.on('data', (chunk) => {
-        stderrTail = (stderrTail + String(chunk)).slice(-2000)
-      })
-    }
-    current.on('message', (message) => {
-      if (message === null || typeof message !== 'object' || typeof message.id !== 'number') return
-      const entry = pending.get(message.id)
-      if (entry === undefined) return
-      pending.delete(message.id)
-      if (message.ok !== true) {
-        entry.reject(new Error(typeof message.error === 'string' ? message.error : 'inference failed'))
-        return
-      }
-      entry.resolve(message)
-    })
-    current.on('error', (error) => {
-      if (worker !== current) return
-      failWorker(error)
-    })
-    current.on('exit', (code) => {
-      if (worker !== current) return
-      const output = stderrTail.trim()
-      failWorker(new Error('inference worker exited with code ' + String(code) + (output === '' ? '' : ': ' + output.slice(-800))))
-    })
-    return current
-  }
-
-  function failWorker(error) {
-    ready = false
-    readyPromise = undefined
-    lastError = error instanceof Error ? error.message : String(error)
-    setModelError(error)
-    const entries = Array.from(pending.values())
-    pending = new Map()
-    for (const entry of entries) entry.reject(error)
-    const dead = worker
-    worker = undefined
-    if (dead !== undefined) {
+  async function loadModels() {
+    if (loading !== undefined) return loading
+    loading = (async () => {
+      let module
       try {
-        void dead.terminate()
-      } catch (failure) {}
-    }
-    if (!disposed) {
-      onError(error)
-      scheduleRetry()
-    }
-  }
-
-  function request(type, payload, timeoutMs, signal, restartOnTimeout = false) {
-    const current = ensureWorker()
-    const id = nextId++
-    return new Promise((resolve, reject) => {
-      let settled = false
-      const finish = (fn) => {
-        if (settled) return
-        settled = true
-        clearTimeout(timer)
-        if (signal !== undefined) signal.removeEventListener('abort', onAbort)
-        pending.delete(id)
-        fn()
-      }
-      const timer = setTimeout(() => {
-        finish(() => reject(new Error('inference timed out')))
-        if (restartOnTimeout) restart()
-      }, Math.max(1, timeoutMs))
-      const onAbort = () => {
-        finish(() => reject(abortError()))
-        if (restartOnTimeout) restart()
-      }
-      if (signal !== undefined) {
-        if (signal.aborted) {
-          finish(() => reject(abortError()))
-          return
-        }
-        signal.addEventListener('abort', onAbort, { once: true })
-      }
-      pending.set(id, {
-        resolve: (value) => finish(() => resolve(value)),
-        reject: (error) => finish(() => reject(error)),
-      })
-      try {
-        current.postMessage({ id, type, ...payload })
+        module = await loadTransformers()
       } catch (error) {
-        finish(() => reject(error))
+        const message = messageOf(error)
+        for (const key of ['embedding', 'classifier']) {
+          if (modelStates[key].state !== 'disabled') modelStates[key] = { state: 'error', error: message }
+        }
+        lastError = message
+        onError(error)
+        return modelStates
       }
-    })
-  }
-
-  function restart() {
-    ready = false
-    readyPromise = undefined
-    const dead = worker
-    worker = undefined
-    const entries = Array.from(pending.values())
-    pending = new Map()
-    for (const entry of entries) entry.reject(new Error('inference worker restarted'))
-    if (dead !== undefined) {
-      try {
-        void dead.terminate()
-      } catch (error) {}
-    }
-    scheduleRetry()
+      const env = module.env
+      if (env !== undefined) {
+        env.allowRemoteModels = config.allowRemoteModels !== false
+        env.allowLocalModels = true
+        if (typeof options.cacheDir === 'string' && options.cacheDir !== '') env.cacheDir = options.cacheDir
+      }
+      const pipeline = module.pipeline
+      if (config.embeddingEnabled) {
+        modelStates.embedding = { state: 'loading', error: null }
+        try {
+          embeddingPipeline = await pipeline('feature-extraction', config.embeddingModel, {
+            device: 'cpu',
+            dtype: 'q8',
+            revision: config.embeddingRevision,
+          })
+          modelStates.embedding = { state: 'ready', error: null }
+        } catch (error) {
+          embeddingPipeline = undefined
+          modelStates.embedding = { state: 'error', error: messageOf(error) }
+        }
+      }
+      if (config.classifierEnabled) {
+        if (typeof config.classifierModel !== 'string' || config.classifierModel === ''
+          || typeof config.classifierRevision !== 'string' || config.classifierRevision === '') {
+          modelStates.classifier = { state: 'error', error: 'classifier model and revision are required' }
+        } else {
+          modelStates.classifier = { state: 'loading', error: null }
+          try {
+            classifierPipeline = await pipeline('text-classification', config.classifierModel, {
+              device: 'cpu',
+              dtype: 'q8',
+              revision: config.classifierRevision,
+            })
+            modelStates.classifier = { state: 'ready', error: null }
+          } catch (error) {
+            classifierPipeline = undefined
+            modelStates.classifier = { state: 'error', error: messageOf(error) }
+          }
+        }
+      }
+      const errors = []
+      for (const key of ['embedding', 'classifier']) {
+        if (modelStates[key].state === 'error') errors.push(key + ': ' + String(modelStates[key].error ?? 'unknown error'))
+      }
+      lastError = errors.length > 0 ? errors.join('; ') : undefined
+      if (errors.length > 0) onError(new Error(lastError))
+      return modelStates
+    })()
+    return loading
   }
 
   async function warmup() {
     if (disposed) throw new Error('inference client disposed')
     if (ready) return
-    if (readyPromise !== undefined) return readyPromise
-    readyPromise = (async () => {
-      const response = await request('warmup', {}, warmupTimeoutMs, undefined, true)
-      if (response.models !== undefined && response.models !== null && typeof response.models === 'object') {
-        modelStates = {
-          embedding: response.models.embedding ?? modelStates.embedding,
-          classifier: response.models.classifier ?? modelStates.classifier,
-        }
-      }
-      const errors = []
-      for (const key of ['embedding', 'classifier']) {
-        if (modelStates[key].state === 'error') {
-          errors.push(key + ': ' + String(modelStates[key].error ?? 'unknown error'))
-        }
-      }
-      lastError = errors.length > 0 ? errors.join('; ') : undefined
-      ready = true
-      if (errors.length === 0) {
-        retryDelayMs = 5000
-        if (retryTimer !== undefined) {
-          clearTimeout(retryTimer)
-          retryTimer = undefined
-        }
-      }
-    })()
-    readyPromise.catch((error) => {
-      readyPromise = undefined
-      lastError = error instanceof Error ? error.message : String(error)
-      setModelError(error)
-      if (!disposed) {
-        onError(error)
-        scheduleRetry()
-      }
-    })
-    return readyPromise
+    await loadModels()
+    ready = true
   }
 
   async function evaluate(command, description, signal) {
@@ -224,37 +141,70 @@ export function createInferenceClient(config, options = {}) {
       void warmup().catch(() => {})
       throw new Error('inference models are not ready')
     }
-    const job = tail.then(async () => request('evaluate', {
-      command,
-      description: description ?? undefined,
-      classify: config.classifierEnabled === true,
-    }, config.modelTimeoutMs, signal))
-    tail = job.then(() => undefined, () => undefined)
-    return job
+    const errorOf = (key) => {
+      const state = modelStates[key]
+      return state.state === 'error' ? ': ' + String(state.error ?? 'unknown error') : ''
+    }
+    if (config.embeddingEnabled && modelStates.embedding.state !== 'ready') {
+      throw new Error('embedding model ' + modelStates.embedding.state + errorOf('embedding'))
+    }
+    if (config.classifierEnabled && modelStates.classifier.state !== 'ready') {
+      throw new Error('classifier model ' + modelStates.classifier.state + errorOf('classifier'))
+    }
+    const work = (async () => {
+      const commandEmbedding = config.embeddingEnabled
+        ? tensorData(await embeddingPipeline(command, {
+          pooling: 'mean',
+          normalize: true,
+          truncation: true,
+          max_length: config.maxTextTokens,
+        }))
+        : undefined
+      const descriptionEmbedding = config.embeddingEnabled && description !== undefined
+        ? tensorData(await embeddingPipeline(description, {
+          pooling: 'mean',
+          normalize: true,
+          truncation: true,
+          max_length: config.maxTextTokens,
+        }))
+        : undefined
+      let maliceScore
+      if (config.classifierEnabled) {
+        const output = await classifierPipeline(command, {
+          truncation: true,
+          max_length: config.maxTextTokens,
+        })
+        const rows = Array.isArray(output) ? output : [output]
+        const wanted = new Set((config.classifierLabels ?? []).map((label) => String(label).toUpperCase()))
+        for (const row of rows) {
+          if (row === null || row === undefined) continue
+          if (!wanted.has(String(row.label ?? '').toUpperCase())) continue
+          const score = Number(row.score)
+          if (Number.isFinite(score)) maliceScore = Math.max(maliceScore ?? 0, Math.min(1, Math.max(0, score)))
+        }
+        if (maliceScore === undefined) throw new Error('classifier returned no configured hostile label')
+      }
+      return { commandEmbedding, descriptionEmbedding, maliceScore }
+    })()
+    return withDeadline(work, modelTimeoutMs, signal)
   }
 
   function start() {
     if (disposed) return
-    warmup().catch(() => {})
+    void warmup().catch(() => {})
   }
 
   function dispose() {
     disposed = true
     ready = false
-    readyPromise = undefined
-    if (retryTimer !== undefined) {
-      clearTimeout(retryTimer)
-      retryTimer = undefined
-    }
-    for (const entry of Array.from(pending.values())) entry.reject(new Error('inference client disposed'))
-    pending = new Map()
-    const dead = worker
-    worker = undefined
-    if (dead !== undefined) {
+    loading = undefined
+    for (const pipeline of [embeddingPipeline, classifierPipeline]) {
       try {
-        void dead.terminate()
+        pipeline?.dispose?.()
       } catch (error) {}
     }
+    embeddingPipeline = undefined
+    classifierPipeline = undefined
   }
 
   return {

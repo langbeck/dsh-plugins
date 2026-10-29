@@ -212,40 +212,27 @@ const evaluated = await evaluatePayload(payload, baseConfig, { inference: evalua
 equal(evaluated.blocked, false, 'payload evaluator allows a benign command')
 
 // ---------------------------------------------------------------------------
-// Inference client with a fake worker
+// Inference client with an injected Transformers.js surface
 // ---------------------------------------------------------------------------
 
-class FakeWorker {
-  constructor(url, options) {
-    this.listeners = new Map()
-    this.options = options
-    queueMicrotask(() => {
-      const listener = this.listeners.get('message')
-      if (listener === undefined) return
-      listener({ id: 1, ok: true, warmed: true })
-    })
-  }
-  on(event, listener) {
-    this.listeners.set(event, listener)
-    return this
-  }
-  postMessage(message) {
-    queueMicrotask(() => {
-      const listener = this.listeners.get('message')
-      if (listener === undefined) return
-      if (message.type === 'warmup') listener({ id: message.id, ok: true, warmed: true })
-      else listener({ id: message.id, ok: true, commandEmbedding: [1, 0], descriptionEmbedding: [1, 0], maliceScore: 0.1 })
-    })
-  }
-  terminate() {
-    return Promise.resolve()
-  }
+const fakeTransformers = {
+  env: {},
+  async pipeline(task) {
+    if (task === "feature-extraction") return async () => ({ data: [1, 0] })
+    return async () => [{ label: "LABEL_1", score: 0.1 }]
+  },
 }
-const fakeClient = createInferenceClient(normalizeConfig({}), { Worker: FakeWorker, workerUrl: 'fake-worker', cacheDir: '/tmp' })
+const fakeClient = createInferenceClient(normalizeConfig({
+  classifierEnabled: true,
+  classifierModel: "fake-classifier",
+  classifierRevision: "fake-revision",
+}), { loadTransformers: async () => fakeTransformers, cacheDir: "/tmp" })
 await fakeClient.warmup()
-check(fakeClient.ready, 'inference client becomes ready after warmup')
-const inferenceValue = await fakeClient.evaluate('echo hi', 'say hi', new AbortController().signal)
-close(inferenceValue.maliceScore, 0.1, 'inference client forwards the worker result')
+check(fakeClient.ready, "inference client becomes ready after warmup")
+equal(fakeClient.models.embedding.state, "ready", "embedding model reports ready")
+equal(fakeClient.models.classifier.state, "ready", "classifier model reports ready")
+const inferenceValue = await fakeClient.evaluate("echo hi", "say hi", new AbortController().signal)
+close(inferenceValue.maliceScore, 0.1, "inference client returns the classifier score")
 fakeClient.dispose()
 
 // ---------------------------------------------------------------------------
