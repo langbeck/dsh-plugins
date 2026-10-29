@@ -3,16 +3,17 @@
 A DSH Web GUI plugin bundle with one Host row and one Client bundle. It adds a
 header action to the current Session that opens a dialog with three tabs:
 
-- **Settings** — switch the Session's permission preset (Read only, Workspace
-  write, Full access) in one row, and inspect the effective sandbox mode and
-  approval policy.
 - **Tools** — a Plugin-Manager-style list of the Session's tools (from its last
   request header, or its tool history before the first request): icon, name,
   description, and an enable/disable switch on the right. The switch track is
   green when enabled (auto-approved) and red when blocked; the knob stays
-  white. Clicking a row
-  expands its parameter schema and recent calls. A final line lists the
-  disabled tool names.
+  white. The second line shows the Session invocation count and blocked state.
+  Clicking a row opens a wider detail dialog with a disabled form preview of
+  its parameter schema, the raw JSON Schema, and recent calls. A pinned line at
+  the top lists the disabled tool names while the rows scroll.
+- **Settings** — switch the Session's permission preset (Read only, Workspace
+  write, Full access) in one row, and inspect the effective sandbox mode and
+  approval policy.
 - **Commands** — the Host slash commands visible to the Session's live Agent:
   name, description, input hint, and attachment support.
 

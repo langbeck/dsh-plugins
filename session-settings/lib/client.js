@@ -826,7 +826,7 @@ function jsonText(value) {
 
 // src/client/components/SessionSettingsDialog.jsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
-var TABS = ["settings", "tools", "commands"];
+var TABS = ["tools", "settings", "commands"];
 var PRESET_LABELS = {
   "read-only": "preset.readOnly",
   "workspace-write": "preset.workspaceWrite",
@@ -834,7 +834,7 @@ var PRESET_LABELS = {
 };
 function SessionSettingsDialog(props) {
   const { sessionId, t, onClose } = props;
-  const [tab, setTab] = (0, import_react2.useState)("settings");
+  const [tab, setTab] = (0, import_react2.useState)("tools");
   const [status, setStatus] = (0, import_react2.useState)("loading");
   const [snapshot, setSnapshot] = (0, import_react2.useState)(void 0);
   const [error, setError] = (0, import_react2.useState)("");

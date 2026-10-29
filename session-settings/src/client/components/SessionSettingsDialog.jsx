@@ -63,7 +63,7 @@ import {
   warningStyle,
 } from '../lib/styles.js'
 
-const TABS = ['settings', 'tools', 'commands']
+const TABS = ['tools', 'settings', 'commands']
 
 const PRESET_LABELS = {
   'read-only': 'preset.readOnly',
@@ -74,7 +74,7 @@ const PRESET_LABELS = {
 /** The tabbed Session Settings dialog. Read-only inspection plus preset and tool-policy writes. */
 export default function SessionSettingsDialog(props) {
   const { sessionId, t, onClose } = props
-  const [tab, setTab] = useState('settings')
+  const [tab, setTab] = useState('tools')
   const [status, setStatus] = useState('loading')
   const [snapshot, setSnapshot] = useState(undefined)
   const [error, setError] = useState('')
