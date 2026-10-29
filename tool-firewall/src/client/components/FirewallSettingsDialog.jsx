@@ -4,7 +4,7 @@ import { LOGS_ROUTE } from '../constants.js'
 import { useSnapshot } from '../lib/hooks.js'
 import {
   dialogBackdropStyle,
-  dialogBodyStyle,
+  dialogBodyTabbedStyle,
   dialogCloseStyle,
   dialogHeaderStyle,
   dialogPanelStyle,
@@ -182,7 +182,7 @@ export default function FirewallSettingsDialog(props) {
             ×
           </button>
         </div>
-        <div style={dialogBodyStyle}>
+        <div style={dialogBodyTabbedStyle}>
           <SettingsForm view="page" t={t} configForm={configForm} tabbed logs={logs} logsLoading={logsLoading} />
         </div>
       </div>

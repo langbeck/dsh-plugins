@@ -64,6 +64,33 @@ export const footerStyle = {
   flexWrap: 'wrap',
 }
 
+export const tabbedFooterStyle = {
+  ...footerStyle,
+  flex: 'none',
+  padding: '12px 20px',
+  borderTop: '0.5px solid var(--dsw-alias-border-l3)',
+  background: 'var(--dsw-alias-bg-layer-1)',
+}
+
+export const tabbedShellStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
+  minHeight: 0,
+  fontSize: '13px',
+  lineHeight: '20px',
+  color: 'var(--dsw-alias-label-primary)',
+}
+
+export const tabbedScrollStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  flex: '1 1 auto',
+  minHeight: 0,
+  overflowY: 'auto',
+  padding: '14px 20px 16px',
+}
+
 export function inputStyle(disabled, width = '96px') {
   return {
     boxSizing: 'border-box',
@@ -262,6 +289,15 @@ export const dialogBodyStyle = {
   minHeight: 0,
   overflowY: 'auto',
   padding: '14px 20px 20px',
+}
+
+export const dialogBodyTabbedStyle = {
+  flex: '1 1 auto',
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  padding: 0,
 }
 
 export function dialogCloseStyle() {

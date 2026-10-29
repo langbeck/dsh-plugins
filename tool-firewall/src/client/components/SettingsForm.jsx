@@ -18,6 +18,9 @@ import {
   selectStyle,
   tabBarStyle,
   tabButtonStyle,
+  tabbedFooterStyle,
+  tabbedScrollStyle,
+  tabbedShellStyle,
   tabIconStyle,
 } from '../lib/styles.js'
 import LogsPanel from './LogsPanel.jsx'
@@ -195,25 +198,26 @@ export default function SettingsForm(props) {
           : ''
 
   return (
-    <div style={pageStyle}>
-      {tabbed ? (
-        <div style={tabBarStyle}>
-          {TABS.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              style={tabButtonStyle(tab === entry.id)}
-              aria-pressed={tab === entry.id}
-              onClick={() => setTab(entry.id)}
-            >
-              <TabIcon paths={entry.icon} />
-              {t(entry.labelKey)}
-            </button>
-          ))}
-        </div>
-      ) : null}
+    <div style={tabbed ? tabbedShellStyle : pageStyle}>
+      <div style={tabbed ? tabbedScrollStyle : { display: 'contents' }}>
+        {tabbed ? (
+          <div style={tabBarStyle}>
+            {TABS.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                style={tabButtonStyle(tab === entry.id)}
+                aria-pressed={tab === entry.id}
+                onClick={() => setTab(entry.id)}
+              >
+                <TabIcon paths={entry.icon} />
+                {t(entry.labelKey)}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
-      {!tabbed || tab === 'general' ? (
+        {!tabbed || tab === 'general' ? (
         <section style={sectionStyle}>
           <h3 style={sectionTitleStyle}>{t('section.general')}</h3>
           {checkboxField('enabled')}
@@ -294,9 +298,10 @@ export default function SettingsForm(props) {
         </section>
       ) : null}
 
-      {tabbed && tab === 'logs' ? <LogsPanel logs={logs} loading={logsLoading} t={t} /> : null}
+        {tabbed && tab === 'logs' ? <LogsPanel logs={logs} loading={logsLoading} t={t} /> : null}
+      </div>
 
-      <div style={footerStyle}>
+      <div style={tabbed ? tabbedFooterStyle : footerStyle}>
         <button type="button" disabled={disabled} onClick={save} style={primaryButtonStyle(disabled)}>
           {t('config.save')}
         </button>
@@ -308,8 +313,8 @@ export default function SettingsForm(props) {
             {noticeText}
           </span>
         )}
+        {writable ? null : <p style={hintStyle}>{t('config.readOnly')}</p>}
       </div>
-      {writable ? null : <p style={hintStyle}>{t('config.readOnly')}</p>}
     </div>
   )
 }

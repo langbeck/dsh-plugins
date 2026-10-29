@@ -211,6 +211,30 @@ var footerStyle = {
   gap: "8px",
   flexWrap: "wrap"
 };
+var tabbedFooterStyle = {
+  ...footerStyle,
+  flex: "none",
+  padding: "12px 20px",
+  borderTop: "0.5px solid var(--dsw-alias-border-l3)",
+  background: "var(--dsw-alias-bg-layer-1)"
+};
+var tabbedShellStyle = {
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",
+  minHeight: 0,
+  fontSize: "13px",
+  lineHeight: "20px",
+  color: "var(--dsw-alias-label-primary)"
+};
+var tabbedScrollStyle = {
+  display: "flex",
+  flexDirection: "column",
+  flex: "1 1 auto",
+  minHeight: 0,
+  overflowY: "auto",
+  padding: "14px 20px 16px"
+};
 function inputStyle(disabled, width = "96px") {
   return {
     boxSizing: "border-box",
@@ -387,11 +411,13 @@ var dialogSubtitleStyle = {
   fontSize: "12px",
   lineHeight: "18px"
 };
-var dialogBodyStyle = {
+var dialogBodyTabbedStyle = {
   flex: "1 1 auto",
   minHeight: 0,
-  overflowY: "auto",
-  padding: "14px 20px 20px"
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
+  padding: 0
 };
 function dialogCloseStyle() {
   return {
@@ -758,107 +784,109 @@ function SettingsForm(props) {
     ] });
   }
   const noticeText = validation !== void 0 ? t(validation) : notice === "saved" ? t("config.saved") : notice === "error" ? t("config.saveError") : notice === "saving" ? t("config.saving") : "";
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: pageStyle, children: [
-    tabbed ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: tabBarStyle, children: TABS.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-      "button",
-      {
-        type: "button",
-        style: tabButtonStyle(tab === entry.id),
-        "aria-pressed": tab === entry.id,
-        onClick: () => setTab(entry.id),
-        children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(TabIcon, { paths: entry.icon }),
-          t(entry.labelKey)
-        ]
-      },
-      entry.id
-    )) }) : null,
-    !tabbed || tab === "general" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.general") }),
-      checkboxField("enabled"),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.enabledHint") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.semanticFailure") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-          "select",
-          {
-            value: draft.semanticFailure,
-            disabled,
-            onChange: (event) => update("semanticFailure", event.target.value),
-            style: selectStyle(disabled),
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "open", children: t("option.open") }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "closed", children: t("option.closed") })
-            ]
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.semanticFailureHint") })
-      ] }),
-      numberField("modelTimeoutMs", 1, 5e3, 1)
-    ] }) : null,
-    !tabbed || tab === "detection" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.detection") }),
-      numberField("maliceThreshold", 0, 1, 0.01),
-      numberField("alignmentThreshold", 0, 1, 0.01),
-      textField("bypassRegex", "100%"),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.shellTools") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-          "input",
-          {
-            type: "text",
-            value: listToText(draft.shellTools),
-            disabled,
-            "aria-label": t("field.shellTools"),
-            onChange: (event) => update("shellTools", textToList(event.target.value)),
-            style: inputStyle(disabled, "100%")
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.shellToolsHint") })
-      ] })
-    ] }) : null,
-    !tabbed || tab === "models" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.models") }),
-      checkboxField("embeddingEnabled"),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.embeddingEnabledHint") }),
-      textField("embeddingModel", "100%", void 0, !draft.embeddingEnabled),
-      textField("embeddingRevision", "100%", void 0, !draft.embeddingEnabled),
-      checkboxField("classifierEnabled"),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierEnabledHint") }),
-      textField("classifierModel", "100%", void 0, !draft.classifierEnabled),
-      textField("classifierRevision", "100%", void 0, !draft.classifierEnabled),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.classifierLabels") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-          "input",
-          {
-            type: "text",
-            value: listToText(draft.classifierLabels),
-            disabled: disabled || !draft.classifierEnabled,
-            "aria-label": t("field.classifierLabels"),
-            onChange: (event) => update("classifierLabels", textToList(event.target.value)),
-            style: inputStyle(disabled || !draft.classifierEnabled, "100%")
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierLabelsHint") })
-      ] }),
-      checkboxField("allowRemoteModels"),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.allowRemoteModelsHint") })
-    ] }) : null,
-    !tabbed || tab === "cache" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.cache") }),
-      numberField("maxCommandChars", 64, 65536, 1),
-      numberField("maxTextTokens", 16, 512, 1),
-      numberField("cacheEntries", 1, 4096, 1),
-      numberField("cacheTtlMs", 1e3, 864e5, 1e3)
-    ] }) : null,
-    tabbed && tab === "logs" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LogsPanel, { logs, loading: logsLoading, t }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: footerStyle, children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedShellStyle : pageStyle, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedScrollStyle : { display: "contents" }, children: [
+      tabbed ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: tabBarStyle, children: TABS.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+        "button",
+        {
+          type: "button",
+          style: tabButtonStyle(tab === entry.id),
+          "aria-pressed": tab === entry.id,
+          onClick: () => setTab(entry.id),
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(TabIcon, { paths: entry.icon }),
+            t(entry.labelKey)
+          ]
+        },
+        entry.id
+      )) }) : null,
+      !tabbed || tab === "general" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.general") }),
+        checkboxField("enabled"),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.enabledHint") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.semanticFailure") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            "select",
+            {
+              value: draft.semanticFailure,
+              disabled,
+              onChange: (event) => update("semanticFailure", event.target.value),
+              style: selectStyle(disabled),
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "open", children: t("option.open") }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "closed", children: t("option.closed") })
+              ]
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.semanticFailureHint") })
+        ] }),
+        numberField("modelTimeoutMs", 1, 5e3, 1)
+      ] }) : null,
+      !tabbed || tab === "detection" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.detection") }),
+        numberField("maliceThreshold", 0, 1, 0.01),
+        numberField("alignmentThreshold", 0, 1, 0.01),
+        textField("bypassRegex", "100%"),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.shellTools") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            "input",
+            {
+              type: "text",
+              value: listToText(draft.shellTools),
+              disabled,
+              "aria-label": t("field.shellTools"),
+              onChange: (event) => update("shellTools", textToList(event.target.value)),
+              style: inputStyle(disabled, "100%")
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.shellToolsHint") })
+        ] })
+      ] }) : null,
+      !tabbed || tab === "models" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.models") }),
+        checkboxField("embeddingEnabled"),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.embeddingEnabledHint") }),
+        textField("embeddingModel", "100%", void 0, !draft.embeddingEnabled),
+        textField("embeddingRevision", "100%", void 0, !draft.embeddingEnabled),
+        checkboxField("classifierEnabled"),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierEnabledHint") }),
+        textField("classifierModel", "100%", void 0, !draft.classifierEnabled),
+        textField("classifierRevision", "100%", void 0, !draft.classifierEnabled),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.classifierLabels") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            "input",
+            {
+              type: "text",
+              value: listToText(draft.classifierLabels),
+              disabled: disabled || !draft.classifierEnabled,
+              "aria-label": t("field.classifierLabels"),
+              onChange: (event) => update("classifierLabels", textToList(event.target.value)),
+              style: inputStyle(disabled || !draft.classifierEnabled, "100%")
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierLabelsHint") })
+        ] }),
+        checkboxField("allowRemoteModels"),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.allowRemoteModelsHint") })
+      ] }) : null,
+      !tabbed || tab === "cache" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.cache") }),
+        numberField("maxCommandChars", 64, 65536, 1),
+        numberField("maxTextTokens", 16, 512, 1),
+        numberField("cacheEntries", 1, 4096, 1),
+        numberField("cacheTtlMs", 1e3, 864e5, 1e3)
+      ] }) : null,
+      tabbed && tab === "logs" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LogsPanel, { logs, loading: logsLoading, t }) : null
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedFooterStyle : footerStyle, children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: save, style: primaryButtonStyle(disabled), children: t("config.save") }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: reset, style: secondaryButtonStyle(disabled), children: t("config.reset") }),
-      noticeText === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { role: notice === "error" ? "alert" : "status", style: notice === "error" ? errorStyle : hintStyle, children: noticeText })
-    ] }),
-    writable ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.readOnly") })
+      noticeText === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { role: notice === "error" ? "alert" : "status", style: notice === "error" ? errorStyle : hintStyle, children: noticeText }),
+      writable ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.readOnly") })
+    ] })
   ] });
 }
 
@@ -1021,7 +1049,7 @@ function FirewallSettingsDialog(props) {
             ]
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: dialogBodyStyle, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SettingsForm, { view: "page", t, configForm, tabbed: true, logs, logsLoading }) })
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: dialogBodyTabbedStyle, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SettingsForm, { view: "page", t, configForm, tabbed: true, logs, logsLoading }) })
       ] })
     }
   );
