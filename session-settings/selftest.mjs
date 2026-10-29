@@ -167,6 +167,7 @@ check(String(enabledSwitch.background).includes('state-success'), 'enabled switc
 check(String(blockedSwitch.background).includes('state-error'), 'blocked switch track is red')
 check(String(switchKnobStyle(true).background).includes('foreground'), 'switch knob stays white')
 equal(disabledLineStyle.display, 'flex', 'disabled-tools summary is a line')
+equal(disabledLineStyle.position, 'sticky', 'disabled-tools summary stays pinned while tools scroll')
 equal(EN['tools.disabled'], 'Disabled tools:', 'disabled-tools line has friendly copy')
 equal(ZH['tools.disabled'], '已禁用的工具：', 'disabled-tools line is localized')
 

@@ -572,12 +572,16 @@ function switchKnobStyle(checked) {
   };
 }
 var disabledLineStyle = {
+  position: "sticky",
+  top: 0,
+  zIndex: 1,
   display: "flex",
   flexWrap: "wrap",
   gap: "4px",
-  margin: "12px 0 0",
-  paddingTop: "10px",
-  borderTop: "0.5px solid var(--dsw-alias-border-l3)",
+  margin: "0 0 4px",
+  padding: "0 0 10px",
+  borderBottom: "0.5px solid var(--dsw-alias-border-l3)",
+  background: "var(--dsw-alias-bg-layer-1)",
   color: "var(--dsw-alias-label-tertiary)",
   fontSize: "12px",
   lineHeight: "18px"
@@ -890,6 +894,10 @@ function ToolsTab(props) {
   const { snapshot, t, busy, expanded, setExpanded, onPolicy } = props;
   const blocked = snapshot.blockList.session;
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { style: disabledLineStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("tools.disabled") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: blocked.length === 0 ? t("tools.none") : blocked.join(", ") })
+    ] }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: toolListStyle, children: snapshot.tools.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: emptyStyle, children: t("tools.empty") }) : snapshot.tools.map((tool) => {
       const isBlocked = blocked.includes(tool.name);
       const open = expanded === tool.name;
@@ -959,11 +967,7 @@ function ToolsTab(props) {
           ] }, call.callId))
         ] }) : null
       ] }, tool.name);
-    }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { style: disabledLineStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("tools.disabled") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: blocked.length === 0 ? t("tools.none") : blocked.join(", ") })
-    ] })
+    }) })
   ] });
 }
 var TOOL_ARTWORK_COLORS = ["#4d6bfe", "#2ea043", "#b7791f", "#8250df", "#1f6feb", "#c2414b"];

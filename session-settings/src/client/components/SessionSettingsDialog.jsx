@@ -321,6 +321,10 @@ function ToolsTab(props) {
   const blocked = snapshot.blockList.session
   return (
     <div>
+      <p style={disabledLineStyle}>
+        <span>{t('tools.disabled')}</span>
+        <span>{blocked.length === 0 ? t('tools.none') : blocked.join(', ')}</span>
+      </p>
       <div style={toolListStyle}>
         {snapshot.tools.length === 0 ? <p style={emptyStyle}>{t('tools.empty')}</p> : snapshot.tools.map((tool) => {
           const isBlocked = blocked.includes(tool.name)
@@ -388,10 +392,6 @@ function ToolsTab(props) {
           )
         })}
       </div>
-      <p style={disabledLineStyle}>
-        <span>{t('tools.disabled')}</span>
-        <span>{blocked.length === 0 ? t('tools.none') : blocked.join(', ')}</span>
-      </p>
     </div>
   )
 }
