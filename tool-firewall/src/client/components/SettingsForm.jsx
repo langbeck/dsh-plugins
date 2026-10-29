@@ -10,6 +10,7 @@ import {
   hintStyle,
   inputStyle,
   labelStyle,
+  modelWarningStyle,
   pageStyle,
   primaryButtonStyle,
   secondaryButtonStyle,
@@ -198,6 +199,14 @@ export default function SettingsForm(props) {
           ? t('config.saving')
           : ''
 
+  const modelIssues = []
+  if (models?.embedding?.state === 'error') {
+    modelIssues.push({ key: 'embedding', model: t('stats.embeddingModel'), error: String(models.embedding.error ?? 'unknown error') })
+  }
+  if (models?.classifier?.state === 'error') {
+    modelIssues.push({ key: 'classifier', model: t('stats.classifierModel'), error: String(models.classifier.error ?? 'unknown error') })
+  }
+
   return (
     <div style={tabbed ? tabbedShellStyle : pageStyle}>
       {tabbed ? (
@@ -218,6 +227,14 @@ export default function SettingsForm(props) {
       ) : null}
 
       <div style={tabbed ? tabbedScrollStyle : { display: 'contents' }}>
+        {tabbed && modelIssues.length > 0 ? (
+          <div style={modelWarningStyle}>
+            {modelIssues.map((entry) => (
+              <p key={entry.key} style={errorStyle}>{t('logs.modelError', { model: entry.model, error: entry.error })}</p>
+            ))}
+          </div>
+        ) : null}
+
         {!tabbed || tab === 'general' ? (
         <section style={tabbed ? tabbedSectionStyle : sectionStyle}>
           {tabbed ? null : <h3 style={sectionTitleStyle}>{t('section.general')}</h3>}

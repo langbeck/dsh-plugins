@@ -388,10 +388,13 @@ check(statsLabels.includes('stats.embeddingModel'), 'sidebar stats card has an e
 check(statsLabels.includes('stats.classifierModel'), 'sidebar stats card has a classifier model row')
 check(statsLabels.includes('stats.disabled'), 'disabled models render as Disabled')
 let offValueStyle
+let disabledValueStyle
 walkTree(statsTree, (node) => {
   if (node !== null && typeof node === 'object' && node.props?.children === 'stats.off') offValueStyle = node.props.style
+  if (node !== null && typeof node === 'object' && node.props?.children === 'stats.disabled') disabledValueStyle = node.props.style
 })
-check(offValueStyle !== undefined && String(offValueStyle.color).includes('state-error'), 'Off values are highlighted in red')
+check(offValueStyle !== undefined && String(offValueStyle.color).includes('state-warning'), 'Off values are highlighted in orange')
+check(disabledValueStyle !== undefined && String(disabledValueStyle.color).includes('label-tertiary'), 'Disabled values are muted')
 statsButtons[0].props.onClick()
 equal(overlayInjected.uiStore.getSnapshot().open, true, 'clicking the stats card opens the settings dialog')
 const dialogTree = ReactFake.reset(() => overlayRegistration.component({ t: (key) => key, configForm, ...overlayInjected }))

@@ -26,32 +26,29 @@ function readConfigValue(form) {
   }
 }
 
-function modelValue(state, configured) {
-  if (configured !== true) return 'stats.disabled'
-  if (state === 'ready') return 'stats.ready'
-  if (state === 'error') return 'stats.error'
-  return 'stats.loading'
+function modelEntry(labelKey, configured, model) {
+  if (configured !== true) return { labelKey, valueKey: 'stats.disabled', tone: 'muted' }
+  if (model?.state === 'error') {
+    return {
+      labelKey,
+      valueKey: 'stats.error',
+      tone: 'error',
+      title: typeof model.error === 'string' ? model.error : undefined,
+    }
+  }
+  if (model?.state === 'ready') return { labelKey, valueKey: 'stats.ready' }
+  return { labelKey, valueKey: 'stats.loading', tone: 'muted' }
 }
 
 function buildStats(value, counters = { blocked: 0, total: 0 }) {
   const config = normalizeConfig(value)
   const models = counters.models ?? {}
-  const embeddingState = models.embedding?.state
-  const classifierState = models.classifier?.state
   return [
-    { labelKey: 'stats.firewall', valueKey: config.enabled ? 'stats.on' : 'stats.off' },
-    { labelKey: 'stats.embedding', valueKey: config.embeddingEnabled ? 'stats.on' : 'stats.off' },
-    { labelKey: 'stats.classifier', valueKey: config.classifierEnabled ? 'stats.on' : 'stats.off' },
-    {
-      labelKey: 'stats.embeddingModel',
-      valueKey: modelValue(embeddingState, config.embeddingEnabled),
-      tone: embeddingState === 'error' ? 'error' : undefined,
-    },
-    {
-      labelKey: 'stats.classifierModel',
-      valueKey: modelValue(classifierState, config.classifierEnabled),
-      tone: classifierState === 'error' ? 'error' : undefined,
-    },
+    { labelKey: 'stats.firewall', valueKey: config.enabled ? 'stats.on' : 'stats.off', tone: config.enabled ? undefined : 'off' },
+    { labelKey: 'stats.embedding', valueKey: config.embeddingEnabled ? 'stats.on' : 'stats.off', tone: config.embeddingEnabled ? undefined : 'off' },
+    { labelKey: 'stats.classifier', valueKey: config.classifierEnabled ? 'stats.on' : 'stats.off', tone: config.classifierEnabled ? undefined : 'off' },
+    modelEntry('stats.embeddingModel', config.embeddingEnabled, models.embedding),
+    modelEntry('stats.classifierModel', config.classifierEnabled, models.classifier),
     { labelKey: 'stats.mode', valueKey: config.semanticFailure === 'closed' ? 'stats.closed' : 'stats.open' },
     { labelKey: 'stats.blocks', value: String(counters.blocked ?? 0) + ' / ' + String(counters.total ?? 0) },
   ]

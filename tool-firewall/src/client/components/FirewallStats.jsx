@@ -33,17 +33,16 @@ export default function FirewallStats(props) {
       style={statsCardStyle(true)}
     >
       {stats.map((stat, index) => (
-        <span key={String(stat.label ?? stat.labelKey ?? index)} style={statsRowStyle}>
+        <span key={String(stat.label ?? stat.labelKey ?? index)} style={statsRowStyle} title={stat.title}>
           <span style={statsLabelStyle}>{typeof stat.label === 'string' ? stat.label : t(stat.labelKey)}</span>
           {(() => {
             const value = typeof stat.value === 'string' ? stat.value : t(stat.valueKey)
-            const off = stat.tone === 'off'
-              || stat.tone === 'error'
-              || stat.valueKey === 'stats.off'
-              || stat.valueKey === 'stats.error'
-              || value === t('stats.off')
-              || value === t('stats.error')
-            return <span style={statsValueStyle(off)}>{value}</span>
+            let tone = stat.tone
+            if (tone === undefined) {
+              if (stat.valueKey === 'stats.error' || value === t('stats.error')) tone = 'error'
+              else if (stat.valueKey === 'stats.off' || value === t('stats.off')) tone = 'off'
+            }
+            return <span style={statsValueStyle(tone)} title={stat.title}>{value}</span>
           })()}
         </span>
       ))}

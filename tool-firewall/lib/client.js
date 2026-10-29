@@ -239,6 +239,15 @@ var tabbedScrollStyle = {
   overflowY: "auto",
   padding: "4px 16px 12px"
 };
+var modelWarningStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+  padding: "8px 10px",
+  border: "0.5px solid var(--dsw-alias-state-error-primary, #d93025)",
+  borderRadius: "var(--dsw-radius-md, 8px)",
+  background: "var(--dsw-alias-bg-layer-2)"
+};
 function inputStyle(disabled, width = "96px") {
   return {
     boxSizing: "border-box",
@@ -354,13 +363,14 @@ var statsLabelStyle = {
   fontSize: "11px",
   lineHeight: "16px"
 };
-function statsValueStyle(off) {
+function statsValueStyle(tone) {
+  const color = tone === "error" ? "var(--dsw-alias-state-error-primary, #d93025)" : tone === "off" ? "var(--dsw-alias-state-warning-primary, #d97706)" : tone === "muted" ? "var(--dsw-alias-label-tertiary)" : "var(--dsw-alias-label-primary)";
   return {
     minWidth: 0,
     overflow: "hidden",
     textOverflow: "ellipsis",
-    color: off ? "var(--dsw-alias-state-error-primary, #d93025)" : "var(--dsw-alias-label-primary)",
-    fontWeight: 600,
+    color,
+    fontWeight: tone === "muted" ? 500 : 600,
     fontSize: "11px",
     lineHeight: "16px"
   };
@@ -812,6 +822,13 @@ function SettingsForm(props) {
     ] });
   }
   const noticeText = validation !== void 0 ? t(validation) : notice === "saved" ? t("config.saved") : notice === "error" ? t("config.saveError") : notice === "saving" ? t("config.saving") : "";
+  const modelIssues = [];
+  if (models?.embedding?.state === "error") {
+    modelIssues.push({ key: "embedding", model: t("stats.embeddingModel"), error: String(models.embedding.error ?? "unknown error") });
+  }
+  if (models?.classifier?.state === "error") {
+    modelIssues.push({ key: "classifier", model: t("stats.classifierModel"), error: String(models.classifier.error ?? "unknown error") });
+  }
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedShellStyle : pageStyle, children: [
     tabbed ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: tabBarStyle, children: TABS.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
       "button",
@@ -828,6 +845,7 @@ function SettingsForm(props) {
       entry.id
     )) }) : null,
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedScrollStyle : { display: "contents" }, children: [
+      tabbed && modelIssues.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: modelWarningStyle, children: modelIssues.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: errorStyle, children: t("logs.modelError", { model: entry.model, error: entry.error }) }, entry.key)) }) : null,
       !tabbed || tab === "general" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
         tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.general") }),
         checkboxField("enabled"),
@@ -1113,12 +1131,16 @@ function FirewallStats(props) {
       title: t("stats.aria"),
       onClick: open,
       style: statsCardStyle(true),
-      children: stats.map((stat, index) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { style: statsRowStyle, children: [
+      children: stats.map((stat, index) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { style: statsRowStyle, title: stat.title, children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: statsLabelStyle, children: typeof stat.label === "string" ? stat.label : t(stat.labelKey) }),
         (() => {
           const value = typeof stat.value === "string" ? stat.value : t(stat.valueKey);
-          const off = stat.tone === "off" || stat.tone === "error" || stat.valueKey === "stats.off" || stat.valueKey === "stats.error" || value === t("stats.off") || value === t("stats.error");
-          return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: statsValueStyle(off), children: value });
+          let tone = stat.tone;
+          if (tone === void 0) {
+            if (stat.valueKey === "stats.error" || value === t("stats.error")) tone = "error";
+            else if (stat.valueKey === "stats.off" || value === t("stats.off")) tone = "off";
+          }
+          return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: statsValueStyle(tone), title: stat.title, children: value });
         })()
       ] }, String(stat.label ?? stat.labelKey ?? index)))
     }
@@ -1357,31 +1379,28 @@ function readConfigValue(form) {
     return void 0;
   }
 }
-function modelValue(state, configured) {
-  if (configured !== true) return "stats.disabled";
-  if (state === "ready") return "stats.ready";
-  if (state === "error") return "stats.error";
-  return "stats.loading";
+function modelEntry(labelKey, configured, model) {
+  if (configured !== true) return { labelKey, valueKey: "stats.disabled", tone: "muted" };
+  if (model?.state === "error") {
+    return {
+      labelKey,
+      valueKey: "stats.error",
+      tone: "error",
+      title: typeof model.error === "string" ? model.error : void 0
+    };
+  }
+  if (model?.state === "ready") return { labelKey, valueKey: "stats.ready" };
+  return { labelKey, valueKey: "stats.loading", tone: "muted" };
 }
 function buildStats(value, counters = { blocked: 0, total: 0 }) {
   const config = normalizeConfig(value);
   const models = counters.models ?? {};
-  const embeddingState = models.embedding?.state;
-  const classifierState = models.classifier?.state;
   return [
-    { labelKey: "stats.firewall", valueKey: config.enabled ? "stats.on" : "stats.off" },
-    { labelKey: "stats.embedding", valueKey: config.embeddingEnabled ? "stats.on" : "stats.off" },
-    { labelKey: "stats.classifier", valueKey: config.classifierEnabled ? "stats.on" : "stats.off" },
-    {
-      labelKey: "stats.embeddingModel",
-      valueKey: modelValue(embeddingState, config.embeddingEnabled),
-      tone: embeddingState === "error" ? "error" : void 0
-    },
-    {
-      labelKey: "stats.classifierModel",
-      valueKey: modelValue(classifierState, config.classifierEnabled),
-      tone: classifierState === "error" ? "error" : void 0
-    },
+    { labelKey: "stats.firewall", valueKey: config.enabled ? "stats.on" : "stats.off", tone: config.enabled ? void 0 : "off" },
+    { labelKey: "stats.embedding", valueKey: config.embeddingEnabled ? "stats.on" : "stats.off", tone: config.embeddingEnabled ? void 0 : "off" },
+    { labelKey: "stats.classifier", valueKey: config.classifierEnabled ? "stats.on" : "stats.off", tone: config.classifierEnabled ? void 0 : "off" },
+    modelEntry("stats.embeddingModel", config.embeddingEnabled, models.embedding),
+    modelEntry("stats.classifierModel", config.classifierEnabled, models.classifier),
     { labelKey: "stats.mode", valueKey: config.semanticFailure === "closed" ? "stats.closed" : "stats.open" },
     { labelKey: "stats.blocks", value: String(counters.blocked ?? 0) + " / " + String(counters.total ?? 0) }
   ];

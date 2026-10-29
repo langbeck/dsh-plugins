@@ -96,6 +96,16 @@ export const tabbedScrollStyle = {
   padding: '4px 16px 12px',
 }
 
+export const modelWarningStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+  padding: '8px 10px',
+  border: '0.5px solid var(--dsw-alias-state-error-primary, #d93025)',
+  borderRadius: 'var(--dsw-radius-md, 8px)',
+  background: 'var(--dsw-alias-bg-layer-2)',
+}
+
 export function inputStyle(disabled, width = '96px') {
   return {
     boxSizing: 'border-box',
@@ -220,13 +230,20 @@ export const statsLabelStyle = {
   lineHeight: '16px',
 }
 
-export function statsValueStyle(off) {
+export function statsValueStyle(tone) {
+  const color = tone === 'error'
+    ? 'var(--dsw-alias-state-error-primary, #d93025)'
+    : tone === 'off'
+      ? 'var(--dsw-alias-state-warning-primary, #d97706)'
+      : tone === 'muted'
+        ? 'var(--dsw-alias-label-tertiary)'
+        : 'var(--dsw-alias-label-primary)'
   return {
     minWidth: 0,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    color: off ? 'var(--dsw-alias-state-error-primary, #d93025)' : 'var(--dsw-alias-label-primary)',
-    fontWeight: 600,
+    color,
+    fontWeight: tone === 'muted' ? 500 : 600,
     fontSize: '11px',
     lineHeight: '16px',
   }
