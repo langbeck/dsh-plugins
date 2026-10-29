@@ -6,11 +6,11 @@ header action to the current Session that opens a dialog with three tabs:
 - **Settings** — switch the Session's permission preset (Read only, Workspace
   write, Full access) in one row, and inspect the effective sandbox mode and
   approval policy.
-- **Tools** — the tools enabled for the Session (from its last request header,
-  or its tool history before the first request): name, description, parameters
-  JSON Schema, deferred-loading state, recent calls, and a small **Block**
-  control. Every tool is auto-approved by default; a blocked tool's approvals
-  are rejected.
+- **Tools** — a Plugin-Manager-style list of the Session's tools (from its last
+  request header, or its tool history before the first request): icon, name,
+  description, and an enable/disable switch on the right. Enabled means
+  auto-approved; switched off means blocked. A final line lists the disabled
+  tool names.
 - **Commands** — the Host slash commands visible to the Session's live Agent:
   name, description, input hint, and attachment support.
 

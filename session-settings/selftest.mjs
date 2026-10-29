@@ -13,7 +13,7 @@ import vm from 'node:vm'
 import * as host from './src/index.js'
 import { commandView, foldRecentToolCalls, mergeToolHistory, toolView } from './src/tools.js'
 import { EN, ZH } from './src/client/locale.js'
-import { policyButtonStyle, presetOptionStyle, presetRowStyle } from './src/client/lib/styles.js'
+import { disabledLineStyle, presetOptionStyle, presetRowStyle, switchTrackStyle, toolRowStyle } from './src/client/lib/styles.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 let checks = 0
@@ -159,8 +159,14 @@ equal(presetRowStyle.flexWrap, 'nowrap', 'preset options stay side by side')
 const dangerousStyle = presetOptionStyle(false, true)
 check(String(dangerousStyle.color).includes('state-error'), 'Full access uses the error color for its font')
 check(String(dangerousStyle.border).includes('state-error'), 'Full access uses the error color for its border')
-const blockStyle = policyButtonStyle(true, 'block')
-check(String(blockStyle.color).includes('state-error'), 'active Block uses the error color')
+equal(toolRowStyle.display, 'flex', 'tools render as plugin-style rows')
+const enabledSwitch = switchTrackStyle(true, false)
+const blockedSwitch = switchTrackStyle(false, false)
+check(enabledSwitch.background !== blockedSwitch.background, 'enabled and blocked switches use different tracks')
+check(String(enabledSwitch.background).includes('brand'), 'enabled switch uses the brand color')
+equal(disabledLineStyle.display, 'flex', 'disabled-tools summary is a line')
+equal(EN['tools.disabled'], 'Disabled tools:', 'disabled-tools line has friendly copy')
+equal(ZH['tools.disabled'], '已禁用的工具：', 'disabled-tools line is localized')
 
 // ---------------------------------------------------------------------------
 // Generated Client bundle

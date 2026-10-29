@@ -31,9 +31,17 @@ import {
   sectionStyle,
   sectionTitleStyle,
   subtitleStyle,
+  switchKnobStyle,
+  switchTrackStyle,
   tabBarStyle,
   tabStyle,
   titleStyle,
+  toolArtworkStyle,
+  toolBodyStyle,
+  toolDescriptionStyle,
+  toolListStyle,
+  toolNameStyle,
+  toolRowStyle,
   warningStyle,
 } from '../lib/styles.js'
 
@@ -55,7 +63,6 @@ export default function SessionSettingsDialog(props) {
   const [actionError, setActionError] = useState('')
   const [busy, setBusy] = useState(false)
   const [search, setSearch] = useState('')
-  const [expanded, setExpanded] = useState('')
   const [pendingPreset, setPendingPreset] = useState('')
 
   useEffect(() => {
@@ -135,13 +142,6 @@ export default function SessionSettingsDialog(props) {
     void changeBlockList(Array.from(block))
   }
 
-  const tools = useMemo(() => {
-    if (snapshot === undefined) return []
-    const needle = search.trim().toLowerCase()
-    if (needle === '') return snapshot.tools
-    return snapshot.tools.filter((tool) => tool.name.toLowerCase().includes(needle) || tool.description.toLowerCase().includes(needle))
-  }, [snapshot, search])
-
   const commands = useMemo(() => {
     if (snapshot === undefined) return []
     const needle = search.trim().toLowerCase()
@@ -184,7 +184,6 @@ export default function SessionSettingsDialog(props) {
               onClick={() => {
                 setTab(name)
                 setSearch('')
-                setExpanded('')
               }}
             >
               {t('tab.' + name)}
@@ -218,17 +217,7 @@ export default function SessionSettingsDialog(props) {
                 />
               ) : null}
               {tab === 'tools' ? (
-                <ToolsTab
-                  snapshot={snapshot}
-                  t={t}
-                  busy={busy}
-                  search={search}
-                  setSearch={setSearch}
-                  tools={tools}
-                  expanded={expanded}
-                  setExpanded={setExpanded}
-                  onPolicy={setToolPolicy}
-                />
+                <ToolsTab snapshot={snapshot} t={t} busy={busy} onPolicy={setToolPolicy} />
               ) : null}
               {tab === 'commands' ? (
                 <CommandsTab snapshot={snapshot} t={t} search={search} setSearch={setSearch} commands={commands} />
@@ -317,83 +306,59 @@ function SettingsTab(props) {
 }
 
 function ToolsTab(props) {
-  const { snapshot, t, busy, search, setSearch, tools, expanded, setExpanded, onPolicy } = props
-  const visibleNames = new Set(snapshot.tools.map((tool) => tool.name))
-  const hiddenBlocked = snapshot.blockList.session.filter((name) => !visibleNames.has(name))
+  const { snapshot, t, busy, onPolicy } = props
+  const blocked = snapshot.blockList.session
   return (
-    <div style={sectionStyle}>
-      <p style={hintStyle}>{t('settings.allowListHint')}</p>
-      <p style={warningStyle}>{t('settings.allowListWarning')}</p>
-      <p style={hintStyle}>{t('tools.policyHint')}</p>
-      <input
-        type="search"
-        value={search}
-        placeholder={t('tools.search')}
-        aria-label={t('tools.search')}
-        style={{ ...inputStyle(), width: '100%' }}
-        onChange={(event) => setSearch(event.target.value)}
-      />
-      {tools.length === 0 ? <p style={emptyStyle}>{t('tools.empty')}</p> : tools.map((tool) => {
-        const open = expanded === 'tool:' + tool.name
-        const blocked = snapshot.blockList.session.includes(tool.name)
-        return (
-          <div key={tool.name} style={listItemStyle(open)}>
-            <button type="button" style={itemHeaderStyle} onClick={() => setExpanded(open ? '' : 'tool:' + tool.name)}>
-              <span style={monoNameStyle}>{tool.name}</span>
-              {tool.deferLoading ? <span style={metaBadgeStyle}>{t('tools.deferLoading')}</span> : null}
-              <span style={itemDescriptionStyle}>{tool.description}</span>
-            </button>
-            <div style={rowStyle}>
+    <div>
+      <div style={toolListStyle}>
+        {snapshot.tools.length === 0 ? <p style={emptyStyle}>{t('tools.empty')}</p> : snapshot.tools.map((tool) => {
+          const isBlocked = blocked.includes(tool.name)
+          const label = isBlocked ? t('tools.unblockTool', { name: tool.name }) : t('tools.blockTool', { name: tool.name })
+          return (
+            <div key={tool.name} style={toolRowStyle}>
+              <ToolArtwork name={tool.name} />
+              <div style={toolBodyStyle}>
+                <span style={toolNameStyle}>{tool.name}</span>
+                <span style={toolDescriptionStyle}>{tool.description}</span>
+              </div>
               <button
                 type="button"
-                style={policyButtonStyle(blocked, 'block')}
+                role="switch"
+                aria-checked={!isBlocked}
+                aria-label={label}
+                title={label}
                 disabled={busy}
+                style={switchTrackStyle(!isBlocked, busy)}
                 onClick={() => onPolicy(tool.name)}
               >
-                {blocked ? t('tools.blocked') : t('tools.block')}
+                <span style={switchKnobStyle(!isBlocked)} />
               </button>
             </div>
-            {open ? (
-              <div style={sectionStyle}>
-                <span style={labelStyle}>{t('tools.parameters')}</span>
-                <pre style={codeBlockStyle}>{schemaText(tool.parameters)}</pre>
-                <span style={labelStyle}>{t('tools.recentCalls')}</span>
-                {tool.recentCalls.length === 0 ? <p style={hintStyle}>{t('tools.noRecentCalls')}</p> : tool.recentCalls.map((call) => (
-                  <div key={call.callId} style={sectionStyle}>
-                    <div style={rowStyle}>
-                      <span style={metaBadgeStyle}>{call.status}</span>
-                      <span style={hintStyle}>turn {call.turn} · step {call.step}</span>
-                    </div>
-                    <span style={labelStyle}>{t('tools.arguments')}</span>
-                    <pre style={codeBlockStyle}>{call.arguments}</pre>
-                    {call.result === '' || call.result === undefined ? null : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={labelStyle}>{t('tools.result')}</span>
-                        <pre style={codeBlockStyle}>{call.result}</pre>
-                      </div>
-                    )}
-                    {call.error === undefined ? null : <p style={errorStyle}>{t('tools.error')}: {call.error.code} {call.error.reason ?? ''}</p>}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        )
-      })}
-      {hiddenBlocked.length === 0 ? null : (
-        <section style={sectionStyle}>
-          <h3 style={sectionTitleStyle}>{t('tools.controlled')}</h3>
-          {hiddenBlocked.map((name) => (
-            <div key={name} style={rowStyle}>
-              <span style={monoNameStyle}>{name}</span>
-              <button type="button" style={policyButtonStyle(true, 'block')} disabled={busy} onClick={() => onPolicy(name)}>
-                {t('tools.unblock')}
-              </button>
-            </div>
-          ))}
-        </section>
-      )}
-      <p style={hintStyle}>{t('settings.memoryWarning')}</p>
+          )
+        })}
+      </div>
+      <p style={disabledLineStyle}>
+        <span>{t('tools.disabled')}</span>
+        <span>{blocked.length === 0 ? t('tools.none') : blocked.join(', ')}</span>
+      </p>
+    </div>
+  )
+}
+
+const TOOL_ARTWORK_COLORS = ['#4d6bfe', '#2ea043', '#b7791f', '#8250df', '#1f6feb', '#c2414b']
+
+function ToolArtwork({ name }) {
+  let hash = 0
+  for (let index = 0; index < name.length; index += 1) hash = (hash * 31 + name.charCodeAt(index)) >>> 0
+  const background = TOOL_ARTWORK_COLORS[hash % TOOL_ARTWORK_COLORS.length]
+  return (
+    <div style={{ ...toolArtworkStyle, background }} aria-hidden="true">
+      <svg viewBox="0 0 20 20" width="20" height="20" focusable="false">
+        <path
+          d="M11.2 3.1a4.3 4.3 0 0 0-5.3 5.2L2.8 11.4l2.3 2.3 3.1-3.1a4.3 4.3 0 0 0 5.2-5.3l-2.2 2.2-1.7-1.7 1.7-2.7Z"
+          fill="currentColor"
+        />
+      </svg>
     </div>
   )
 }
@@ -422,10 +387,3 @@ function CommandsTab(props) {
   )
 }
 
-function schemaText(schema) {
-  try {
-    return JSON.stringify(schema, null, 2)
-  } catch (error) {
-    return String(schema)
-  }
-}

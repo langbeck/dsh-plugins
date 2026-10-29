@@ -407,6 +407,98 @@ export const metaBadgeStyle = {
   lineHeight: '16px',
 }
 
+export const toolListStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+}
+
+export const toolRowStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  padding: '10px 2px',
+}
+
+export const toolArtworkStyle = {
+  flex: 'none',
+  width: '40px',
+  height: '40px',
+  borderRadius: '10px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#ffffff',
+  boxSizing: 'border-box',
+}
+
+export const toolBodyStyle = {
+  flex: '1 1 auto',
+  minWidth: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2px',
+}
+
+export const toolNameStyle = {
+  fontSize: '13px',
+  lineHeight: '18px',
+  fontWeight: 600,
+  color: 'var(--dsw-alias-label-primary)',
+}
+
+export const toolDescriptionStyle = {
+  fontSize: '12px',
+  lineHeight: '17px',
+  color: 'var(--dsw-alias-label-tertiary)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+
+export function switchTrackStyle(checked, disabled) {
+  return {
+    position: 'relative',
+    flex: 'none',
+    width: '38px',
+    height: '22px',
+    padding: '2px',
+    border: 'none',
+    borderRadius: '11px',
+    background: checked
+      ? 'var(--dsw-alias-brand-primary, #4d6bfe)'
+      : 'var(--dsw-alias-bg-layer-4, rgba(127, 127, 127, 0.4))',
+    cursor: disabled ? 'default' : 'pointer',
+    opacity: disabled ? 0.6 : 1,
+    boxSizing: 'border-box',
+    transition: 'background-color 120ms ease',
+  }
+}
+
+export function switchKnobStyle(checked) {
+  return {
+    display: 'block',
+    width: '18px',
+    height: '18px',
+    borderRadius: '50%',
+    background: 'var(--dsw-alias-label-primary-foreground, #ffffff)',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.25)',
+    transform: checked ? 'translateX(16px)' : 'translateX(0)',
+    transition: 'transform 120ms ease',
+  }
+}
+
+export const disabledLineStyle = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '4px',
+  margin: '12px 0 0',
+  paddingTop: '10px',
+  borderTop: '0.5px solid var(--dsw-alias-border-l3)',
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontSize: '12px',
+  lineHeight: '18px',
+}
+
 export const emptyStyle = {
   padding: '28px 0',
   textAlign: 'center',
