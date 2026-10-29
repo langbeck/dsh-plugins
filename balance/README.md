@@ -36,11 +36,10 @@ The route also returns `limitUsd`, `remainingUsd`, and `limitPersistence`.
 Session id and survive plugin reloads and DSH restarts; if the storage domain
 is unavailable the plugin falls back to memory.
 
-A Host `agent/pre-step` guard pauses an over-cap turn and asks **Proceed once**
-(one step) / **Allow turn** (rest of the turn) / **Increase limit** / **Cancel**.
-Increase opens a second question with defaults (`+$1`, `+$5`, `+$10`, double)
-plus a custom amount; the new cap is saved before the step proceeds. Per-turn
-approvals remain ephemeral.
+A Host `agent/pre-step` guard pauses an over-cap turn and asks **Allow turn**
+(rest of the turn) / **Increase limit** / **Cancel**. Increase opens a second
+question with defaults (`+$1`, `+$5`, `+$10`, double) plus a custom amount; the
+new cap is saved before the step proceeds. Per-turn approvals remain ephemeral.
 
 The sidebar's Session block gains a `Limit $5.00 ($2.50 left)` row while a cap
 is set.

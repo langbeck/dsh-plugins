@@ -299,7 +299,6 @@ let routeHandler
 let askAnswer = { answers: [{ id: 'cost-cap', selected: ['Cancel'] }] }
 let askAnswers = null
 let askCalls = 0
-let nextCalls = 0
 const provided = {}
 const routes = {}
 const capDisposers = []
@@ -385,25 +384,17 @@ check(eventDecoder.decode(limitEvent.value).includes('"type":"limit"'), 'setting
 check(eventDecoder.decode(limitEvent.value).includes('"limitUsd":0.02'), 'the limit event carries the cap')
 eventsAbort.abort()
 await eventsReader.cancel().catch(() => {})
-const next = async () => { nextCalls += 1; return { kind: 'enter', messages: [] } }
+const next = async () => ({ kind: 'enter', messages: [] })
 const payload = { agent: capAgent, turn: 1, step: 1, messages: [], signal: new AbortController().signal }
 const cancelled = await preStepHandler(payload, next)
 equal(cancelled.kind, 'reject', 'a cancelled cap prompt rejects the step')
 equal(askCalls, 1, 'the cap prompt is asked once')
-askAnswer = { answers: [{ id: 'cost-cap', selected: ['Proceed once'] }] }
-const proceeded = await preStepHandler({ ...payload, step: 2 }, next)
-equal(proceeded.kind, 'enter', 'proceeding once allows the step')
-equal(nextCalls, 1, 'the guard delegates when proceeding')
-askAnswer = { answers: [{ id: 'cost-cap', selected: ['Cancel'] }] }
-const nextStep = await preStepHandler({ ...payload, step: 3 }, next)
-equal(nextStep.kind, 'reject', 'Proceed once does not cover the rest of the turn')
-equal(askCalls, 3, 'the next step is prompted again')
 askAnswer = { answers: [{ id: 'cost-cap', selected: ['Allow turn'] }] }
-const allowedTurn = await preStepHandler({ ...payload, step: 4 }, next)
+const allowedTurn = await preStepHandler({ ...payload, step: 2 }, next)
 equal(allowedTurn.kind, 'enter', 'Allow turn permits the step')
-const laterStep = await preStepHandler({ ...payload, step: 5 }, next)
+const laterStep = await preStepHandler({ ...payload, step: 3 }, next)
 equal(laterStep.kind, 'enter', 'Allow turn covers the rest of the turn')
-equal(askCalls, 4, 'Allow turn does not prompt again in the same turn')
+equal(askCalls, 2, 'Allow turn does not prompt again in the same turn')
 askAnswers = [
   { answers: [{ id: 'cost-cap', selected: ['Increase limit'] }] },
   { answers: [{ id: 'cost-cap-amount', selected: ['$1.02'] }] },
