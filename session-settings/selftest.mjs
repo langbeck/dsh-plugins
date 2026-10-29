@@ -168,6 +168,15 @@ equal(disabledLineStyle.display, 'flex', 'disabled-tools summary is a line')
 equal(EN['tools.disabled'], 'Disabled tools:', 'disabled-tools line has friendly copy')
 equal(ZH['tools.disabled'], '已禁用的工具：', 'disabled-tools line is localized')
 
+const dialogSource = readFileSync(join(here, 'src', 'client', 'components', 'SessionSettingsDialog.jsx'), 'utf8')
+const importedStyles = new Set(
+  (/import \{([^}]*)\} from '\.\.\/lib\/styles\.js'/.exec(dialogSource)?.[1] ?? '')
+    .split(',').map((name) => name.trim()).filter(Boolean),
+)
+const usedStyles = new Set(Array.from(dialogSource.matchAll(/\b([A-Za-z_$][\w$]*Style)\b/g), (match) => match[1]))
+const missingStyles = Array.from(usedStyles).filter((name) => !importedStyles.has(name) && !new RegExp('(?:function|const|let)\\s+' + name + '\\b').test(dialogSource))
+equal(missingStyles.length, 0, 'every style identifier in the dialog is imported (' + missingStyles.join(', ') + ')')
+
 // ---------------------------------------------------------------------------
 // Generated Client bundle
 // ---------------------------------------------------------------------------

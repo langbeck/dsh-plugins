@@ -533,6 +533,17 @@ function switchKnobStyle(checked) {
     transition: "transform 120ms ease"
   };
 }
+var disabledLineStyle = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "4px",
+  margin: "12px 0 0",
+  paddingTop: "10px",
+  borderTop: "0.5px solid var(--dsw-alias-border-l3)",
+  color: "var(--dsw-alias-label-tertiary)",
+  fontSize: "12px",
+  lineHeight: "18px"
+};
 var emptyStyle = {
   padding: "28px 0",
   textAlign: "center",
