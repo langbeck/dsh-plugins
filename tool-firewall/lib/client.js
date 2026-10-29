@@ -881,7 +881,6 @@ function buildStats(value) {
 }
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), "tool-firewall: dictionaries");
-  const bindT = ctx.locale.bind(NS);
   const configForm = ctx.configForms.get(ROW_ID);
   const statsStore = createValueStore(buildStats(readConfigValue(configForm)));
   const uiStore = createValueStore({ open: false });
@@ -921,14 +920,6 @@ function apply(ctx) {
     name: "plugins.row.config",
     key: CONFIG_KEY,
     locale: NS,
-    inject: () => ({ configForm })
-  }, SettingsForm));
-  ctx.slots.inject("plugins.item", () => ctx.slots.register({
-    name: "plugins.item",
-    id: ROW_ID,
-    order: 55,
-    locale: NS,
-    label: () => bindT("config.title"),
     inject: () => ({ configForm })
   }, SettingsForm));
 }

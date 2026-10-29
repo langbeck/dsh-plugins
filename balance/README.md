@@ -98,11 +98,9 @@ dsh plugin --profile web remove dsh-plugin-balance
 
 ## Configuration
 
-The plugin row carries a Config schema and registers its own **plugin item**, so
-the Plugin Manager shows a **Balance** settings card in the Plugins page
-(beside the other built-in plugin settings); the bundle row also keeps a
-**Configure** control. Both open the same form. The resolved values are read
-live by the client half.
+The plugin row carries a Config schema and a **Configure** control in the
+Plugin Manager; it no longer adds a separate Balance card to the Plugins page.
+The resolved values are read live by the client half.
 
 | Field | Default | Meaning |
 | --- | --- | --- |

@@ -314,16 +314,12 @@ const fakeClientContext = {
 }
 plugin.apply(fakeClientContext)
 const rowConfig = registrations.find((entry) => entry.options.name === 'plugins.row.config')
-const item = registrations.find((entry) => entry.options.name === 'plugins.item')
 const statsRegistration = registrations.find((entry) => entry.options.name === 'sidebar.footer.action')
 const overlayRegistration = registrations.find((entry) => entry.options.name === 'shell.overlay')
 check(rowConfig !== undefined, 'client registers the row configure page')
-check(item !== undefined, 'client registers the plugins-list item')
 check(statsRegistration !== undefined, 'client registers the sidebar stats card')
 check(overlayRegistration !== undefined, 'client registers the settings overlay')
 equal(rowConfig.options.key, 'dsh-plugin-tool-firewall#tool-firewall', 'configure page key names the package and row')
-equal(item.options.id, 'tool-firewall', 'plugins-list item uses the firewall row id')
-equal(item.options.label(), 'config.title', 'plugins-list label follows the locale')
 equal(statsRegistration.options.id, 'tool-firewall', 'sidebar stats card uses the firewall id')
 equal(overlayRegistration.options.id, 'tool-firewall-settings', 'overlay uses a distinct settings id')
 

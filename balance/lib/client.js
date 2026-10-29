@@ -807,7 +807,6 @@ function createClient() {
 }
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), "balance: dictionaries");
-  const bindT = ctx.locale.bind(NS);
   ctx.effect(() => ctx.on("command/executed", (sessionId, name) => {
     if (name !== "limit") return;
     if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
@@ -972,14 +971,6 @@ function apply(ctx) {
     name: "plugins.row.config",
     key: CONFIG_KEY,
     locale: NS,
-    inject: () => ({ configForm })
-  }, SettingsForm));
-  ctx.slots.inject("plugins.item", () => ctx.slots.register({
-    name: "plugins.item",
-    id: ROW_ID,
-    order: 50,
-    locale: NS,
-    label: () => bindT("config.title"),
     inject: () => ({ configForm })
   }, SettingsForm));
 }

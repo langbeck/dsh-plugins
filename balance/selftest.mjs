@@ -553,13 +553,9 @@ check(injectedStyles[0].textContent.indexOf('data-slot="sidebar.footer.action"')
 
 const pillRegistration = registrations.find((registration) => registration.options.name === 'sidebar.footer.action')
 const rowConfigRegistration = registrations.find((registration) => registration.options.name === 'plugins.row.config')
-const itemRegistration = registrations.find((registration) => registration.options.name === 'plugins.item')
 check(pillRegistration !== undefined, 'apply registers the sidebar block')
 check(rowConfigRegistration !== undefined, 'apply registers the row configure page')
-check(itemRegistration !== undefined, 'apply registers the plugin settings item')
 equal(rowConfigRegistration.options.key, 'dsh-plugin-balance#balance', 'configure page key names the package and row')
-equal(itemRegistration.options.id, 'balance', 'plugin settings item uses the plugin id')
-check(typeof itemRegistration.options.label === 'function', 'plugin settings item label follows the locale')
 
 const injected = pillRegistration.options.inject()
 injected.balanceStore.set({
@@ -688,7 +684,7 @@ const narrowTree = ReactFake.reset(() => pillRegistration.component(pillProps(fa
 const narrowText = textOf(narrowTree).join(' ')
 check(narrowText.indexOf('$0.00') !== -1 && narrowText.indexOf('¥2.55') !== -1, 'narrow block renders both amounts')
 
-const settingsRegistration = registrations.find((registration) => registration.options.name === 'plugins.item')
+const settingsRegistration = rowConfigRegistration
 const settingsTree = ReactFake.reset(() => settingsRegistration.component({ view: 'page', t: (key) => key, configForm: form }))
 const settingsText = textOf(settingsTree).join(' ')
 check(settingsText.indexOf('config.refresh') !== -1, 'settings page renders the balance refresh field')

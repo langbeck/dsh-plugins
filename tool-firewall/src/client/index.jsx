@@ -9,9 +9,9 @@ import { EN, ZH } from './locale.js'
 /**
  * Tool Firewall — Client half.
  *
- * Registers the Plugin Manager configure page, the Plugins-list item, a
- * sidebar stats card, and the stats card's settings dialog. All persistence
- * goes through the Host-owned Config form.
+ * Registers the Plugin Manager configure page, a sidebar stats card, and the
+ * stats card's settings dialog. All persistence goes through the Host-owned
+ * Config form.
  */
 export default function createClient() {
   return { apply, inject: INJECT }
@@ -38,7 +38,6 @@ function buildStats(value) {
 
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), 'tool-firewall: dictionaries')
-  const bindT = ctx.locale.bind(NS)
   const configForm = ctx.configForms.get(ROW_ID)
   const statsStore = createValueStore(buildStats(readConfigValue(configForm)))
   const uiStore = createValueStore({ open: false })
@@ -83,15 +82,6 @@ function apply(ctx) {
     name: 'plugins.row.config',
     key: CONFIG_KEY,
     locale: NS,
-    inject: () => ({ configForm }),
-  }, SettingsForm))
-
-  ctx.slots.inject('plugins.item', () => ctx.slots.register({
-    name: 'plugins.item',
-    id: ROW_ID,
-    order: 55,
-    locale: NS,
-    label: () => bindT('config.title'),
     inject: () => ({ configForm }),
   }, SettingsForm))
 }
