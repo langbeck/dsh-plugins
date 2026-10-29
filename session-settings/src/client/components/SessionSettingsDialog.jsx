@@ -277,7 +277,7 @@ export default function SessionSettingsDialog(props) {
         </div>
       </div>
       {detailTool !== '' && snapshot !== undefined ? (
-        <ToolDetailDialog tool={snapshot.tools.find((tool) => tool.name === detailTool)} t={t} onClose={() => setDetailTool('')} />
+        <ToolDetailDialog key={detailTool} tool={snapshot.tools.find((tool) => tool.name === detailTool)} t={t} onClose={() => setDetailTool('')} />
       ) : null}
     </div>
   )
@@ -409,7 +409,9 @@ function ToolsTab(props) {
 
 function ToolDetailDialog(props) {
   const { tool, t, onClose } = props
+  const [tab, setTab] = useState('schema')
   if (tool === undefined) return null
+  const callCount = tool.recentCalls.length
   return (
     <div
       style={detailBackdropStyle}
@@ -434,15 +436,23 @@ function ToolDetailDialog(props) {
             {t('common.close')}
           </button>
         </div>
+        <div role="tablist" style={tabBarStyle}>
+          <button type="button" role="tab" aria-selected={tab === 'schema'} style={tabStyle(tab === 'schema')} onClick={() => setTab('schema')}>
+            {t('tools.tabSchema')}
+          </button>
+          <button type="button" role="tab" aria-selected={tab === 'history'} style={tabStyle(tab === 'history')} onClick={() => setTab('history')}>
+            {t('tools.tabHistory', { n: callCount })}
+          </button>
+        </div>
         <div style={detailBodyStyle}>
-          <ToolDetails tool={tool} t={t} />
+          {tab === 'schema' ? <ToolSchema tool={tool} t={t} /> : <ToolHistory tool={tool} t={t} />}
         </div>
       </div>
     </div>
   )
 }
 
-function ToolDetails(props) {
+function ToolSchema(props) {
   const { tool, t } = props
   return (
     <div style={toolDetailsStyle}>
@@ -450,7 +460,14 @@ function ToolDetails(props) {
       <SchemaForm schema={tool.parameters} t={t} />
       <span style={labelStyle}>{t('tools.jsonSchema')}</span>
       <pre style={codeBlockStyle}>{schemaText(tool.parameters)}</pre>
-      <span style={labelStyle}>{t('tools.recentCalls')}</span>
+    </div>
+  )
+}
+
+function ToolHistory(props) {
+  const { tool, t } = props
+  return (
+    <div style={toolDetailsStyle}>
       {tool.recentCalls.length === 0 ? <p style={hintStyle}>{t('tools.noRecentCalls')}</p> : tool.recentCalls.map((call) => (
         <div key={call.callId} style={sectionStyle}>
           <div style={rowStyle}>

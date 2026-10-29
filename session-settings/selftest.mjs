@@ -179,6 +179,9 @@ equal(toolsBodyStyle.padding, 0, 'Tools tab removes the body padding so the stic
 check(String(disabledLineStyle.padding).includes('16px'), 'pinned header carries its own top padding')
 equal(EN['tools.disabled'], 'Disabled tools:', 'disabled-tools line has friendly copy')
 equal(ZH['tools.disabled'], '已禁用的工具：', 'disabled-tools line is localized')
+equal(EN['tools.tabSchema'], 'Schema', 'detail dialog has a Schema tab label')
+equal(EN['tools.tabHistory'], 'History ({n})', 'detail dialog history tab carries a count')
+equal(ZH['tools.tabHistory'], '历史 ({n})', 'detail dialog history tab is localized')
 
 const dialogSource = readFileSync(join(here, 'src', 'client', 'components', 'SessionSettingsDialog.jsx'), 'utf8')
 const importedStyles = new Set(

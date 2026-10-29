@@ -129,6 +129,8 @@ var EN = {
   "tools.sortCountDesc": "Most invocations",
   "tools.sortCountAsc": "Fewest invocations",
   "tools.details": "Tool details",
+  "tools.tabSchema": "Schema",
+  "tools.tabHistory": "History ({n})",
   "tools.noRecentCalls": "No calls recorded in this Session.",
   "tools.arguments": "Arguments",
   "tools.result": "Result",
@@ -203,6 +205,8 @@ var ZH = {
   "tools.sortCountDesc": "\u8C03\u7528\u6700\u591A",
   "tools.sortCountAsc": "\u8C03\u7528\u6700\u5C11",
   "tools.details": "\u5DE5\u5177\u8BE6\u60C5",
+  "tools.tabSchema": "\u6A21\u5F0F",
+  "tools.tabHistory": "\u5386\u53F2 ({n})",
   "tools.noRecentCalls": "\u6B64\u4F1A\u8BDD\u5C1A\u65E0\u8C03\u7528\u8BB0\u5F55\u3002",
   "tools.arguments": "\u53C2\u6570",
   "tools.result": "\u7ED3\u679C",
@@ -1059,7 +1063,7 @@ function SessionSettingsDialog(props) {
             ]
           }
         ),
-        detailTool !== "" && snapshot !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolDetailDialog, { tool: snapshot.tools.find((tool) => tool.name === detailTool), t, onClose: () => setDetailTool("") }) : null
+        detailTool !== "" && snapshot !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolDetailDialog, { tool: snapshot.tools.find((tool) => tool.name === detailTool), t, onClose: () => setDetailTool("") }, detailTool) : null
       ]
     }
   );
@@ -1179,7 +1183,9 @@ function ToolsTab(props) {
 }
 function ToolDetailDialog(props) {
   const { tool, t, onClose } = props;
+  const [tab, setTab] = (0, import_react2.useState)("schema");
   if (tool === void 0) return null;
+  const callCount = tool.recentCalls.length;
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
     "div",
     {
@@ -1204,46 +1210,52 @@ function ToolDetailDialog(props) {
               ] }),
               /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: secondaryButtonStyle(false), onClick: onClose, children: t("common.close") })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: detailBodyStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolDetails, { tool, t }) })
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { role: "tablist", style: tabBarStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", role: "tab", "aria-selected": tab === "schema", style: tabStyle(tab === "schema"), onClick: () => setTab("schema"), children: t("tools.tabSchema") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", role: "tab", "aria-selected": tab === "history", style: tabStyle(tab === "history"), onClick: () => setTab("history"), children: t("tools.tabHistory", { n: callCount }) })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: detailBodyStyle, children: tab === "schema" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolSchema, { tool, t }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ToolHistory, { tool, t }) })
           ]
         }
       )
     }
   );
 }
-function ToolDetails(props) {
+function ToolSchema(props) {
   const { tool, t } = props;
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolDetailsStyle, children: [
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.schemaPreview") }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(SchemaForm, { schema: tool.parameters, t }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.jsonSchema") }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: schemaText(tool.parameters) }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.recentCalls") }),
-    tool.recentCalls.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("tools.noRecentCalls") }) : tool.recentCalls.map((call) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: metaBadgeStyle, children: call.status }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: hintStyle, children: [
-          "turn ",
-          call.turn,
-          " \xB7 step ",
-          call.step
-        ] })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.arguments") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: call.arguments }),
-      call.result === "" || call.result === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "4px" }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.result") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: call.result })
-      ] }),
-      call.error === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { style: errorStyle, children: [
-        t("tools.error"),
-        ": ",
-        call.error.code,
-        " ",
-        call.error.reason ?? ""
-      ] })
-    ] }, call.callId))
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: schemaText(tool.parameters) })
   ] });
+}
+function ToolHistory(props) {
+  const { tool, t } = props;
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: toolDetailsStyle, children: tool.recentCalls.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("tools.noRecentCalls") }) : tool.recentCalls.map((call) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: metaBadgeStyle, children: call.status }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: hintStyle, children: [
+        "turn ",
+        call.turn,
+        " \xB7 step ",
+        call.step
+      ] })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.arguments") }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: call.arguments }),
+    call.result === "" || call.result === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "4px" }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.result") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: call.result })
+    ] }),
+    call.error === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { style: errorStyle, children: [
+      t("tools.error"),
+      ": ",
+      call.error.code,
+      " ",
+      call.error.reason ?? ""
+    ] })
+  ] }, call.callId)) });
 }
 var TOOL_ARTWORK_COLORS = ["#4d6bfe", "#2ea043", "#b7791f", "#8250df", "#1f6feb", "#c2414b"];
 function ToolArtwork({ name }) {
