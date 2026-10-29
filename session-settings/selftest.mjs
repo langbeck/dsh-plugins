@@ -14,6 +14,7 @@ import * as host from './src/index.js'
 import { commandView, countToolCalls, foldRecentToolCalls, mergeToolHistory, toolView } from './src/tools.js'
 import { EN, ZH } from './src/client/locale.js'
 import { collectSchemaFields, schemaDefaultHint, schemaTypeLabel } from './src/client/lib/schema.js'
+import { sortTools } from './src/client/lib/tools.js'
 import { disabledLineStyle, presetOptionStyle, presetRowStyle, switchKnobStyle, switchTrackStyle, toolRowStyle, toolsBodyStyle } from './src/client/lib/styles.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -216,6 +217,18 @@ equal(schemaDefaultHint({ default: 10 }), 'default: 10', 'schema form shows a de
 equal(schemaDefaultHint({ examples: ['abc'] }), 'example: "abc"', 'schema form falls back to the first example')
 equal(collectSchemaFields({ type: 'object', properties: {} }).length, 0, 'an empty object schema has no fields')
 equal(collectSchemaFields({ type: 'string' })[0].name, 'value', 'a scalar schema renders as one value field')
+
+const sortable = [
+  { name: 'zeta', callCount: 2 },
+  { name: 'alpha', callCount: 0 },
+  { name: 'beta', callCount: 7 },
+]
+equal(sortTools(sortable, 'name-asc').map((tool) => tool.name).join(','), 'alpha,beta,zeta', 'sortTools sorts names ascending')
+equal(sortTools(sortable, 'name-desc').map((tool) => tool.name).join(','), 'zeta,beta,alpha', 'sortTools sorts names descending')
+equal(sortTools(sortable, 'count-desc').map((tool) => tool.name).join(','), 'beta,zeta,alpha', 'sortTools sorts invocations descending')
+equal(sortTools(sortable, 'count-asc').map((tool) => tool.name).join(','), 'alpha,zeta,beta', 'sortTools sorts invocations ascending')
+equal(sortTools(sortable, 'unknown')[0].name, 'alpha', 'sortTools falls back to name order')
+equal(sortTools(sortable, 'name-asc')[0].name, 'alpha', 'sortTools does not mutate the input order')
 
 // ---------------------------------------------------------------------------
 // Generated Client bundle

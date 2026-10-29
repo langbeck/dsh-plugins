@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { readSettings, applyPreset, saveBlockList } from '../lib/api.js'
 import { collectSchemaFields, schemaDefaultHint, schemaTypeLabel } from '../lib/schema.js'
+import { sortTools } from '../lib/tools.js'
 import {
   backdropStyle,
   bodyStyle,
@@ -37,6 +38,9 @@ import {
   schemaObjectStyle,
   schemaRequiredStyle,
   schemaTypeStyle,
+  sortGroupStyle,
+  sortLabelStyle,
+  sortSelectStyle,
   secondaryButtonStyle,
   sectionStyle,
   sectionTitleStyle,
@@ -81,6 +85,7 @@ export default function SessionSettingsDialog(props) {
   const [actionError, setActionError] = useState('')
   const [busy, setBusy] = useState(false)
   const [search, setSearch] = useState('')
+  const [sort, setSort] = useState('name-asc')
   const [detailTool, setDetailTool] = useState('')
   const [pendingPreset, setPendingPreset] = useState('')
 
@@ -246,6 +251,8 @@ export default function SessionSettingsDialog(props) {
                   snapshot={snapshot}
                   t={t}
                   busy={busy}
+                  sort={sort}
+                  setSort={setSort}
                   onOpen={setDetailTool}
                   onPolicy={setToolPolicy}
                 />
@@ -340,16 +347,28 @@ function SettingsTab(props) {
 }
 
 function ToolsTab(props) {
-  const { snapshot, t, busy, onOpen, onPolicy } = props
+  const { snapshot, t, busy, sort, setSort, onOpen, onPolicy } = props
   const blocked = snapshot.blockList.session
+  const sortedBlocked = blocked.slice().sort((left, right) => left.localeCompare(right))
+  const sortedTools = sortTools(snapshot.tools, sort)
   return (
     <div>
-      <p style={disabledLineStyle}>
-        <span>{t('tools.disabled')}</span>
-        <span>{blocked.length === 0 ? t('tools.none') : blocked.join(', ')}</span>
-      </p>
+      <div style={disabledLineStyle}>
+        <span>
+          {t('tools.disabled')} {sortedBlocked.length === 0 ? t('tools.none') : sortedBlocked.join(', ')}
+        </span>
+        <label style={sortGroupStyle}>
+          <span style={sortLabelStyle}>{t('tools.sort')}</span>
+          <select aria-label={t('tools.sort')} value={sort} style={sortSelectStyle()} onChange={(event) => setSort(event.target.value)}>
+            <option value="name-asc">{t('tools.sortNameAsc')}</option>
+            <option value="name-desc">{t('tools.sortNameDesc')}</option>
+            <option value="count-desc">{t('tools.sortCountDesc')}</option>
+            <option value="count-asc">{t('tools.sortCountAsc')}</option>
+          </select>
+        </label>
+      </div>
       <div style={toolListStyle}>
-        {snapshot.tools.length === 0 ? <p style={emptyStyle}>{t('tools.empty')}</p> : snapshot.tools.map((tool) => {
+        {snapshot.tools.length === 0 ? <p style={emptyStyle}>{t('tools.empty')}</p> : sortedTools.map((tool) => {
           const isBlocked = blocked.includes(tool.name)
           const label = isBlocked ? t('tools.unblockTool', { name: tool.name }) : t('tools.blockTool', { name: tool.name })
           return (

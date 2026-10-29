@@ -10,7 +10,8 @@ header action to the current Session that opens a dialog with three tabs:
   white. The second line shows the Session invocation count and blocked state.
   Clicking a row opens a wider detail dialog with a disabled form preview of
   its parameter schema, the raw JSON Schema, and recent calls. A pinned line at
-  the top lists the disabled tool names while the rows scroll.
+  the top lists the disabled tool names and offers name/invocation sorting while
+  the rows scroll.
 - **Settings** — switch the Session's permission preset (Read only, Workspace
   write, Full access) in one row, and inspect the effective sandbox mode and
   approval policy.

@@ -552,6 +552,33 @@ export function switchKnobStyle(checked) {
   }
 }
 
+export const sortGroupStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  marginLeft: 'auto',
+  flex: 'none',
+}
+
+export function sortSelectStyle() {
+  return {
+    height: '24px',
+    padding: '0 6px',
+    border: '0.5px solid var(--dsw-alias-border-l3)',
+    borderRadius: '6px',
+    background: 'var(--dsw-alias-bg-layer-3)',
+    color: 'var(--dsw-alias-label-secondary)',
+    font: 'inherit',
+    fontSize: '11px',
+    cursor: 'pointer',
+  }
+}
+
+export const sortLabelStyle = {
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontSize: '11px',
+}
+
 export const schemaFormStyle = {
   display: 'flex',
   flexDirection: 'column',
@@ -639,7 +666,9 @@ export const disabledLineStyle = {
   zIndex: 1,
   display: 'flex',
   flexWrap: 'wrap',
-  gap: '4px',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: '8px',
   margin: 0,
   padding: '16px 18px 10px',
   borderBottom: '0.5px solid var(--dsw-alias-border-l3)',

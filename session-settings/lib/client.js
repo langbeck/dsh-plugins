@@ -123,6 +123,11 @@ var EN = {
   "tools.parameters": "Parameters",
   "tools.recentCalls": "Recent calls",
   "tools.invocationsCount": "Invocations: {n}",
+  "tools.sort": "Sort",
+  "tools.sortNameAsc": "Name A\u2013Z",
+  "tools.sortNameDesc": "Name Z\u2013A",
+  "tools.sortCountDesc": "Most invocations",
+  "tools.sortCountAsc": "Fewest invocations",
   "tools.details": "Tool details",
   "tools.noRecentCalls": "No calls recorded in this Session.",
   "tools.arguments": "Arguments",
@@ -192,6 +197,11 @@ var ZH = {
   "tools.parameters": "\u53C2\u6570",
   "tools.recentCalls": "\u6700\u8FD1\u8C03\u7528",
   "tools.invocationsCount": "\u8C03\u7528\u6B21\u6570\uFF1A{n}",
+  "tools.sort": "\u6392\u5E8F",
+  "tools.sortNameAsc": "\u540D\u79F0 A\u2013Z",
+  "tools.sortNameDesc": "\u540D\u79F0 Z\u2013A",
+  "tools.sortCountDesc": "\u8C03\u7528\u6700\u591A",
+  "tools.sortCountAsc": "\u8C03\u7528\u6700\u5C11",
   "tools.details": "\u5DE5\u5177\u8BE6\u60C5",
   "tools.noRecentCalls": "\u6B64\u4F1A\u8BDD\u5C1A\u65E0\u8C03\u7528\u8BB0\u5F55\u3002",
   "tools.arguments": "\u53C2\u6570",
@@ -613,6 +623,30 @@ function switchKnobStyle(checked) {
     transition: "transform 120ms ease"
   };
 }
+var sortGroupStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+  marginLeft: "auto",
+  flex: "none"
+};
+function sortSelectStyle() {
+  return {
+    height: "24px",
+    padding: "0 6px",
+    border: "0.5px solid var(--dsw-alias-border-l3)",
+    borderRadius: "6px",
+    background: "var(--dsw-alias-bg-layer-3)",
+    color: "var(--dsw-alias-label-secondary)",
+    font: "inherit",
+    fontSize: "11px",
+    cursor: "pointer"
+  };
+}
+var sortLabelStyle = {
+  color: "var(--dsw-alias-label-tertiary)",
+  fontSize: "11px"
+};
 var schemaFormStyle = {
   display: "flex",
   flexDirection: "column",
@@ -690,7 +724,9 @@ var disabledLineStyle = {
   zIndex: 1,
   display: "flex",
   flexWrap: "wrap",
-  gap: "4px",
+  alignItems: "baseline",
+  justifyContent: "space-between",
+  gap: "8px",
   margin: 0,
   padding: "16px 18px 10px",
   borderBottom: "0.5px solid var(--dsw-alias-border-l3)",
@@ -824,6 +860,21 @@ function jsonText(value) {
   }
 }
 
+// src/client/lib/tools.js
+function sortTools(tools, mode) {
+  const list = tools.slice();
+  const nameOrder = (left, right) => left.name.localeCompare(right.name);
+  const countOf = (tool) => typeof tool.callCount === "number" && Number.isFinite(tool.callCount) ? tool.callCount : 0;
+  if (mode === "name-desc") return list.sort((left, right) => nameOrder(right, left));
+  if (mode === "count-desc") {
+    return list.sort((left, right) => countOf(right) - countOf(left) || nameOrder(left, right));
+  }
+  if (mode === "count-asc") {
+    return list.sort((left, right) => countOf(left) - countOf(right) || nameOrder(left, right));
+  }
+  return list.sort(nameOrder);
+}
+
 // src/client/components/SessionSettingsDialog.jsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
 var TABS = ["tools", "settings", "commands"];
@@ -841,6 +892,7 @@ function SessionSettingsDialog(props) {
   const [actionError, setActionError] = (0, import_react2.useState)("");
   const [busy, setBusy] = (0, import_react2.useState)(false);
   const [search, setSearch] = (0, import_react2.useState)("");
+  const [sort, setSort] = (0, import_react2.useState)("name-asc");
   const [detailTool, setDetailTool] = (0, import_react2.useState)("");
   const [pendingPreset, setPendingPreset] = (0, import_react2.useState)("");
   (0, import_react2.useEffect)(() => {
@@ -988,6 +1040,8 @@ function SessionSettingsDialog(props) {
                       snapshot,
                       t,
                       busy,
+                      sort,
+                      setSort,
                       onOpen: setDetailTool,
                       onPolicy: setToolPolicy
                     }
@@ -1067,14 +1121,28 @@ function SettingsTab(props) {
   ] }) });
 }
 function ToolsTab(props) {
-  const { snapshot, t, busy, onOpen, onPolicy } = props;
+  const { snapshot, t, busy, sort, setSort, onOpen, onPolicy } = props;
   const blocked = snapshot.blockList.session;
+  const sortedBlocked = blocked.slice().sort((left, right) => left.localeCompare(right));
+  const sortedTools = sortTools(snapshot.tools, sort);
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { style: disabledLineStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("tools.disabled") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: blocked.length === 0 ? t("tools.none") : blocked.join(", ") })
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: disabledLineStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { children: [
+        t("tools.disabled"),
+        " ",
+        sortedBlocked.length === 0 ? t("tools.none") : sortedBlocked.join(", ")
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: sortGroupStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: sortLabelStyle, children: t("tools.sort") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("select", { "aria-label": t("tools.sort"), value: sort, style: sortSelectStyle(), onChange: (event) => setSort(event.target.value), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "name-asc", children: t("tools.sortNameAsc") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "name-desc", children: t("tools.sortNameDesc") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "count-desc", children: t("tools.sortCountDesc") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "count-asc", children: t("tools.sortCountAsc") })
+        ] })
+      ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: toolListStyle, children: snapshot.tools.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: emptyStyle, children: t("tools.empty") }) : snapshot.tools.map((tool) => {
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: toolListStyle, children: snapshot.tools.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: emptyStyle, children: t("tools.empty") }) : sortedTools.map((tool) => {
       const isBlocked = blocked.includes(tool.name);
       const label = isBlocked ? t("tools.unblockTool", { name: tool.name }) : t("tools.blockTool", { name: tool.name });
       return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: toolRowStyle, children: [
