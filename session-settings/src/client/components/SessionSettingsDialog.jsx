@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { readSettings, applyPreset, savePolicies } from '../lib/api.js'
+import { readSettings, applyPreset, saveBlockList } from '../lib/api.js'
 import {
   backdropStyle,
   bodyStyle,
@@ -114,11 +114,11 @@ export default function SessionSettingsDialog(props) {
     }
   }
 
-  async function changePolicies(allow, block) {
+  async function changeBlockList(block) {
     setBusy(true)
     setActionError('')
     try {
-      const value = await savePolicies(sessionId, allow, block)
+      const value = await saveBlockList(sessionId, block)
       setSnapshot(value)
     } catch (failure) {
       setActionError(t('settings.saveError'))
@@ -127,31 +127,12 @@ export default function SessionSettingsDialog(props) {
     }
   }
 
-  function setToolPolicy(name, action) {
+  function setToolPolicy(name) {
     if (snapshot === undefined || busy) return
-    const allow = new Set(snapshot.allowList.session)
     const block = new Set(snapshot.blockList.session)
-    const configured = snapshot.allowList.configured.includes(name)
-    const allowed = allow.has(name)
-    const blocked = block.has(name)
-    if (action === 'allow') {
-      if (allowed) allow.delete(name)
-      else if (configured && !blocked) return
-      else {
-        allow.add(name)
-        block.delete(name)
-      }
-    } else if (action === 'block') {
-      if (blocked) block.delete(name)
-      else {
-        block.add(name)
-        allow.delete(name)
-      }
-    } else if (action === 'reset') {
-      allow.delete(name)
-      block.delete(name)
-    }
-    void changePolicies(Array.from(allow), Array.from(block))
+    if (block.has(name)) block.delete(name)
+    else block.add(name)
+    void changeBlockList(Array.from(block))
   }
 
   const tools = useMemo(() => {
@@ -338,7 +319,7 @@ function SettingsTab(props) {
 function ToolsTab(props) {
   const { snapshot, t, busy, search, setSearch, tools, expanded, setExpanded, onPolicy } = props
   const visibleNames = new Set(snapshot.tools.map((tool) => tool.name))
-  const controlled = Array.from(new Set([...snapshot.allowList.session, ...snapshot.blockList.session])).filter((name) => !visibleNames.has(name))
+  const hiddenBlocked = snapshot.blockList.session.filter((name) => !visibleNames.has(name))
   return (
     <div style={sectionStyle}>
       <p style={hintStyle}>{t('settings.allowListHint')}</p>
@@ -354,33 +335,22 @@ function ToolsTab(props) {
       />
       {tools.length === 0 ? <p style={emptyStyle}>{t('tools.empty')}</p> : tools.map((tool) => {
         const open = expanded === 'tool:' + tool.name
-        const configured = snapshot.allowList.configured.includes(tool.name)
         const blocked = snapshot.blockList.session.includes(tool.name)
-        const allowed = !blocked && (snapshot.allowList.session.includes(tool.name) || configured)
         return (
           <div key={tool.name} style={listItemStyle(open)}>
             <button type="button" style={itemHeaderStyle} onClick={() => setExpanded(open ? '' : 'tool:' + tool.name)}>
               <span style={monoNameStyle}>{tool.name}</span>
               {tool.deferLoading ? <span style={metaBadgeStyle}>{t('tools.deferLoading')}</span> : null}
-              {configured ? <span style={metaBadgeStyle}>{t('tools.configuredDefault')}</span> : null}
               <span style={itemDescriptionStyle}>{tool.description}</span>
             </button>
             <div style={rowStyle}>
               <button
                 type="button"
-                style={policyButtonStyle(allowed, 'allow')}
-                disabled={busy}
-                onClick={() => onPolicy(tool.name, 'allow')}
-              >
-                {t('tools.allow')}
-              </button>
-              <button
-                type="button"
                 style={policyButtonStyle(blocked, 'block')}
                 disabled={busy}
-                onClick={() => onPolicy(tool.name, 'block')}
+                onClick={() => onPolicy(tool.name)}
               >
-                {t('tools.block')}
+                {blocked ? t('tools.blocked') : t('tools.block')}
               </button>
             </div>
             {open ? (
@@ -410,26 +380,17 @@ function ToolsTab(props) {
           </div>
         )
       })}
-      {controlled.length === 0 ? null : (
+      {hiddenBlocked.length === 0 ? null : (
         <section style={sectionStyle}>
           <h3 style={sectionTitleStyle}>{t('tools.controlled')}</h3>
-          {controlled.map((name) => {
-            const blocked = snapshot.blockList.session.includes(name)
-            return (
-              <div key={name} style={rowStyle}>
-                <span style={monoNameStyle}>{name}</span>
-                <button type="button" style={policyButtonStyle(!blocked, 'allow')} disabled={busy} onClick={() => onPolicy(name, 'allow')}>
-                  {t('tools.allow')}
-                </button>
-                <button type="button" style={policyButtonStyle(blocked, 'block')} disabled={busy} onClick={() => onPolicy(name, 'block')}>
-                  {t('tools.block')}
-                </button>
-                <button type="button" style={secondaryButtonStyle(busy)} disabled={busy} onClick={() => onPolicy(name, 'reset')}>
-                  {t('tools.reset')}
-                </button>
-              </div>
-            )
-          })}
+          {hiddenBlocked.map((name) => (
+            <div key={name} style={rowStyle}>
+              <span style={monoNameStyle}>{name}</span>
+              <button type="button" style={policyButtonStyle(true, 'block')} disabled={busy} onClick={() => onPolicy(name)}>
+                {t('tools.unblock')}
+              </button>
+            </div>
+          ))}
         </section>
       )}
       <p style={hintStyle}>{t('settings.memoryWarning')}</p>

@@ -34,9 +34,6 @@
     "icon.svg",
     "README.md"
   ],
-  "dependencies": {
-    "@deepseek-ai/schemastery": "~3.18.5"
-  },
   "devDependencies": {
     "esbuild": "^0.28.2"
   }

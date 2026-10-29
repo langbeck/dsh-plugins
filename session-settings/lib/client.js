@@ -93,22 +93,21 @@ var EN = {
   "settings.fullAccessWarning": "Full access removes the filesystem sandbox and lets the agent modify anything the process can reach.",
   "settings.confirmFullAccess": "Switch to Full access?",
   "settings.allowList": "Auto-approve tools",
-  "settings.allowListHint": "Approvals for these tool names resolve automatically for this Session. Only the tool name is visible to approvals, not its arguments.",
-  "settings.allowListWarning": "A listed tool is auto-approved for every call in this Session. Do not list destructive or sandbox-escalating tools.",
+  "settings.allowListHint": "All tools are automatically approved for this Session unless blocked.",
+  "settings.allowListWarning": "Blocking a tool rejects its approval requests. Approvals see only the tool name, never its arguments.",
   "settings.addPlaceholder": "Tool name, e.g. plugin_manager",
   "settings.add": "Add",
   "settings.remove": "Remove",
   "settings.configured": "Profile defaults",
   "settings.sessionOnly": "Session only",
-  "settings.memoryWarning": "The allow-list is kept in Host memory and resets when DSH restarts.",
+  "settings.memoryWarning": "The block list is kept in Host memory and resets when DSH restarts.",
   "settings.noAllowList": "No tools are auto-approved.",
   "settings.saveError": "Could not save the change.",
-  "tools.allow": "Allow",
   "tools.block": "Block",
-  "tools.configuredDefault": "profile default",
-  "tools.policyHint": "Allow auto-approves this tool for the Session; Block rejects its approval requests. Clicking the active choice resets it to neutral.",
-  "tools.controlled": "Controlled tools not currently visible",
-  "tools.reset": "Reset",
+  "tools.blocked": "Blocked",
+  "tools.policyHint": "Every tool is auto-approved by default. Block rejects that tool\u2019s approval requests; click Blocked again to unblock it.",
+  "tools.controlled": "Blocked tools not currently visible",
+  "tools.unblock": "Unblock",
   "tools.search": "Search tools\u2026",
   "tools.empty": "No tools are visible for this Session.",
   "tools.deferLoading": "deferred",
@@ -152,22 +151,21 @@ var ZH = {
   "settings.fullAccessWarning": "\u5B8C\u5168\u6743\u9650\u4F1A\u79FB\u9664\u6587\u4EF6\u7CFB\u7EDF\u6C99\u7BB1\uFF0C\u4EE3\u7406\u53EF\u4EE5\u4FEE\u6539\u8FDB\u7A0B\u53EF\u8BBF\u95EE\u7684\u4EFB\u4F55\u5185\u5BB9\u3002",
   "settings.confirmFullAccess": "\u5207\u6362\u4E3A\u5B8C\u5168\u6743\u9650\uFF1F",
   "settings.allowList": "\u81EA\u52A8\u6279\u51C6\u5DE5\u5177",
-  "settings.allowListHint": "\u6B64\u4F1A\u8BDD\u4E2D\uFF0C\u8FD9\u4E9B\u5DE5\u5177\u7684\u5BA1\u6279\u4F1A\u81EA\u52A8\u901A\u8FC7\u3002\u5BA1\u6279\u53EA\u80FD\u770B\u5230\u5DE5\u5177\u540D\u79F0\uFF0C\u65E0\u6CD5\u770B\u5230\u8C03\u7528\u53C2\u6570\u3002",
-  "settings.allowListWarning": "\u5217\u51FA\u7684\u5DE5\u5177\u5728\u6B64\u4F1A\u8BDD\u4E2D\u7684\u6BCF\u6B21\u8C03\u7528\u90FD\u4F1A\u88AB\u81EA\u52A8\u6279\u51C6\u3002\u8BF7\u4E0D\u8981\u52A0\u5165\u7834\u574F\u6027\u6216\u4F1A\u63D0\u5347\u6C99\u7BB1\u6743\u9650\u7684\u5DE5\u5177\u3002",
+  "settings.allowListHint": "\u6B64\u4F1A\u8BDD\u4E2D\u7684\u6240\u6709\u5DE5\u5177\u9ED8\u8BA4\u81EA\u52A8\u6279\u51C6\uFF0C\u9664\u975E\u88AB\u963B\u6B62\u3002",
+  "settings.allowListWarning": "\u963B\u6B62\u5DE5\u5177\u4F1A\u62D2\u7EDD\u5176\u5BA1\u6279\u8BF7\u6C42\u3002\u5BA1\u6279\u53EA\u80FD\u770B\u5230\u5DE5\u5177\u540D\u79F0\uFF0C\u65E0\u6CD5\u770B\u5230\u8C03\u7528\u53C2\u6570\u3002",
   "settings.addPlaceholder": "\u5DE5\u5177\u540D\u79F0\uFF0C\u4F8B\u5982 plugin_manager",
   "settings.add": "\u6DFB\u52A0",
   "settings.remove": "\u79FB\u9664",
   "settings.configured": "\u914D\u7F6E\u9ED8\u8BA4\u503C",
   "settings.sessionOnly": "\u4EC5\u672C\u4F1A\u8BDD",
-  "settings.memoryWarning": "\u5141\u8BB8\u5217\u8868\u4FDD\u5B58\u5728 Host \u5185\u5B58\u4E2D\uFF0CDSH \u91CD\u542F\u540E\u4F1A\u91CD\u7F6E\u3002",
+  "settings.memoryWarning": "\u963B\u6B62\u5217\u8868\u4FDD\u5B58\u5728 Host \u5185\u5B58\u4E2D\uFF0CDSH \u91CD\u542F\u540E\u4F1A\u91CD\u7F6E\u3002",
   "settings.noAllowList": "\u6CA1\u6709\u81EA\u52A8\u6279\u51C6\u7684\u5DE5\u5177\u3002",
   "settings.saveError": "\u65E0\u6CD5\u4FDD\u5B58\u66F4\u6539\u3002",
-  "tools.allow": "\u5141\u8BB8",
   "tools.block": "\u963B\u6B62",
-  "tools.configuredDefault": "\u914D\u7F6E\u9ED8\u8BA4",
-  "tools.policyHint": "\u5141\u8BB8\u4F1A\u4E3A\u6B64\u4F1A\u8BDD\u81EA\u52A8\u6279\u51C6\u8BE5\u5DE5\u5177\uFF1B\u963B\u6B62\u4F1A\u62D2\u7EDD\u5176\u5BA1\u6279\u8BF7\u6C42\u3002\u518D\u6B21\u70B9\u51FB\u5DF2\u9009\u4E2D\u7684\u9009\u9879\u53EF\u6062\u590D\u4E3A\u4E2D\u6027\u3002",
-  "tools.controlled": "\u5F53\u524D\u4E0D\u53EF\u89C1\u7684\u5DF2\u63A7\u5236\u5DE5\u5177",
-  "tools.reset": "\u91CD\u7F6E",
+  "tools.blocked": "\u5DF2\u963B\u6B62",
+  "tools.policyHint": "\u6240\u6709\u5DE5\u5177\u9ED8\u8BA4\u81EA\u52A8\u6279\u51C6\u3002\u963B\u6B62\u4F1A\u62D2\u7EDD\u8BE5\u5DE5\u5177\u7684\u5BA1\u6279\u8BF7\u6C42\uFF1B\u518D\u6B21\u70B9\u51FB\u201C\u5DF2\u963B\u6B62\u201D\u53EF\u53D6\u6D88\u963B\u6B62\u3002",
+  "tools.controlled": "\u5F53\u524D\u4E0D\u53EF\u89C1\u7684\u5DF2\u963B\u6B62\u5DE5\u5177",
+  "tools.unblock": "\u53D6\u6D88\u963B\u6B62",
   "tools.search": "\u641C\u7D22\u5DE5\u5177\u2026",
   "tools.empty": "\u6B64\u4F1A\u8BDD\u6CA1\u6709\u53EF\u89C1\u5DE5\u5177\u3002",
   "tools.deferLoading": "\u5EF6\u8FDF\u52A0\u8F7D",
@@ -564,8 +562,8 @@ function readSettings(sessionId) {
 function applyPreset(sessionId, preset) {
   return post({ sessionId, action: "preset", preset });
 }
-function savePolicies(sessionId, allow, block) {
-  return post({ sessionId, action: "policies", allow, block });
+function saveBlockList(sessionId, block) {
+  return post({ sessionId, action: "policies", block });
 }
 
 // src/client/components/SessionSettingsDialog.jsx
@@ -637,11 +635,11 @@ function SessionSettingsDialog(props) {
       setBusy(false);
     }
   }
-  async function changePolicies(allow, block) {
+  async function changeBlockList(block) {
     setBusy(true);
     setActionError("");
     try {
-      const value = await savePolicies(sessionId, allow, block);
+      const value = await saveBlockList(sessionId, block);
       setSnapshot(value);
     } catch (failure) {
       setActionError(t("settings.saveError"));
@@ -649,31 +647,12 @@ function SessionSettingsDialog(props) {
       setBusy(false);
     }
   }
-  function setToolPolicy(name, action) {
+  function setToolPolicy(name) {
     if (snapshot === void 0 || busy) return;
-    const allow = new Set(snapshot.allowList.session);
     const block = new Set(snapshot.blockList.session);
-    const configured = snapshot.allowList.configured.includes(name);
-    const allowed = allow.has(name);
-    const blocked = block.has(name);
-    if (action === "allow") {
-      if (allowed) allow.delete(name);
-      else if (configured && !blocked) return;
-      else {
-        allow.add(name);
-        block.delete(name);
-      }
-    } else if (action === "block") {
-      if (blocked) block.delete(name);
-      else {
-        block.add(name);
-        allow.delete(name);
-      }
-    } else if (action === "reset") {
-      allow.delete(name);
-      block.delete(name);
-    }
-    void changePolicies(Array.from(allow), Array.from(block));
+    if (block.has(name)) block.delete(name);
+    else block.add(name);
+    void changeBlockList(Array.from(block));
   }
   const tools = (0, import_react2.useMemo)(() => {
     if (snapshot === void 0) return [];
@@ -834,7 +813,7 @@ function SettingsTab(props) {
 function ToolsTab(props) {
   const { snapshot, t, busy, search, setSearch, tools, expanded, setExpanded, onPolicy } = props;
   const visibleNames = new Set(snapshot.tools.map((tool) => tool.name));
-  const controlled = Array.from(/* @__PURE__ */ new Set([...snapshot.allowList.session, ...snapshot.blockList.session])).filter((name) => !visibleNames.has(name));
+  const hiddenBlocked = snapshot.blockList.session.filter((name) => !visibleNames.has(name));
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("settings.allowListHint") }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: warningStyle, children: t("settings.allowListWarning") }),
@@ -852,38 +831,23 @@ function ToolsTab(props) {
     ),
     tools.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: emptyStyle, children: t("tools.empty") }) : tools.map((tool) => {
       const open = expanded === "tool:" + tool.name;
-      const configured = snapshot.allowList.configured.includes(tool.name);
       const blocked = snapshot.blockList.session.includes(tool.name);
-      const allowed = !blocked && (snapshot.allowList.session.includes(tool.name) || configured);
       return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: listItemStyle(open), children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("button", { type: "button", style: itemHeaderStyle, onClick: () => setExpanded(open ? "" : "tool:" + tool.name), children: [
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: monoNameStyle, children: tool.name }),
           tool.deferLoading ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: metaBadgeStyle, children: t("tools.deferLoading") }) : null,
-          configured ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: metaBadgeStyle, children: t("tools.configuredDefault") }) : null,
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: itemDescriptionStyle, children: tool.description })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-            "button",
-            {
-              type: "button",
-              style: policyButtonStyle(allowed, "allow"),
-              disabled: busy,
-              onClick: () => onPolicy(tool.name, "allow"),
-              children: t("tools.allow")
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-            "button",
-            {
-              type: "button",
-              style: policyButtonStyle(blocked, "block"),
-              disabled: busy,
-              onClick: () => onPolicy(tool.name, "block"),
-              children: t("tools.block")
-            }
-          )
-        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: rowStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+          "button",
+          {
+            type: "button",
+            style: policyButtonStyle(blocked, "block"),
+            disabled: busy,
+            onClick: () => onPolicy(tool.name),
+            children: blocked ? t("tools.blocked") : t("tools.block")
+          }
+        ) }),
         open ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: sectionStyle, children: [
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("tools.parameters") }),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: codeBlockStyle, children: schemaText(tool.parameters) }),
@@ -915,17 +879,12 @@ function ToolsTab(props) {
         ] }) : null
       ] }, tool.name);
     }),
-    controlled.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
+    hiddenBlocked.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: sectionStyle, children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("tools.controlled") }),
-      controlled.map((name) => {
-        const blocked = snapshot.blockList.session.includes(name);
-        return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: monoNameStyle, children: name }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: policyButtonStyle(!blocked, "allow"), disabled: busy, onClick: () => onPolicy(name, "allow"), children: t("tools.allow") }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: policyButtonStyle(blocked, "block"), disabled: busy, onClick: () => onPolicy(name, "block"), children: t("tools.block") }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: secondaryButtonStyle(busy), disabled: busy, onClick: () => onPolicy(name, "reset"), children: t("tools.reset") })
-        ] }, name);
-      })
+      hiddenBlocked.map((name) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: monoNameStyle, children: name }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: policyButtonStyle(true, "block"), disabled: busy, onClick: () => onPolicy(name), children: t("tools.unblock") })
+      ] }, name))
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("settings.memoryWarning") })
   ] });

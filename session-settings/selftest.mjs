@@ -68,8 +68,6 @@ equal(host.sanitizeTools('plugin_manager').length, 0, 'sanitizeTools rejects a n
 const longName = 'x'.repeat(129)
 equal(host.sanitizeTools([longName]).length, 0, 'sanitizeTools rejects overlong names')
 
-const defaults = host.Config({})
-equal(Array.isArray(defaults.defaultAllowedTools) && defaults.defaultAllowedTools.length, 0, 'Config defaults to an empty allow-list')
 for (const service of ['connection', 'approval', 'permissionPresets', 'sandboxPolicy', 'commands', 'agents', 'sessions']) {
   check(host.inject.includes(service), 'inject includes ' + service)
 }
@@ -129,26 +127,24 @@ equal(readValue.value.tools[0].name, 'plugin_manager', 'read exposes the Session
 equal(readValue.value.tools[0].recentCalls[0].result, 'ok', 'read attaches recent tool calls')
 equal(readValue.value.commands[0].name, 'compact', 'read exposes Host commands')
 equal(readValue.value.knobs.sandbox, 'workspace-write', 'read exposes the effective sandbox')
-equal(readValue.value.allowList.session.length, 0, 'read starts with an empty session allow-list')
+equal(readValue.value.blockList.session.length, 0, 'read starts with an empty block list')
+equal(readValue.value.defaultPolicy, 'allow', 'read reports the default allow policy')
 const badPreset = await callHost({ sessionId: 'session-1', action: 'preset', preset: 'nope' })
 check(badPreset.ok === false, 'unknown presets are rejected')
 const presetValue = await callHost({ sessionId: 'session-1', action: 'preset', preset: 'danger-full-access' })
 check(presetValue.ok === true, 'a configured preset is accepted')
 equal(selectedPreset, 'danger-full-access', 'the preset service receives the selection')
-const policiesValue = await callHost({ sessionId: 'session-1', action: 'policies', allow: ['plugin_manager'], block: ['read_file'] })
+const policiesValue = await callHost({ sessionId: 'session-1', action: 'policies', block: ['read_file'] })
 check(policiesValue.ok === true, 'tool-policy write returns ok')
-equal(policiesValue.value.allowList.session.join(','), 'plugin_manager', 'allow list persists in memory')
 equal(policiesValue.value.blockList.session.join(','), 'read_file', 'block list persists in memory')
-let nextCalled = false
-const allowed = await approvalHandler({ toolName: 'plugin_manager', agent: { id: 'session-1' } }, async () => { nextCalled = true; return 'rejected' })
-equal(allowed, 'allowed-once', 'allowed tool approvals resolve allowed-once')
-const blocked = await approvalHandler({ toolName: 'read_file', agent: { id: 'session-1' } }, async () => { nextCalled = true; return 'rejected' })
+const blocked = await approvalHandler({ toolName: 'read_file', agent: { id: 'session-1' } }, async () => 'rejected')
 equal(blocked, 'rejected', 'blocked tool approvals resolve rejected')
-const unlisted = await approvalHandler({ toolName: 'bash', agent: { id: 'session-1' } }, async () => { nextCalled = true; return 'rejected' })
-equal(unlisted, 'rejected', 'unlisted tool approvals delegate to the next answerer')
-check(nextCalled, 'unlisted approvals call next')
-const resetValue = await callHost({ sessionId: 'session-1', action: 'policies', allow: [], block: [] })
-equal(resetValue.value.allowList.session.length + resetValue.value.blockList.session.length, 0, 'empty policy lists reset both controls')
+const defaultAllowed = await approvalHandler({ toolName: 'plugin_manager', agent: { id: 'session-1' } }, async () => 'rejected')
+equal(defaultAllowed, 'allowed-once', 'non-blocked tool approvals resolve allowed-once by default')
+const bashAllowed = await approvalHandler({ toolName: 'bash', agent: { id: 'session-1' } }, async () => 'rejected')
+equal(bashAllowed, 'allowed-once', 'unlisted tools are allowed by default')
+const resetValue = await callHost({ sessionId: 'session-1', action: 'policies', block: [] })
+equal(resetValue.value.blockList.session.length, 0, 'an empty block list resets the control')
 
 // ---------------------------------------------------------------------------
 // Presentation requirements
@@ -163,9 +159,7 @@ equal(presetRowStyle.flexWrap, 'nowrap', 'preset options stay side by side')
 const dangerousStyle = presetOptionStyle(false, true)
 check(String(dangerousStyle.color).includes('state-error'), 'Full access uses the error color for its font')
 check(String(dangerousStyle.border).includes('state-error'), 'Full access uses the error color for its border')
-const allowStyle = policyButtonStyle(true, 'allow')
 const blockStyle = policyButtonStyle(true, 'block')
-check(String(allowStyle.color).includes('state-success'), 'active Allow uses the success color')
 check(String(blockStyle.color).includes('state-error'), 'active Block uses the error color')
 
 // ---------------------------------------------------------------------------

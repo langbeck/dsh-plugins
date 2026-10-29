@@ -7,13 +7,11 @@
  *     { sessionId, action: 'preset', preset }
  *     { sessionId, action: 'allowlist', tools: string[] }
  *
- * It also owns the small approval answerer behind the allow-list: a listed
- * tool's `approval/request` resolves `allowed-once`, and every other request is
- * delegated to the normal human answerer. The permission catalog is the
- * Host's configured preset table; third-party plugins cannot add presets.
+ * It also owns the small approval answerer behind the block list: every
+ * approval request resolves `allowed-once` except a blocked tool name, which
+ * resolves `rejected`. The permission catalog is the Host's configured preset
+ * table; third-party plugins cannot add presets.
  */
-
-import Schema from '@deepseek-ai/schemastery'
 
 import { commandView, foldRecentToolCalls, mergeToolHistory, toolView } from './tools.js'
 
@@ -29,18 +27,12 @@ export const inject = [
   'sessions',
 ]
 
-export const Config = Schema.object({
-  defaultAllowedTools: Schema.array(Schema.string()).default([]),
-})
-
 const ROUTE = '/api/session-settings'
 const MAX_TOOLS = 64
 const MAX_TOOL_NAME = 128
 const RECENT_CALLS = 8
 
-export function apply(ctx, config) {
-  const defaults = sanitizeTools(config !== null && config !== undefined ? config.defaultAllowedTools : undefined)
-  const sessionAllowLists = new Map()
+export function apply(ctx) {
   const sessionBlockLists = new Map()
 
   function queryService() {
@@ -56,12 +48,6 @@ export function apply(ctx, config) {
     const session = ctx.sessions.get(sessionId)
     if (session === undefined) throw new Error('Session is not loaded: ' + sessionId)
     return session
-  }
-
-  function effectiveAllow(sessionId) {
-    const tools = new Set(defaults)
-    for (const tool of sessionAllowLists.get(sessionId) ?? []) tools.add(tool)
-    return Array.from(tools)
   }
 
   function toolSchemas(session) {
@@ -139,14 +125,10 @@ export function apply(ctx, config) {
       knobs: { sandbox, approval },
       tools: tools.map((tool) => ({ ...tool, recentCalls: recentByTool.get(tool.name) ?? [] })),
       commands: commandDescriptors(sessionId),
-      allowList: {
-        configured: defaults,
-        session: Array.from(sessionAllowLists.get(sessionId) ?? []),
-        effective: effectiveAllow(sessionId),
-      },
       blockList: {
         session: Array.from(sessionBlockLists.get(sessionId) ?? []),
       },
+      defaultPolicy: 'allow',
       persistence: 'memory',
     }
   }
@@ -166,12 +148,9 @@ export function apply(ctx, config) {
     }
     if (action === 'policies') {
       sessionOf(sessionId)
-      const blocked = new Set(sanitizeTools(body.block))
-      const allowed = sanitizeTools(body.allow).filter((tool) => !blocked.has(tool))
-      if (allowed.length === 0) sessionAllowLists.delete(sessionId)
-      else sessionAllowLists.set(sessionId, allowed)
-      if (blocked.size === 0) sessionBlockLists.delete(sessionId)
-      else sessionBlockLists.set(sessionId, Array.from(blocked))
+      const blocked = sanitizeTools(body.block)
+      if (blocked.length === 0) sessionBlockLists.delete(sessionId)
+      else sessionBlockLists.set(sessionId, blocked)
       return snapshot(sessionId)
     }
     throw new Error('Unknown action: ' + String(action))
@@ -202,11 +181,11 @@ export function apply(ctx, config) {
     const sessionId = request.agent !== null && request.agent !== undefined ? request.agent.id : undefined
     if (typeof sessionId !== 'string') return next()
     if ((sessionBlockLists.get(sessionId) ?? []).includes(request.toolName)) return 'rejected'
-    return effectiveAllow(sessionId).includes(request.toolName) ? 'allowed-once' : next()
+    return 'allowed-once'
   }, true), 'session-settings: approval allow-list')
 }
 
-/** Normalize a tool allow-list: strings only, unique, bounded. */
+/** Normalize a tool block-list: strings only, unique, bounded. */
 export function sanitizeTools(value) {
   if (!Array.isArray(value)) return []
   const seen = new Set()

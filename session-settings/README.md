@@ -8,30 +8,29 @@ header action to the current Session that opens a dialog with three tabs:
   approval policy.
 - **Tools** — the tools enabled for the Session (from its last request header,
   or its tool history before the first request): name, description, parameters
-  JSON Schema, deferred-loading state, recent calls, and small **Allow** /
-  **Block** controls that auto-approve or auto-reject that tool's approvals for
-  this Session.
+  JSON Schema, deferred-loading state, recent calls, and a small **Block**
+  control. Every tool is auto-approved by default; a blocked tool's approvals
+  are rejected.
 - **Commands** — the Host slash commands visible to the Session's live Agent:
   name, description, input hint, and attachment support.
 
-Tool policies are enforced by a Host `approval/request` answerer: an allowed
-tool resolves `allowed-once`, a blocked tool resolves `rejected`, and every
-other request delegates to the normal human answerer. Only the **tool name** is
-available to an answerer — not the call arguments — so this is a coarse,
-tool-level policy. The per-Session policy is currently **in-memory** and resets
-when the Host process restarts; `defaultAllowedTools` in the plugin Config
-seeds the allow side of every Session.
+Tool policy is enforced by a Host `approval/request` answerer: every request
+resolves `allowed-once` unless the tool name is blocked for that Session, in
+which case it resolves `rejected`. Only the **tool name** is available to an
+answerer — not the call arguments — so this is a coarse, tool-level policy. The
+per-Session block list is currently **in-memory** and resets when the Host
+process restarts.
 
-> **Security:** an allowed tool is auto-approved for the whole Session, and a
-> blocked tool's approvals are rejected. Do not allow tools whose every call
-> should require a human, and do not allow `bash` unless you intend to
-> auto-approve sandbox escalations.
+> **Security:** by default this plugin auto-approves **every** non-blocked tool
+> approval for every Session, including sandbox-escalation requests. Use Block
+> to reject a tool. Do not install this plugin where human approval of tools is
+> required.
 
 ## Layout
 
 | Path | What it is |
 | --- | --- |
-| `src/index.js` | Host entry: Config, authenticated `/api/session-settings` route, preset writes, snapshots, and the approval answerer. |
+| `src/index.js` | Host entry: authenticated `/api/session-settings` route, preset writes, snapshots, and the block-list approval answerer. |
 | `src/tools.js` | Pure tool/command snapshot helpers. |
 | `src/client/index.jsx` | Client entry: header trigger, overlay entry, route client. |
 | `src/client/components/` | Header action and the tabbed settings dialog. |
