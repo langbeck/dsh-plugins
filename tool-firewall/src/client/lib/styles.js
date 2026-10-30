@@ -596,6 +596,34 @@ export const inspectWarningStyle = {
   lineHeight: '17px',
 }
 
+export const inspectMetaStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'max-content minmax(0, 1fr)',
+  gap: '4px 12px',
+  padding: '10px 16px',
+  borderBottom: '0.5px solid var(--dsw-alias-border-l3)',
+  fontSize: '11px',
+  lineHeight: '17px',
+}
+
+export const inspectMetaLabelStyle = {
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontWeight: 600,
+}
+
+export const inspectMetaValueStyle = {
+  minWidth: 0,
+  color: 'var(--dsw-alias-label-primary)',
+  wordBreak: 'break-all',
+}
+
+export const inspectContentHeaderStyle = {
+  padding: '8px 16px 0',
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontSize: '11px',
+  fontWeight: 600,
+}
+
 export const logValueStyle = {
   color: 'var(--dsw-alias-label-primary)',
   fontVariantNumeric: 'tabular-nums',

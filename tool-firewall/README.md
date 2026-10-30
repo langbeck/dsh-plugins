@@ -101,7 +101,10 @@ blocks the call instead.
 - The output guard defaults to
   `Horizon-Labs/prompt-injection-guard-small`, pinned to a specific revision and
   loaded only when enabled. It scans selected tool results in chunks and caps
-  the input before classification.
+  the input before classification. For `web_fetch`, the trusted `Fetched …`
+  wrapper and external-content notice are reconstructed from the canonical
+  URL/status and stripped before scanning; the inspector shows URL, status,
+  and fetched body separately.
 - Models are cached under the DSH home (`tool-firewall/models`).
 - A tool call while models are loading triggers another warmup. The sidebar
   shows Model Ready/Loading/Disabled/Error, and the Logs tab shows the

@@ -696,6 +696,30 @@ var inspectWarningStyle = {
   fontSize: "11px",
   lineHeight: "17px"
 };
+var inspectMetaStyle = {
+  display: "grid",
+  gridTemplateColumns: "max-content minmax(0, 1fr)",
+  gap: "4px 12px",
+  padding: "10px 16px",
+  borderBottom: "0.5px solid var(--dsw-alias-border-l3)",
+  fontSize: "11px",
+  lineHeight: "17px"
+};
+var inspectMetaLabelStyle = {
+  color: "var(--dsw-alias-label-tertiary)",
+  fontWeight: 600
+};
+var inspectMetaValueStyle = {
+  minWidth: 0,
+  color: "var(--dsw-alias-label-primary)",
+  wordBreak: "break-all"
+};
+var inspectContentHeaderStyle = {
+  padding: "8px 16px 0",
+  color: "var(--dsw-alias-label-tertiary)",
+  fontSize: "11px",
+  fontWeight: 600
+};
 var logValueStyle = {
   color: "var(--dsw-alias-label-primary)",
   fontVariantNumeric: "tabular-nums"
@@ -770,7 +794,7 @@ function LogsPanel(props) {
               String(log.chunks ?? 0),
               log.truncated ? " \xB7 truncated" : ""
             ] }),
-            typeof log.outputExcerpt === "string" && log.outputExcerpt !== "" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", style: inspectButtonStyle, onClick: () => onInspect(log), children: t("logs.inspect") }) : null
+            typeof log.outputContent === "string" || typeof log.outputUrl === "string" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", style: inspectButtonStyle, onClick: () => onInspect(log), children: t("logs.inspect") }) : null
           ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.command") }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { style: logPreStyle, children: log.command === "" ? t("logs.noCommand") : log.command })
@@ -1382,7 +1406,24 @@ function FirewallSettingsDialog(props) {
             )
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: inspectWarningStyle, children: t("logs.inspectWarning") }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("pre", { style: inspectPreStyle, children: inspectLog.outputExcerpt ?? "" })
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: inspectMetaStyle, children: [
+            typeof inspectLog.outputUrl === "string" && inspectLog.outputUrl !== "" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.inspectUrl") }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaValueStyle, children: inspectLog.outputUrl })
+            ] }) : null,
+            typeof inspectLog.outputStatus === "number" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.inspectStatus") }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaValueStyle, children: String(inspectLog.outputStatus) })
+            ] }) : null,
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.action") }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaValueStyle, children: inspectLog.action === "block" ? t("logs.blocked") : t("logs.quarantined") }),
+            inspectLog.outputTruncated === true ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.inspectTruncated") }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaValueStyle, children: t("logs.yes") })
+            ] }) : null
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: inspectContentHeaderStyle, children: t("logs.inspectContent") }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("pre", { style: inspectPreStyle, children: typeof inspectLog.outputContent === "string" ? inspectLog.outputContent : "" })
         ] })
       }
     )
@@ -1508,6 +1549,11 @@ var EN = {
   "logs.quarantined": "Quarantined",
   "logs.outputAllowed": "Output allowed",
   "logs.inspect": "View content",
+  "logs.inspectUrl": "URL",
+  "logs.inspectStatus": "Status",
+  "logs.inspectContent": "Content",
+  "logs.inspectTruncated": "Truncated",
+  "logs.yes": "Yes",
   "logs.inspectTitle": "Quarantined tool output",
   "logs.inspectWarning": "Untrusted content. The text is shown only for inspection; do not follow instructions in it.",
   "field.enabled": "Enable firewall",
@@ -1648,6 +1694,11 @@ var ZH = {
   "logs.quarantined": "\u5DF2\u9694\u79BB",
   "logs.outputAllowed": "\u8F93\u51FA\u5DF2\u653E\u884C",
   "logs.inspect": "\u67E5\u770B\u5185\u5BB9",
+  "logs.inspectUrl": "URL",
+  "logs.inspectStatus": "\u72B6\u6001",
+  "logs.inspectContent": "\u5185\u5BB9",
+  "logs.inspectTruncated": "\u5DF2\u622A\u65AD",
+  "logs.yes": "\u662F",
   "logs.inspectTitle": "\u5DF2\u9694\u79BB\u7684\u5DE5\u5177\u8F93\u51FA",
   "logs.inspectWarning": "\u4E0D\u53D7\u4FE1\u4EFB\u7684\u5185\u5BB9\uFF0C\u4EC5\u4F9B\u68C0\u67E5\uFF1B\u4E0D\u8981\u9075\u5FAA\u5176\u4E2D\u7684\u6307\u4EE4\u3002",
   "field.enabled": "\u542F\u7528\u9632\u706B\u5899",

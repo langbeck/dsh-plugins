@@ -92,7 +92,7 @@ export default function LogsPanel(props) {
                   <span style={logValueStyle}>{t(decisionLabel)}</span>
                   <span style={logLabelStyle}>{t('logs.chunks')}</span>
                   <span style={logValueStyle}>{String(log.chunks ?? 0)}{log.truncated ? ' · truncated' : ''}</span>
-                  {typeof log.outputExcerpt === 'string' && log.outputExcerpt !== '' ? (
+                  {typeof log.outputContent === 'string' || typeof log.outputUrl === 'string' ? (
                     <button type="button" style={inspectButtonStyle} onClick={() => onInspect(log)}>{t('logs.inspect')}</button>
                   ) : null}
                 </div>

@@ -10,7 +10,11 @@ import {
   dialogPanelStyle,
   dialogSubtitleStyle,
   dialogTitleStyle,
+  inspectContentHeaderStyle,
   inspectHeaderStyle,
+  inspectMetaLabelStyle,
+  inspectMetaStyle,
+  inspectMetaValueStyle,
   inspectPanelStyle,
   inspectPreStyle,
   inspectWarningStyle,
@@ -228,7 +232,33 @@ export default function FirewallSettingsDialog(props) {
               </button>
             </div>
             <p style={inspectWarningStyle}>{t('logs.inspectWarning')}</p>
-            <pre style={inspectPreStyle}>{inspectLog.outputExcerpt ?? ''}</pre>
+            <div style={inspectMetaStyle}>
+              {typeof inspectLog.outputUrl === 'string' && inspectLog.outputUrl !== '' ? (
+                <>
+                  <span style={inspectMetaLabelStyle}>{t('logs.inspectUrl')}</span>
+                  <span style={inspectMetaValueStyle}>{inspectLog.outputUrl}</span>
+                </>
+              ) : null}
+              {typeof inspectLog.outputStatus === 'number' ? (
+                <>
+                  <span style={inspectMetaLabelStyle}>{t('logs.inspectStatus')}</span>
+                  <span style={inspectMetaValueStyle}>{String(inspectLog.outputStatus)}</span>
+                </>
+              ) : null}
+              <span style={inspectMetaLabelStyle}>{t('logs.action')}</span>
+              <span style={inspectMetaValueStyle}>
+                {inspectLog.action === 'block' ? t('logs.blocked') : t('logs.quarantined')}
+              </span>
+              {inspectLog.outputTruncated === true ? (
+                <>
+                  <span style={inspectMetaLabelStyle}>{t('logs.inspectTruncated')}</span>
+                  <span style={inspectMetaValueStyle}>{t('logs.yes')}</span>
+                </>
+              ) : null}
+            </div>
+            <div style={inspectContentHeaderStyle}>{t('logs.inspectContent')}</div>
+            {/* Untrusted text is rendered as a React text node, never as HTML. */}
+            <pre style={inspectPreStyle}>{typeof inspectLog.outputContent === 'string' ? inspectLog.outputContent : ''}</pre>
           </div>
         </div>
       )}
