@@ -48,7 +48,7 @@ var NS = "balance";
 var PACKAGE = "dsh-plugin-balance";
 var ROW_ID = "balance";
 var CONFIG_KEY = `${PACKAGE}#${ROW_ID}`;
-var INJECT = ["slots", "locale", "remote", "remote.account", "configForms", "commandUi"];
+var INJECT = ["slots", "locale", "remote", "remote.account", "configForms", "inputTriggers"];
 var DEFAULT_CONFIG = Object.freeze({
   refreshSeconds: 60,
   showZeroBalances: true,
@@ -518,167 +518,8 @@ function BalanceRow(props) {
   ] });
 }
 
-// src/client/components/BudgetDialog.jsx
-var import_react3 = require("react");
-var import_jsx_runtime2 = require("react/jsx-runtime");
-var backdropStyle = {
-  position: "fixed",
-  inset: 0,
-  zIndex: 1200,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "20px",
-  background: "rgba(0, 0, 0, 0.32)",
-  boxSizing: "border-box"
-};
-var panelStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "12px",
-  width: "min(420px, 100%)",
-  padding: "16px",
-  border: "0.5px solid var(--dsw-alias-border-l3)",
-  borderRadius: "var(--dsw-radius-lg, 12px)",
-  background: "var(--dsw-alias-bg-layer-1)",
-  color: "var(--dsw-alias-label-primary)",
-  boxShadow: "0 18px 60px rgba(0, 0, 0, 0.32)",
-  boxSizing: "border-box"
-};
-var headerStyle = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" };
-var titleStyle = { margin: 0, fontSize: "15px", lineHeight: "22px", fontWeight: 600 };
-var rowStyle2 = { display: "flex", flexDirection: "column", gap: "6px" };
-var labelStyle2 = { color: "var(--dsw-alias-label-tertiary)", fontSize: "11px", fontWeight: 600 };
-var scopeStyle = { display: "flex", gap: "6px" };
-var scopeButtonStyle = (active) => ({
-  height: "30px",
-  padding: "0 10px",
-  border: "0.5px solid var(--dsw-alias-border-l3)",
-  borderRadius: "var(--dsw-radius-md, 8px)",
-  background: active ? "var(--dsw-alias-bg-layer-3)" : "transparent",
-  color: active ? "var(--dsw-alias-label-primary)" : "var(--dsw-alias-label-tertiary)",
-  font: "inherit",
-  fontSize: "12px",
-  fontWeight: active ? 600 : 500,
-  cursor: "pointer"
-});
-var inputStyle2 = {
-  boxSizing: "border-box",
-  width: "100%",
-  height: "32px",
-  padding: "0 10px",
-  border: "0.5px solid var(--dsw-alias-border-l4)",
-  borderRadius: "var(--dsw-radius-md, 8px)",
-  background: "var(--dsw-alias-bg-layer-3)",
-  color: "var(--dsw-alias-label-primary)",
-  font: "inherit",
-  fontSize: "13px"
-};
-var hintStyle2 = { color: "var(--dsw-alias-label-tertiary)", fontSize: "11px", lineHeight: "16px" };
-var footerStyle2 = { display: "flex", justifyContent: "flex-end", gap: "8px", flexWrap: "wrap" };
-var buttonStyle = (primary) => ({
-  height: "30px",
-  padding: "0 12px",
-  border: primary ? "none" : "0.5px solid var(--dsw-alias-border-l3)",
-  borderRadius: "var(--dsw-radius-md, 8px)",
-  background: primary ? "var(--dsw-alias-button-primary-fill, #4d6bfe)" : "transparent",
-  color: primary ? "var(--dsw-alias-label-primary-foreground, #fff)" : "var(--dsw-alias-label-primary)",
-  font: "inherit",
-  fontSize: "12px",
-  cursor: "pointer"
-});
-var messageStyle = { margin: 0, fontSize: "11px", lineHeight: "16px" };
-function BudgetDialog({ uiStore, costStore, refreshCost, t }) {
-  const ui = useSnapshot(uiStore);
-  const cost = useSnapshot(costStore);
-  const [scope, setScope] = (0, import_react3.useState)("session");
-  const [amount, setAmount] = (0, import_react3.useState)("");
-  const [busy, setBusy] = (0, import_react3.useState)(false);
-  const [message, setMessage] = (0, import_react3.useState)(void 0);
-  (0, import_react3.useEffect)(() => {
-    if (!ui.open) return;
-    setScope("session");
-    setAmount("");
-    setBusy(false);
-    setMessage(void 0);
-  }, [ui.open]);
-  if (!ui.open || typeof ui.sessionId !== "string") return null;
-  const current = cost.status === "ready" && cost.sessionId === ui.sessionId ? scope === "turn" ? cost.turnLimitUsd : cost.limitUsd : null;
-  async function send(value) {
-    if (busy) return;
-    setBusy(true);
-    setMessage(void 0);
-    try {
-      const response = await fetch(LIMIT_ROUTE, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId: ui.sessionId, scope, input: value })
-      });
-      const result = await response.json();
-      if (result.ok !== true) {
-        setMessage({ error: true, text: result.error?.message ?? t("budget.failed") });
-        return;
-      }
-      setAmount("");
-      setMessage({ error: false, text: result.value.text ?? t("budget.saved") });
-      refreshCost(ui.sessionId);
-    } catch (error) {
-      setMessage({ error: true, text: t("budget.failed") });
-    } finally {
-      setBusy(false);
-    }
-  }
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: backdropStyle, onMouseDown: (event) => {
-    if (event.target === event.currentTarget) uiStore.set({ open: false });
-  }, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: panelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("budget.title"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: headerStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { style: titleStyle, children: t("budget.title") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: buttonStyle(false), onClick: () => uiStore.set({ open: false }), children: t("budget.close") })
-    ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle2, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle2, children: t("budget.scope") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: scopeStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: scopeButtonStyle(scope === "session"), onClick: () => {
-          setScope("session");
-          setMessage(void 0);
-        }, children: t("budget.session") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: scopeButtonStyle(scope === "turn"), onClick: () => {
-          setScope("turn");
-          setMessage(void 0);
-        }, children: t("budget.turn") })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle2, children: current === null ? t("budget.notSet") : t("budget.current", { amount: "$" + Number(current).toFixed(2) }) })
-    ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: rowStyle2, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle2, children: t("budget.amount") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-        "input",
-        {
-          type: "text",
-          value: amount,
-          disabled: busy,
-          placeholder: "+2, -2, 5, off",
-          onChange: (event) => setAmount(event.target.value),
-          onKeyDown: (event) => {
-            if (event.key === "Enter") void send(amount);
-          },
-          style: inputStyle2,
-          "aria-label": t("budget.amount")
-        }
-      ),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle2, children: t("budget.amountHint") })
-    ] }),
-    message === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: { ...messageStyle, color: message.error ? "var(--dsw-alias-state-error-primary)" : "var(--dsw-alias-state-success-primary)" }, children: message.text }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: footerStyle2, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: buttonStyle(false), disabled: busy, onClick: () => void send("off"), children: t("budget.clear") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: buttonStyle(true), disabled: busy || amount.trim() === "", onClick: () => void send(amount), children: t("budget.apply") })
-    ] })
-  ] }) });
-}
-
 // src/client/components/SettingsForm.jsx
-var import_react4 = require("react");
+var import_react3 = require("react");
 
 // src/client/lib/config.js
 function normalizeConfig(value) {
@@ -698,21 +539,21 @@ function normalizeConfig(value) {
 }
 
 // src/client/components/SettingsForm.jsx
-var import_jsx_runtime3 = require("react/jsx-runtime");
+var import_jsx_runtime2 = require("react/jsx-runtime");
 function SettingsForm(props) {
   const { view, t, configForm } = props;
   const snapshot = useSnapshot(configForm);
   const resolved = normalizeConfig(snapshot.value);
-  const [draft, setDraft] = (0, import_react4.useState)(resolved);
-  const [notice, setNotice] = (0, import_react4.useState)("idle");
+  const [draft, setDraft] = (0, import_react3.useState)(resolved);
+  const [notice, setNotice] = (0, import_react3.useState)("idle");
   const revision = snapshot.revision;
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     setDraft(normalizeConfig(configForm.getSnapshot().value));
     setNotice("idle");
   }, [revision]);
-  if (view === "summary") return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: t("config.summary") });
-  if (snapshot.status === "loading") return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: hintStyle, children: t("config.loading") });
-  if (snapshot.status === "unavailable") return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: hintStyle, children: t("config.unavailable") });
+  if (view === "summary") return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("config.summary") });
+  if (snapshot.status === "loading") return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.loading") });
+  if (snapshot.status === "unavailable") return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.unavailable") });
   const writable = snapshot.writable === true;
   const saving = notice === "saving";
   const disabled = !writable || saving;
@@ -739,10 +580,10 @@ function SettingsForm(props) {
     ]);
   }
   const noticeText = notice === "saved" ? t("config.saved") : notice === "error" ? t("config.saveError") : notice === "saving" ? t("config.saving") : "";
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: pageStyle, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { style: fieldStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: labelStyle, children: t("config.refresh") }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: pageStyle, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("config.refresh") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
         "input",
         {
           type: "number",
@@ -760,11 +601,11 @@ function SettingsForm(props) {
           style: inputStyle(disabled)
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: hintStyle, children: t("config.refreshHint") })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("config.refreshHint") })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { style: fieldStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: labelStyle, children: t("config.pricingRefresh") }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("config.pricingRefresh") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
         "input",
         {
           type: "number",
@@ -782,10 +623,10 @@ function SettingsForm(props) {
           style: inputStyle(disabled)
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: hintStyle, children: t("config.pricingRefreshHint") })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("config.pricingRefreshHint") })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { style: checkboxStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: checkboxStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
         "input",
         {
           type: "checkbox",
@@ -794,10 +635,10 @@ function SettingsForm(props) {
           onChange: (event) => setDraft({ ...draft, showZeroBalances: event.target.checked })
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: labelStyle, children: t("config.showZeroBalances") })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("config.showZeroBalances") })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { style: checkboxStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: checkboxStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
         "input",
         {
           type: "checkbox",
@@ -806,14 +647,14 @@ function SettingsForm(props) {
           onChange: (event) => setDraft({ ...draft, showCurrencyName: event.target.checked })
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: labelStyle, children: t("config.showCurrencyCodes") })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("config.showCurrencyCodes") })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: footerStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", disabled, onClick: save, style: primaryButtonStyle(disabled), children: t("config.save") }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", disabled, onClick: reset, style: secondaryButtonStyle(disabled), children: t("config.reset") }),
-      noticeText === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { role: notice === "error" ? "alert" : "status", style: notice === "error" ? errorStyle : hintStyle, children: noticeText })
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: footerStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: save, style: primaryButtonStyle(disabled), children: t("config.save") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: reset, style: secondaryButtonStyle(disabled), children: t("config.reset") }),
+      noticeText === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { role: notice === "error" ? "alert" : "status", style: notice === "error" ? errorStyle : hintStyle, children: noticeText })
     ] }),
-    writable ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: hintStyle, children: t("config.readOnly") })
+    writable ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.readOnly") })
   ] });
 }
 
@@ -943,6 +784,12 @@ var EN = {
   "config.readOnly": "This profile does not accept settings writes.",
   "command.budget": "Budget",
   "command.budgetDescription": "Set session and turn spending limits.",
+  "budget.section": "Budget",
+  "budget.sessionItem": "Session budget",
+  "budget.turnItem": "Turn budget",
+  "budget.sessionDescription": "Set or adjust the Session spending cap.",
+  "budget.turnDescription": "Set or adjust the per-turn spending budget.",
+  "budget.claimHint": "Enter an amount: +2, -2, 5, or off",
   "budget.title": "Budget",
   "budget.scope": "Limit",
   "budget.session": "Session",
@@ -998,6 +845,12 @@ var ZH = {
   "config.readOnly": "\u6B64\u914D\u7F6E\u4E0D\u63A5\u53D7\u5199\u5165\u3002",
   "command.budget": "\u9884\u7B97",
   "command.budgetDescription": "\u8BBE\u7F6E\u4F1A\u8BDD\u548C\u5355\u8F6E\u652F\u51FA\u4E0A\u9650\u3002",
+  "budget.section": "\u9884\u7B97",
+  "budget.sessionItem": "\u4F1A\u8BDD\u9884\u7B97",
+  "budget.turnItem": "\u5355\u8F6E\u9884\u7B97",
+  "budget.sessionDescription": "\u8BBE\u7F6E\u6216\u8C03\u6574\u4F1A\u8BDD\u652F\u51FA\u4E0A\u9650\u3002",
+  "budget.turnDescription": "\u8BBE\u7F6E\u6216\u8C03\u6574\u5355\u8F6E\u652F\u51FA\u9884\u7B97\u3002",
+  "budget.claimHint": "\u8F93\u5165\u91D1\u989D\uFF1A+2\u3001-2\u30015 \u6216 off",
   "budget.title": "\u9884\u7B97",
   "budget.scope": "\u4E0A\u9650",
   "budget.session": "\u4F1A\u8BDD",
@@ -1036,15 +889,15 @@ var ZH = {
 };
 
 // src/client/index.jsx
-var import_jsx_runtime4 = require("react/jsx-runtime");
+var import_jsx_runtime3 = require("react/jsx-runtime");
 function createClient() {
   return { apply, inject: INJECT };
 }
 function WalletIcon(props) {
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { ...props, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 16.5v-9Z" }),
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M4 8h16" }),
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M15 12h5v4h-5a2 2 0 0 1 0-4Z" })
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("svg", { ...props, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 16.5v-9Z" }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M4 8h16" }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M15 12h5v4h-5a2 2 0 0 1 0-4Z" })
   ] });
 }
 function apply(ctx) {
@@ -1053,35 +906,80 @@ function apply(ctx) {
   const configStore = createSnapshotStore(normalizeConfig(readConfigValue(configForm)));
   const balanceStore = createSnapshotStore({ status: "loading", wallets: [], error: void 0, updatedAt: void 0 });
   const costTracker = createCostTracker();
-  const budgetUiStore = createSnapshotStore({ open: false, sessionId: void 0 });
-  ctx.effect(() => {
-    const commandUi = ctx.commandUi;
-    if (commandUi === void 0 || typeof commandUi.register !== "function") return void 0;
-    const t = ctx.locale.bind(NS);
-    return commandUi.register({
-      name: "budget",
-      label: () => t("command.budget"),
-      description: () => t("command.budgetDescription"),
-      icon: WalletIcon,
-      available: () => true,
-      ui: {
-        kind: "action",
-        run: (session) => {
-          budgetUiStore.set({ open: true, sessionId: session.sessionId });
+  const t = ctx.locale.bind(NS);
+  const claimFor = (scope, sessionId) => {
+    const name = scope === "turn" ? "turn-budget" : "session-budget";
+    const token = "/" + name + " ";
+    return {
+      name,
+      token,
+      hint: t("budget.claimHint"),
+      submit: async (args) => {
+        let result;
+        try {
+          const response = await fetch(LIMIT_ROUTE, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ sessionId, scope, input: typeof args === "string" ? args.trim() : "" })
+          });
+          result = await response.json();
+        } catch (error) {
+          return { kind: "error", text: t("budget.failed") };
         }
+        if (result === null || result === void 0 || result.ok !== true) {
+          return { kind: "error", text: result?.error?.message ?? t("budget.failed") };
+        }
+        costTracker.refresh(sessionId);
+        return { kind: "success", text: result.value.text ?? t("budget.saved") };
+      }
+    };
+  };
+  const sourceItems = () => [
+    {
+      name: "session-budget",
+      label: t("budget.sessionItem"),
+      description: t("budget.sessionDescription"),
+      icon: WalletIcon,
+      section: t("budget.section"),
+      value: "session"
+    },
+    {
+      name: "turn-budget",
+      label: t("budget.turnItem"),
+      description: t("budget.turnDescription"),
+      icon: WalletIcon,
+      section: t("budget.section"),
+      value: "turn"
+    }
+  ];
+  ctx.effect(() => {
+    const inputTriggers = ctx.inputTriggers;
+    if (inputTriggers === void 0 || typeof inputTriggers.registerSource !== "function") return void 0;
+    const scopeOf = (name) => name === "turn-budget" ? "turn" : "session";
+    return inputTriggers.registerSource({
+      trigger: "/",
+      name: "budget",
+      order: 1,
+      showGroupTitle: false,
+      candidates: (_session, { query }) => {
+        const needle = query.trim().toLowerCase();
+        if (needle === "") return sourceItems();
+        return sourceItems().filter((item) => item.label.toLowerCase().includes(needle) || item.name.includes(needle));
+      },
+      onPick: (pick) => ({ claim: claimFor(scopeOf(pick.candidate.name), pick.session.sessionId) }),
+      matchEnter: (session, line) => {
+        const match = /^\/(session-budget|turn-budget)(?:\s|$)/.exec(line.trim());
+        if (match === null) return void 0;
+        return { claim: claimFor(scopeOf(match[1]), session.sessionId) };
+      },
+      matchClaim: (session, token) => {
+        const match = /^\/(session-budget|turn-budget)$/.exec(token.trim());
+        if (match === null) return void 0;
+        return claimFor(scopeOf(match[1]), session.sessionId);
       }
     });
-  }, "balance: budget command");
-  ctx.slots.inject("shell.overlay", () => ctx.slots.register({
-    name: "shell.overlay",
-    id: "balance.budget",
-    locale: NS,
-    inject: () => ({
-      uiStore: budgetUiStore,
-      costStore: costTracker.store,
-      refreshCost: costTracker.refresh
-    })
-  }, BudgetDialog));
+  }, "balance: budget input source");
   let timer = null;
   let refreshing = false;
   let disposed = false;

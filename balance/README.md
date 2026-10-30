@@ -33,17 +33,21 @@ The route also returns `limitUsd`, `remainingUsd`, `turnLimitUsd`, active-turn
 
 ### Session and turn limits
 
-The Web client registers a Client-owned **Budget** command with a wallet icon.
-It opens a dialog where you choose **Session** or **Turn**, see the current
-limit, and enter an amount:
+The Web client registers a Client-owned **Budget** input source in its own
+**Budget** menu section. It has two items:
+
+- **Session budget** — claims a fixed `/session-budget` command block.
+- **Turn budget** — claims a fixed `/turn-budget` command block.
+
+After picking one, type an amount in the composer:
 
 - absolute: `5`, `$5`, or `5.00`
 - relative: `+2` or `-2`
 - clear: `off`
 
-The dialog submits to the Host route `/api/balance-limit`; there are no
-limit slash commands in the command menu. The route/write logic is Host-owned,
-so limits still survive reloads and restarts.
+Submitting sends the value to the Host route `/api/balance-limit`; there are no
+limit slash commands in the command catalog. The route/write logic is
+Host-owned, so limits still survive reloads and restarts.
 
 Both caps are stored in separate `balance` storage domains keyed by Session
 id; if a domain is unavailable that cap falls back to memory.

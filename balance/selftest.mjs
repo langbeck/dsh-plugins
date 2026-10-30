@@ -535,12 +535,12 @@ const plugin = entry.factory((specifier) => {
 })
 equal(typeof plugin.apply, 'function', 'bundle exports apply')
 check(Array.isArray(plugin.inject), 'bundle exports inject')
-for (const service of ['slots', 'locale', 'remote', 'remote.account', 'configForms', 'commandUi']) {
+for (const service of ['slots', 'locale', 'remote', 'remote.account', 'configForms', 'inputTriggers']) {
   check(plugin.inject.indexOf(service) !== -1, 'inject includes ' + service)
 }
 
 const registrations = []
-const contributions = []
+const inputSources = []
 const executedCommands = []
 const disposers = []
 const form = {
@@ -566,9 +566,9 @@ const fakeClientContext = {
     getSnapshot: () => ({ active: 'en' }),
   },
   configForms: { get: () => form },
-  commandUi: {
-    register(contribution) {
-      contributions.push(contribution)
+  inputTriggers: {
+    registerSource(source) {
+      inputSources.push(source)
       return () => {}
     },
   },
@@ -602,14 +602,17 @@ check(injectedStyles.length === 1, 'apply injects one layout stylesheet')
 check(injectedStyles[0].textContent.indexOf('flex-wrap: wrap') !== -1, 'layout stylesheet makes the footer actions wrap')
 check(injectedStyles[0].textContent.indexOf('data-slot="sidebar.footer.action"') !== -1, 'layout rule is scoped to the footer slot')
 
-const budgetCommand = contributions.find((contribution) => contribution.name === 'budget')
-check(budgetCommand !== undefined, 'Budget is a Client-owned command')
-check(budgetCommand.label() === 'command.budget' && typeof budgetCommand.icon === 'function', 'Budget has a label and icon')
-budgetCommand.ui.run({ sessionId: 's1' })
-const budgetRegistration = registrations.find((registration) => registration.options.name === 'shell.overlay' && registration.options.id === 'balance.budget')
-check(budgetRegistration !== undefined, 'Budget dialog is registered in the shell overlay')
-const budgetInjected = budgetRegistration.options.inject()
-check(budgetInjected.uiStore.getSnapshot().open === true && budgetInjected.uiStore.getSnapshot().sessionId === 's1', 'Budget action opens the dialog for the session')
+const budgetSource = inputSources.find((source) => source.name === 'budget')
+check(budgetSource !== undefined, 'Budget input source is registered')
+check(budgetSource.showGroupTitle === false, 'Budget source hides the generic group title')
+const budgetCandidates = await budgetSource.candidates({ sessionId: 's1' }, { query: '' })
+check(budgetCandidates.length === 2, 'Budget source lists session and turn items')
+check(budgetCandidates.every((candidate) => candidate.section === 'budget.section'), 'Budget items share a Budget section')
+check(budgetCandidates.every((candidate) => typeof candidate.icon === 'function'), 'Budget items carry a wallet icon')
+const picked = budgetSource.onPick({ candidate: budgetCandidates[0], session: { sessionId: 's1' }, position: 'leading', via: 'menu', action: 'pick', span: { start: 0, end: 0 } })
+check(picked.claim !== undefined && picked.claim.token === '/session-budget ', 'picking a Budget item claims a fixed command token')
+const typedClaim = budgetSource.matchEnter({ sessionId: 's1' }, '/turn-budget +2')
+check(typedClaim.claim !== undefined && typedClaim.claim.token === '/turn-budget ', 'typing a Budget command claims it for an amount')
 
 const pillRegistration = registrations.find((registration) => registration.options.name === 'sidebar.footer.action')
 const rowConfigRegistration = registrations.find((registration) => registration.options.name === 'plugins.row.config')

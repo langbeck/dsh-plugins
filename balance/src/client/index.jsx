@@ -1,7 +1,6 @@
 import BalanceRow from './components/BalanceRow.jsx'
-import BudgetDialog from './components/BudgetDialog.jsx'
 import SettingsForm from './components/SettingsForm.jsx'
-import { CONFIG_KEY, INJECT, LAYOUT_CSS, NS, ROW_ID } from './constants.js'
+import { CONFIG_KEY, INJECT, LAYOUT_CSS, LIMIT_ROUTE, NS, ROW_ID } from './constants.js'
 import { normalizeConfig } from './lib/config.js'
 import { createCostTracker } from './lib/cost.js'
 import { sumWallets } from './lib/money.js'
@@ -38,37 +37,81 @@ function apply(ctx) {
   const configStore = createSnapshotStore(normalizeConfig(readConfigValue(configForm)))
   const balanceStore = createSnapshotStore({ status: 'loading', wallets: [], error: undefined, updatedAt: undefined })
   const costTracker = createCostTracker()
-  const budgetUiStore = createSnapshotStore({ open: false, sessionId: undefined })
-
-  ctx.effect(() => {
-    const commandUi = ctx.commandUi
-    if (commandUi === undefined || typeof commandUi.register !== 'function') return undefined
-    const t = ctx.locale.bind(NS)
-    return commandUi.register({
-      name: 'budget',
-      label: () => t('command.budget'),
-      description: () => t('command.budgetDescription'),
+  const t = ctx.locale.bind(NS)
+  const claimFor = (scope, sessionId) => {
+    const name = scope === 'turn' ? 'turn-budget' : 'session-budget'
+    const token = '/' + name + ' '
+    return {
+      name,
+      token,
+      hint: t('budget.claimHint'),
+      submit: async (args) => {
+        let result
+        try {
+          const response = await fetch(LIMIT_ROUTE, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ sessionId, scope, input: typeof args === 'string' ? args.trim() : '' }),
+          })
+          result = await response.json()
+        } catch (error) {
+          return { kind: 'error', text: t('budget.failed') }
+        }
+        if (result === null || result === undefined || result.ok !== true) {
+          return { kind: 'error', text: result?.error?.message ?? t('budget.failed') }
+        }
+        costTracker.refresh(sessionId)
+        return { kind: 'success', text: result.value.text ?? t('budget.saved') }
+      },
+    }
+  }
+  const sourceItems = () => [
+    {
+      name: 'session-budget',
+      label: t('budget.sessionItem'),
+      description: t('budget.sessionDescription'),
       icon: WalletIcon,
-      available: () => true,
-      ui: {
-        kind: 'action',
-        run: (session) => {
-          budgetUiStore.set({ open: true, sessionId: session.sessionId })
-        },
+      section: t('budget.section'),
+      value: 'session',
+    },
+    {
+      name: 'turn-budget',
+      label: t('budget.turnItem'),
+      description: t('budget.turnDescription'),
+      icon: WalletIcon,
+      section: t('budget.section'),
+      value: 'turn',
+    },
+  ]
+  ctx.effect(() => {
+    const inputTriggers = ctx.inputTriggers
+    if (inputTriggers === undefined || typeof inputTriggers.registerSource !== 'function') return undefined
+    const scopeOf = (name) => name === 'turn-budget' ? 'turn' : 'session'
+    return inputTriggers.registerSource({
+      trigger: '/',
+      name: 'budget',
+      order: 1,
+      showGroupTitle: false,
+      candidates: (_session, { query }) => {
+        const needle = query.trim().toLowerCase()
+        if (needle === '') return sourceItems()
+        return sourceItems().filter((item) => item.label.toLowerCase().includes(needle) || item.name.includes(needle))
+      },
+      onPick: (pick) => ({ claim: claimFor(scopeOf(pick.candidate.name), pick.session.sessionId) }),
+      matchEnter: (session, line) => {
+        const match = /^\/(session-budget|turn-budget)(?:\s|$)/.exec(line.trim())
+        if (match === null) return undefined
+        return { claim: claimFor(scopeOf(match[1]), session.sessionId) }
+      },
+      matchClaim: (session, token) => {
+        const match = /^\/(session-budget|turn-budget)$/.exec(token.trim())
+        if (match === null) return undefined
+        return claimFor(scopeOf(match[1]), session.sessionId)
       },
     })
-  }, 'balance: budget command')
+  }, 'balance: budget input source')
 
-  ctx.slots.inject('shell.overlay', () => ctx.slots.register({
-    name: 'shell.overlay',
-    id: 'balance.budget',
-    locale: NS,
-    inject: () => ({
-      uiStore: budgetUiStore,
-      costStore: costTracker.store,
-      refreshCost: costTracker.refresh,
-    }),
-  }, BudgetDialog))
 
   let timer = null
   let refreshing = false
