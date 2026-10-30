@@ -25,7 +25,7 @@ import { describeError } from './host/util.js'
 
 export const name = 'balance'
 
-export const inject = ['connection', 'commands']
+export const inject = ['connection']
 
 export const Config = Schema.object({
   refreshSeconds: Schema.number().min(0).max(3600).step(1).default(60),
@@ -35,6 +35,7 @@ export const Config = Schema.object({
 })
 
 const COST_ROUTE = '/api/balance-session-cost'
+const LIMIT_ROUTE = '/api/balance-limit'
 const EVENTS_ROUTE = '/api/balance-events'
 const MAX_COST_LIMIT_USD = 1_000_000
 
@@ -351,26 +352,6 @@ export function apply(ctx, config) {
     return () => pricing.dispose()
   }, 'balance: pricing')
 
-  ctx.effect(() => {
-    const disposers = []
-    const register = (name, description, handler) => {
-      disposers.push(ctx.commands.register({
-        name,
-        description,
-        input: { hint: '<usd|+usd|-usd|off>' },
-        handler,
-      }))
-    }
-    const sessionHandler = async ({ agent, rawInput }) => runLimitCommand('session', agent, rawInput)
-    const turnHandler = async ({ agent, rawInput }) => runLimitCommand('turn', agent, rawInput)
-    register('session-limit', 'Session limit — set, adjust, or clear the current Session cost cap.', sessionHandler)
-    register('turn-limit', 'Turn limit — set, adjust, or clear the current turn cost budget.', turnHandler)
-    return () => {
-      for (const dispose of disposers.reverse()) {
-        try { dispose() } catch (error) {}
-      }
-    }
-  }, 'balance: limit commands')
 
   ctx.effect(() => ctx.on('agent/pre-step', async (payload, next) => {
     const sessionId = payload.agent.session.id
@@ -588,6 +569,33 @@ export function apply(ctx, config) {
       Promise.resolve(dispose()).catch(() => {})
     }
   }, 'balance: cost events')
+
+  ctx.effect(() => {
+    const dispose = ctx.connection.fetch.register({
+      path: LIMIT_ROUTE,
+      methods: ['POST'],
+      requestBody: 'buffered',
+      fetch: async (request) => {
+        try {
+          const payload = await request.json()
+          const sessionId = typeof payload.sessionId === 'string' ? payload.sessionId : ''
+          if (sessionId === '') return Response.json({ ok: false, error: { code: 'limit-command-failed', message: 'sessionId is required', details: {} } })
+          const scope = payload.scope === 'turn' ? 'turn' : 'session'
+          const input = typeof payload.input === 'string' ? payload.input : ''
+          const result = await runLimitCommand(scope, { id: sessionId }, input)
+          if (result.kind === 'error') {
+            return Response.json({ ok: false, error: { code: 'limit-command-failed', message: result.text, details: {} } })
+          }
+          return Response.json({ ok: true, value: { ...result, sessionId, scope } })
+        } catch (error) {
+          return Response.json({ ok: false, error: { code: 'limit-command-failed', message: describeError(error), details: {} } })
+        }
+      },
+    })
+    return () => {
+      Promise.resolve(dispose()).catch(() => {})
+    }
+  }, 'balance: limit route')
 
   ctx.effect(() => {
     const dispose = ctx.connection.fetch.register({

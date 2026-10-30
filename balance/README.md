@@ -33,20 +33,20 @@ state of each limit.
 
 ### Session and turn limits
 
-`/session-limit <usd>` sets the current Session cap. `/session-limit +2`
-raises the existing cap by $2, `/session-limit -2` lowers it, and
-`/session-limit off` clears it. `/session-limit` reports the current cap.
+The Web client registers a Client-owned **Budget** command with a wallet icon.
+It opens a dialog where you choose **Session** or **Turn**, see the current
+limit, and enter an amount:
 
-`/turn-limit <usd>` sets a budget for the current turn; `/turn-limit +2`,
-`/turn-limit -2`, `/turn-limit off`, and `/turn-limit` work the same way.
-In the Web client, a bare invocation of either command opens a popup with
-**Show current**, **Clear**, relative **+$0.50 / +$1 / +$5 / +$10**, and
-absolute **$1 / $5 / $10 / $20** choices. Typed arguments continue to execute
-directly. The popup is a Client decoration: the Host command keeps its name
-and lifecycle, and the command row still has no custom title or icon.
-Both caps are stored in separate `balance` storage
-domains keyed by Session id and survive plugin reloads and DSH restarts; if a
-domain is unavailable that cap falls back to memory.
+- absolute: `5`, `$5`, or `5.00`
+- relative: `+2` or `-2`
+- clear: `off`
+
+The dialog submits to the Host route `/api/balance-limit`; there are no
+limit slash commands in the command menu. The route/write logic is Host-owned,
+so limits still survive reloads and restarts.
+
+Both caps are stored in separate `balance` storage domains keyed by Session
+id; if a domain is unavailable that cap falls back to memory.
 
 The Host `agent/pre-step` guard checks the turn budget first, then the Session
 cap. It asks **Allow step** / **Increase turn limit** / **Cancel** for the turn

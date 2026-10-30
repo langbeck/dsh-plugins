@@ -48,7 +48,7 @@ var NS = "balance";
 var PACKAGE = "dsh-plugin-balance";
 var ROW_ID = "balance";
 var CONFIG_KEY = `${PACKAGE}#${ROW_ID}`;
-var INJECT = ["slots", "locale", "remote", "remote.account", "remote.commands", "configForms", "commandUi"];
+var INJECT = ["slots", "locale", "remote", "remote.account", "configForms", "commandUi"];
 var DEFAULT_CONFIG = Object.freeze({
   refreshSeconds: 60,
   showZeroBalances: true,
@@ -59,6 +59,7 @@ var MAX_REFRESH_SECONDS = 3600;
 var CURRENCY_ORDER = ["USD", "CNY"];
 var CURRENCY_SYMBOLS = { USD: "$", CNY: "\xA5" };
 var COST_ROUTE = "/api/balance-session-cost";
+var LIMIT_ROUTE = "/api/balance-limit";
 var EVENTS_ROUTE = "/api/balance-events";
 var COST_REFRESH_MS = 6e4;
 var COST_CHANGED_EVENT = "dsh-plugin-balance:cost-changed";
@@ -511,8 +512,167 @@ function BalanceRow(props) {
   ] });
 }
 
-// src/client/components/SettingsForm.jsx
+// src/client/components/BudgetDialog.jsx
 var import_react3 = require("react");
+var import_jsx_runtime2 = require("react/jsx-runtime");
+var backdropStyle = {
+  position: "fixed",
+  inset: 0,
+  zIndex: 1200,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "20px",
+  background: "rgba(0, 0, 0, 0.32)",
+  boxSizing: "border-box"
+};
+var panelStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  width: "min(420px, 100%)",
+  padding: "16px",
+  border: "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "var(--dsw-radius-lg, 12px)",
+  background: "var(--dsw-alias-bg-layer-1)",
+  color: "var(--dsw-alias-label-primary)",
+  boxShadow: "0 18px 60px rgba(0, 0, 0, 0.32)",
+  boxSizing: "border-box"
+};
+var headerStyle = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" };
+var titleStyle = { margin: 0, fontSize: "15px", lineHeight: "22px", fontWeight: 600 };
+var rowStyle2 = { display: "flex", flexDirection: "column", gap: "6px" };
+var labelStyle2 = { color: "var(--dsw-alias-label-tertiary)", fontSize: "11px", fontWeight: 600 };
+var scopeStyle = { display: "flex", gap: "6px" };
+var scopeButtonStyle = (active) => ({
+  height: "30px",
+  padding: "0 10px",
+  border: "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "var(--dsw-radius-md, 8px)",
+  background: active ? "var(--dsw-alias-bg-layer-3)" : "transparent",
+  color: active ? "var(--dsw-alias-label-primary)" : "var(--dsw-alias-label-tertiary)",
+  font: "inherit",
+  fontSize: "12px",
+  fontWeight: active ? 600 : 500,
+  cursor: "pointer"
+});
+var inputStyle2 = {
+  boxSizing: "border-box",
+  width: "100%",
+  height: "32px",
+  padding: "0 10px",
+  border: "0.5px solid var(--dsw-alias-border-l4)",
+  borderRadius: "var(--dsw-radius-md, 8px)",
+  background: "var(--dsw-alias-bg-layer-3)",
+  color: "var(--dsw-alias-label-primary)",
+  font: "inherit",
+  fontSize: "13px"
+};
+var hintStyle2 = { color: "var(--dsw-alias-label-tertiary)", fontSize: "11px", lineHeight: "16px" };
+var footerStyle2 = { display: "flex", justifyContent: "flex-end", gap: "8px", flexWrap: "wrap" };
+var buttonStyle = (primary) => ({
+  height: "30px",
+  padding: "0 12px",
+  border: primary ? "none" : "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "var(--dsw-radius-md, 8px)",
+  background: primary ? "var(--dsw-alias-button-primary-fill, #4d6bfe)" : "transparent",
+  color: primary ? "var(--dsw-alias-label-primary-foreground, #fff)" : "var(--dsw-alias-label-primary)",
+  font: "inherit",
+  fontSize: "12px",
+  cursor: "pointer"
+});
+var messageStyle = { margin: 0, fontSize: "11px", lineHeight: "16px" };
+function BudgetDialog({ uiStore, costStore, refreshCost, t }) {
+  const ui = useSnapshot(uiStore);
+  const cost = useSnapshot(costStore);
+  const [scope, setScope] = (0, import_react3.useState)("session");
+  const [amount, setAmount] = (0, import_react3.useState)("");
+  const [busy, setBusy] = (0, import_react3.useState)(false);
+  const [message, setMessage] = (0, import_react3.useState)(void 0);
+  (0, import_react3.useEffect)(() => {
+    if (!ui.open) return;
+    setScope("session");
+    setAmount("");
+    setBusy(false);
+    setMessage(void 0);
+  }, [ui.open]);
+  if (!ui.open || typeof ui.sessionId !== "string") return null;
+  const current = cost.status === "ready" && cost.sessionId === ui.sessionId ? scope === "turn" ? cost.turnLimitUsd : cost.limitUsd : null;
+  async function send(value) {
+    if (busy) return;
+    setBusy(true);
+    setMessage(void 0);
+    try {
+      const response = await fetch(LIMIT_ROUTE, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId: ui.sessionId, scope, input: value })
+      });
+      const result = await response.json();
+      if (result.ok !== true) {
+        setMessage({ error: true, text: result.error?.message ?? t("budget.failed") });
+        return;
+      }
+      setAmount("");
+      setMessage({ error: false, text: result.value.text ?? t("budget.saved") });
+      refreshCost(ui.sessionId);
+    } catch (error) {
+      setMessage({ error: true, text: t("budget.failed") });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: backdropStyle, onMouseDown: (event) => {
+    if (event.target === event.currentTarget) uiStore.set({ open: false });
+  }, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: panelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("budget.title"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: headerStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { style: titleStyle, children: t("budget.title") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: buttonStyle(false), onClick: () => uiStore.set({ open: false }), children: t("budget.close") })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: rowStyle2, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle2, children: t("budget.scope") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: scopeStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: scopeButtonStyle(scope === "session"), onClick: () => {
+          setScope("session");
+          setMessage(void 0);
+        }, children: t("budget.session") }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: scopeButtonStyle(scope === "turn"), onClick: () => {
+          setScope("turn");
+          setMessage(void 0);
+        }, children: t("budget.turn") })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle2, children: current === null ? t("budget.notSet") : t("budget.current", { amount: "$" + Number(current).toFixed(2) }) })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: rowStyle2, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle2, children: t("budget.amount") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+        "input",
+        {
+          type: "text",
+          value: amount,
+          disabled: busy,
+          placeholder: "+2, -2, 5, off",
+          onChange: (event) => setAmount(event.target.value),
+          onKeyDown: (event) => {
+            if (event.key === "Enter") void send(amount);
+          },
+          style: inputStyle2,
+          "aria-label": t("budget.amount")
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle2, children: t("budget.amountHint") })
+    ] }),
+    message === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: { ...messageStyle, color: message.error ? "var(--dsw-alias-state-error-primary)" : "var(--dsw-alias-state-success-primary)" }, children: message.text }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: footerStyle2, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: buttonStyle(false), disabled: busy, onClick: () => void send("off"), children: t("budget.clear") }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", style: buttonStyle(true), disabled: busy || amount.trim() === "", onClick: () => void send(amount), children: t("budget.apply") })
+    ] })
+  ] }) });
+}
+
+// src/client/components/SettingsForm.jsx
+var import_react4 = require("react");
 
 // src/client/lib/config.js
 function normalizeConfig(value) {
@@ -532,21 +692,21 @@ function normalizeConfig(value) {
 }
 
 // src/client/components/SettingsForm.jsx
-var import_jsx_runtime2 = require("react/jsx-runtime");
+var import_jsx_runtime3 = require("react/jsx-runtime");
 function SettingsForm(props) {
   const { view, t, configForm } = props;
   const snapshot = useSnapshot(configForm);
   const resolved = normalizeConfig(snapshot.value);
-  const [draft, setDraft] = (0, import_react3.useState)(resolved);
-  const [notice, setNotice] = (0, import_react3.useState)("idle");
+  const [draft, setDraft] = (0, import_react4.useState)(resolved);
+  const [notice, setNotice] = (0, import_react4.useState)("idle");
   const revision = snapshot.revision;
-  (0, import_react3.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     setDraft(normalizeConfig(configForm.getSnapshot().value));
     setNotice("idle");
   }, [revision]);
-  if (view === "summary") return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("config.summary") });
-  if (snapshot.status === "loading") return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.loading") });
-  if (snapshot.status === "unavailable") return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.unavailable") });
+  if (view === "summary") return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: t("config.summary") });
+  if (snapshot.status === "loading") return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: hintStyle, children: t("config.loading") });
+  if (snapshot.status === "unavailable") return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: hintStyle, children: t("config.unavailable") });
   const writable = snapshot.writable === true;
   const saving = notice === "saving";
   const disabled = !writable || saving;
@@ -573,10 +733,10 @@ function SettingsForm(props) {
     ]);
   }
   const noticeText = notice === "saved" ? t("config.saved") : notice === "error" ? t("config.saveError") : notice === "saving" ? t("config.saving") : "";
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: pageStyle, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("config.refresh") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: pageStyle, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { style: fieldStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: labelStyle, children: t("config.refresh") }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
         "input",
         {
           type: "number",
@@ -594,11 +754,11 @@ function SettingsForm(props) {
           style: inputStyle(disabled)
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("config.refreshHint") })
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: hintStyle, children: t("config.refreshHint") })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("config.pricingRefresh") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { style: fieldStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: labelStyle, children: t("config.pricingRefresh") }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
         "input",
         {
           type: "number",
@@ -616,10 +776,10 @@ function SettingsForm(props) {
           style: inputStyle(disabled)
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("config.pricingRefreshHint") })
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: hintStyle, children: t("config.pricingRefreshHint") })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: checkboxStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { style: checkboxStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
         "input",
         {
           type: "checkbox",
@@ -628,10 +788,10 @@ function SettingsForm(props) {
           onChange: (event) => setDraft({ ...draft, showZeroBalances: event.target.checked })
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("config.showZeroBalances") })
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: labelStyle, children: t("config.showZeroBalances") })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: checkboxStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { style: checkboxStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
         "input",
         {
           type: "checkbox",
@@ -640,14 +800,14 @@ function SettingsForm(props) {
           onChange: (event) => setDraft({ ...draft, showCurrencyName: event.target.checked })
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("config.showCurrencyCodes") })
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: labelStyle, children: t("config.showCurrencyCodes") })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: footerStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: save, style: primaryButtonStyle(disabled), children: t("config.save") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: reset, style: secondaryButtonStyle(disabled), children: t("config.reset") }),
-      noticeText === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { role: notice === "error" ? "alert" : "status", style: notice === "error" ? errorStyle : hintStyle, children: noticeText })
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: footerStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", disabled, onClick: save, style: primaryButtonStyle(disabled), children: t("config.save") }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", disabled, onClick: reset, style: secondaryButtonStyle(disabled), children: t("config.reset") }),
+      noticeText === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { role: notice === "error" ? "alert" : "status", style: notice === "error" ? errorStyle : hintStyle, children: noticeText })
     ] }),
-    writable ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.readOnly") })
+    writable ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: hintStyle, children: t("config.readOnly") })
   ] });
 }
 
@@ -769,6 +929,21 @@ var EN = {
   "config.loading": "Loading settings\u2026",
   "config.unavailable": "Settings are not available in this deployment.",
   "config.readOnly": "This profile does not accept settings writes.",
+  "command.budget": "Budget",
+  "command.budgetDescription": "Set session and turn spending limits.",
+  "budget.title": "Budget",
+  "budget.scope": "Limit",
+  "budget.session": "Session",
+  "budget.turn": "Turn",
+  "budget.current": "Current: {amount}",
+  "budget.notSet": "No limit set",
+  "budget.amount": "Amount",
+  "budget.amountHint": "Use +2 or -2 to adjust, 5 to set, or off to clear.",
+  "budget.apply": "Apply",
+  "budget.clear": "Clear",
+  "budget.close": "Close",
+  "budget.saved": "Saved",
+  "budget.failed": "Could not update the limit.",
   "pill.aria": "DeepSeek account balance",
   "row.balance": "Balance",
   "row.session": "Session",
@@ -808,6 +983,21 @@ var ZH = {
   "config.loading": "\u6B63\u5728\u8BFB\u53D6\u8BBE\u7F6E\u2026",
   "config.unavailable": "\u6B64\u90E8\u7F72\u4E2D\u65E0\u6CD5\u4F7F\u7528\u8BBE\u7F6E\u3002",
   "config.readOnly": "\u6B64\u914D\u7F6E\u4E0D\u63A5\u53D7\u5199\u5165\u3002",
+  "command.budget": "\u9884\u7B97",
+  "command.budgetDescription": "\u8BBE\u7F6E\u4F1A\u8BDD\u548C\u5355\u8F6E\u652F\u51FA\u4E0A\u9650\u3002",
+  "budget.title": "\u9884\u7B97",
+  "budget.scope": "\u4E0A\u9650",
+  "budget.session": "\u4F1A\u8BDD",
+  "budget.turn": "\u5355\u8F6E",
+  "budget.current": "\u5F53\u524D\uFF1A{amount}",
+  "budget.notSet": "\u672A\u8BBE\u7F6E\u4E0A\u9650",
+  "budget.amount": "\u91D1\u989D",
+  "budget.amountHint": "\u4F7F\u7528 +2 \u6216 -2 \u8C03\u6574\uFF0C5 \u8BBE\u7F6E\uFF0Coff \u6E05\u9664\u3002",
+  "budget.apply": "\u5E94\u7528",
+  "budget.clear": "\u6E05\u9664",
+  "budget.close": "\u5173\u95ED",
+  "budget.saved": "\u5DF2\u4FDD\u5B58",
+  "budget.failed": "\u65E0\u6CD5\u66F4\u65B0\u4E0A\u9650\u3002",
   "pill.aria": "DeepSeek \u8D26\u6237\u4F59\u989D",
   "row.balance": "\u4F59\u989D",
   "row.session": "\u4F1A\u8BDD",
@@ -832,90 +1022,52 @@ var ZH = {
 };
 
 // src/client/index.jsx
+var import_jsx_runtime4 = require("react/jsx-runtime");
 function createClient() {
   return { apply, inject: INJECT };
 }
+function WalletIcon(props) {
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { ...props, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 16.5v-9Z" }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M4 8h16" }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M15 12h5v4h-5a2 2 0 0 1 0-4Z" })
+  ] });
+}
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), "balance: dictionaries");
-  ctx.effect(() => {
-    const commandUi = ctx.commandUi;
-    const remoteCommands = ctx.remote === void 0 ? void 0 : ctx.remote.commands;
-    if (commandUi === void 0 || typeof commandUi.decorate !== "function" || remoteCommands === void 0 || typeof remoteCommands.execute !== "function") {
-      return void 0;
-    }
-    const t = ctx.locale.bind(NS);
-    const optionsFor = (scope, session) => {
-      const snapshot = costTracker.store.getSnapshot();
-      const current = snapshot.sessionId === session.sessionId ? scope === "turn" ? snapshot.turnLimitUsd : snapshot.limitUsd : null;
-      const amount = (value) => "$" + Number(value).toFixed(2);
-      const group = (type) => ({ name: type, label: t("limit.group." + type) });
-      const result = [
-        {
-          id: "show",
-          label: t("limit.show"),
-          detail: typeof current === "number" ? t("limit.current", { amount: amount(current) }) : t("limit.notSet"),
-          group: group("current")
-        },
-        { id: "off", label: t("limit.clear"), group: group("current") }
-      ];
-      for (const value of [0.5, 1, 5, 10]) {
-        result.push({
-          id: "add:" + value,
-          label: t("limit.increase", { amount: amount(value) }),
-          group: group("relative")
-        });
-      }
-      for (const value of [1, 5, 10, 20]) {
-        result.push({
-          id: "set:" + value,
-          label: t("limit.set", { amount: amount(value) }),
-          group: group("absolute")
-        });
-      }
-      return result;
-    };
-    const decorate = (name, scope) => commandUi.decorate({
-      name,
-      available: () => true,
-      ui: {
-        kind: "popupSelect",
-        options: async (session) => optionsFor(scope, session),
-        onSelect: async (option, session) => {
-          const raw = option.id === "show" ? "" : option.id === "off" ? "off" : option.id.startsWith("add:") ? "+" + option.id.slice(4) : option.id.slice(4);
-          const line = "/" + name + (raw === "" ? "" : " " + raw);
-          const result = await remoteCommands.execute(session.sessionId, line, []);
-          if (result !== void 0 && result !== null && result.ok !== true) {
-            throw new Error(result.error?.message ?? "limit command failed");
-          }
-          if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
-            window.dispatchEvent(new CustomEvent(COST_CHANGED_EVENT, { detail: { sessionId: session.sessionId } }));
-          }
-        }
-      }
-    });
-    const disposers = [
-      decorate("session-limit", "session"),
-      decorate("turn-limit", "turn")
-    ];
-    return () => {
-      for (const dispose of disposers.reverse()) {
-        try {
-          dispose();
-        } catch (error) {
-        }
-      }
-    };
-  }, "balance: limit command decorations");
-  ctx.effect(() => ctx.on("command/executed", (sessionId, name) => {
-    if (name !== "limit" && name !== "session-limit" && name !== "turn-limit") return;
-    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
-      window.dispatchEvent(new CustomEvent(COST_CHANGED_EVENT, { detail: { sessionId } }));
-    }
-  }), "balance: limit command refresh");
   const configForm = ctx.configForms.get(ROW_ID);
   const configStore = createSnapshotStore(normalizeConfig(readConfigValue(configForm)));
   const balanceStore = createSnapshotStore({ status: "loading", wallets: [], error: void 0, updatedAt: void 0 });
   const costTracker = createCostTracker();
+  const budgetUiStore = createSnapshotStore({ open: false, sessionId: void 0 });
+  ctx.effect(() => {
+    const commandUi = ctx.commandUi;
+    if (commandUi === void 0 || typeof commandUi.register !== "function") return void 0;
+    const t = ctx.locale.bind(NS);
+    return commandUi.register({
+      name: "budget",
+      label: () => t("command.budget"),
+      description: () => t("command.budgetDescription"),
+      icon: WalletIcon,
+      available: () => true,
+      ui: {
+        kind: "action",
+        run: (session) => {
+          budgetUiStore.set({ open: true, sessionId: session.sessionId });
+        }
+      }
+    });
+  }, "balance: budget command");
+  ctx.slots.inject("shell.overlay", () => ctx.slots.register({
+    name: "shell.overlay",
+    id: "balance.budget",
+    locale: NS,
+    inject: () => ({
+      uiStore: budgetUiStore,
+      costStore: costTracker.store,
+      refreshCost: costTracker.refresh
+    })
+  }, BudgetDialog));
   let timer = null;
   let refreshing = false;
   let disposed = false;

@@ -298,10 +298,10 @@ globalThis.fetch = originalHostFetch
 
 const originalCapFetch = globalThis.fetch
 globalThis.fetch = async () => ({ ok: true, json: async () => ({ data: pricingBody.data }) })
-let commandDefinition
-const commandDefinitions = {}
 let preStepHandler
 let routeHandler
+let limitRouteHandler
+let commandRegistrations = 0
 let askAnswer = { answers: [{ id: 'cost-cap', selected: ['Cancel'] }] }
 let askAnswers = null
 let askCalls = 0
@@ -344,9 +344,8 @@ const fakeCapContext = {
     return undefined
   },
   commands: {
-    register(definition) {
-      commandDefinition = definition
-      commandDefinitions[definition.name] = definition
+    register() {
+      commandRegistrations += 1
       return () => {}
     },
   },
@@ -359,6 +358,7 @@ const fakeCapContext = {
       register(route) {
         routes[route.path] = route.fetch
         if (route.path === '/api/balance-session-cost') routeHandler = route.fetch
+        if (route.path === '/api/balance-limit') limitRouteHandler = route.fetch
         return () => {}
       },
     },
@@ -366,14 +366,16 @@ const fakeCapContext = {
 }
 await host.apply(fakeCapContext, { pricingRefreshSeconds: 3600 })
 check(provided.balanceCost !== undefined, 'Host provides the balanceCost service')
-const sessionLimitCommand = commandDefinitions['session-limit']
-const turnLimitCommand = commandDefinitions['turn-limit']
-check(typeof sessionLimitCommand === 'object', 'Host registers the session-limit command')
-check(typeof turnLimitCommand === 'object', 'Host registers the turn-limit command')
+check(typeof limitRouteHandler === 'function', 'Host registers the limit route')
+check(commandRegistrations === 0, 'Host does not register limit slash commands')
 check(typeof preStepHandler === 'function', 'Host registers the pre-step cost guard')
 const service = provided.balanceCost
-const commandResult = await sessionLimitCommand.handler({ agent: capAgent, rawInput: ' 0.01 ' })
-equal(commandResult.kind, 'success', 'session-limit command sets a cap')
+const limit = async (scope, input) => {
+  const response = await limitRouteHandler({ json: async () => ({ sessionId: 'root', scope, input }), signal: new AbortController().signal })
+  return response.json()
+}
+const commandResult = await limit('session', ' 0.01 ')
+equal(commandResult.ok, true, 'limit route sets a session cap')
 equal(await service.limitOf('root'), 0.01, 'the service exposes the cap')
 const capRoute = await routeHandler({ json: async () => ({ sessionId: 'root' }), signal: new AbortController().signal })
 const capValue = await capRoute.json()
@@ -388,12 +390,12 @@ const eventsReader = eventsResponse.body.getReader()
 const eventDecoder = new TextDecoder()
 const readyEvent = await eventsReader.read()
 check(eventDecoder.decode(readyEvent.value).includes('"type":"ready"'), 'the cost event stream opens')
-await sessionLimitCommand.handler({ agent: capAgent, rawInput: '0.02' }); await sessionLimitCommand.handler({ agent: capAgent, rawInput: '+2' })
-equal(await service.limitOf('root'), 2.02, 'relative /session-limit +2 increases the cap')
+await limit('session', '0.02'); await limit('session', '+2')
+equal(await service.limitOf('root'), 2.02, 'relative limit input increases the cap')
 const limitEvent = await eventsReader.read()
 check(eventDecoder.decode(limitEvent.value).includes('"type":"limit"'), 'setting a cap emits a limit event')
 check(eventDecoder.decode(limitEvent.value).includes('"limitUsd":0.02'), 'the limit event carries the cap')
-await sessionLimitCommand.handler({ agent: capAgent, rawInput: '0.02' })
+await limit('session', '0.02')
 eventsAbort.abort()
 await eventsReader.cancel().catch(() => {})
 const next = async () => ({ kind: 'enter', messages: [] })
@@ -414,18 +416,18 @@ askAnswers = [
 const increased = await preStepHandler({ ...payload, turn: 2, step: 1 }, next)
 equal(increased.kind, 'enter', 'increasing the cap allows the step')
 equal(await service.limitOf('root'), 1.02, 'the increased cap is saved through the service')
-const clearResult = await sessionLimitCommand.handler({ agent: capAgent, rawInput: 'off' })
-equal(clearResult.kind, 'success', 'session-limit command clears the cap')
+const clearResult = await limit('session', 'off')
+equal(clearResult.ok, true, 'limit route clears the cap')
 equal(await service.limitOf('root'), null, 'the service clears the cap')
-const turnSet = await turnLimitCommand.handler({ agent: capAgent, rawInput: '0.01' })
-equal(turnSet.kind, 'success', 'turn-limit command sets a budget')
+const turnSet = await limit('turn', '0.01')
+equal(turnSet.ok, true, 'limit route sets a turn budget')
 equal(await service.turnLimitOf('root'), 0.01, 'the service exposes the turn budget')
 const turnRoute = await routeHandler({ json: async () => ({ sessionId: 'root' }), signal: new AbortController().signal })
 const turnCapValue = await turnRoute.json()
 equal(turnCapValue.value.turnLimitUsd, 0.01, 'the cost route carries the turn budget')
-await turnLimitCommand.handler({ agent: capAgent, rawInput: '+2' })
-equal(await service.turnLimitOf('root'), 2.01, 'relative /turn-limit +2 increases the budget')
-await turnLimitCommand.handler({ agent: capAgent, rawInput: '0.01' })
+await limit('turn', '+2')
+equal(await service.turnLimitOf('root'), 2.01, 'relative turn input increases the budget')
+await limit('turn', '0.01')
 askAnswer = { answers: [{ id: 'turn-cost-cap', selected: ['Allow step'] }] }
 const turnBaseline = await preStepHandler({ ...payload, turn: 3, step: 1 }, next)
 equal(turnBaseline.kind, 'enter', 'the first step establishes the turn baseline')
@@ -433,8 +435,8 @@ const turnCapped = await preStepHandler({ ...payload, turn: 3, step: 2 }, next)
 equal(turnCapped.kind, 'enter', 'Allow step proceeds past the turn budget')
 const turnReprompted = await preStepHandler({ ...payload, turn: 3, step: 3 }, next)
 equal(turnReprompted.kind, 'enter', 'the next step asks for turn-budget approval again')
-const turnClear = await turnLimitCommand.handler({ agent: capAgent, rawInput: 'off' })
-equal(turnClear.kind, 'success', 'turn-limit command clears the budget')
+const turnClear = await limit('turn', 'off')
+equal(turnClear.ok, true, 'limit route clears the turn budget')
 equal(await service.turnLimitOf('root'), null, 'the service clears the turn budget')
 capDisposers.reverse().forEach((dispose) => dispose())
 globalThis.fetch = originalCapFetch
@@ -524,12 +526,12 @@ const plugin = entry.factory((specifier) => {
 })
 equal(typeof plugin.apply, 'function', 'bundle exports apply')
 check(Array.isArray(plugin.inject), 'bundle exports inject')
-for (const service of ['slots', 'locale', 'remote', 'remote.account', 'remote.commands', 'configForms', 'commandUi']) {
+for (const service of ['slots', 'locale', 'remote', 'remote.account', 'configForms', 'commandUi']) {
   check(plugin.inject.indexOf(service) !== -1, 'inject includes ' + service)
 }
 
 const registrations = []
-const decorations = []
+const contributions = []
 const executedCommands = []
 const disposers = []
 const form = {
@@ -556,8 +558,8 @@ const fakeClientContext = {
   },
   configForms: { get: () => form },
   commandUi: {
-    decorate(decoration) {
-      decorations.push(decoration)
+    register(contribution) {
+      contributions.push(contribution)
       return () => {}
     },
   },
@@ -591,16 +593,14 @@ check(injectedStyles.length === 1, 'apply injects one layout stylesheet')
 check(injectedStyles[0].textContent.indexOf('flex-wrap: wrap') !== -1, 'layout stylesheet makes the footer actions wrap')
 check(injectedStyles[0].textContent.indexOf('data-slot="sidebar.footer.action"') !== -1, 'layout rule is scoped to the footer slot')
 
-const sessionDecoration = decorations.find((decoration) => decoration.name === 'session-limit')
-const turnDecoration = decorations.find((decoration) => decoration.name === 'turn-limit')
-check(sessionDecoration !== undefined && turnDecoration !== undefined, 'limit commands are decorated with popup choices')
-const decorationOptions = await sessionDecoration.ui.options({ sessionId: 's1' }, new AbortController().signal)
-check(decorationOptions.some((option) => option.id === 'add:1'), 'decoration offers relative session amounts')
-check(decorationOptions.some((option) => option.id === 'set:5'), 'decoration offers absolute session amounts')
-await sessionDecoration.ui.onSelect({ id: 'add:2' }, { sessionId: 's1' })
-equal(executedCommands.at(-1)?.line, '/session-limit +2', 'decoration submits the session command with relative input')
-await turnDecoration.ui.onSelect({ id: 'set:5' }, { sessionId: 's1' })
-equal(executedCommands.at(-1)?.line, '/turn-limit 5', 'decoration submits the turn command with absolute input')
+const budgetCommand = contributions.find((contribution) => contribution.name === 'budget')
+check(budgetCommand !== undefined, 'Budget is a Client-owned command')
+check(budgetCommand.label() === 'command.budget' && typeof budgetCommand.icon === 'function', 'Budget has a label and icon')
+budgetCommand.ui.run({ sessionId: 's1' })
+const budgetRegistration = registrations.find((registration) => registration.options.name === 'shell.overlay' && registration.options.id === 'balance.budget')
+check(budgetRegistration !== undefined, 'Budget dialog is registered in the shell overlay')
+const budgetInjected = budgetRegistration.options.inject()
+check(budgetInjected.uiStore.getSnapshot().open === true && budgetInjected.uiStore.getSnapshot().sessionId === 's1', 'Budget action opens the dialog for the session')
 
 const pillRegistration = registrations.find((registration) => registration.options.name === 'sidebar.footer.action')
 const rowConfigRegistration = registrations.find((registration) => registration.options.name === 'plugins.row.config')

@@ -5,7 +5,7 @@ export const PACKAGE = 'dsh-plugin-balance'
 export const ROW_ID = 'balance'
 export const CONFIG_KEY = `${PACKAGE}#${ROW_ID}`
 
-export const INJECT = ['slots', 'locale', 'remote', 'remote.account', 'remote.commands', 'configForms', 'commandUi']
+export const INJECT = ['slots', 'locale', 'remote', 'remote.account', 'configForms', 'commandUi']
 
 export const DEFAULT_CONFIG = Object.freeze({
   refreshSeconds: 60,
@@ -19,6 +19,7 @@ export const CURRENCY_ORDER = ['USD', 'CNY']
 export const CURRENCY_SYMBOLS = { USD: '$', CNY: '¥' }
 
 export const COST_ROUTE = '/api/balance-session-cost'
+export const LIMIT_ROUTE = '/api/balance-limit'
 export const EVENTS_ROUTE = '/api/balance-events'
 export const COST_REFRESH_MS = 60_000
 export const COST_CHANGED_EVENT = 'dsh-plugin-balance:cost-changed'
