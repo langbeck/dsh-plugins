@@ -93,7 +93,7 @@ function apply(ctx) {
       name: 'budget',
       order: 1,
       showGroupTitle: false,
-      candidates: (_session, { query }) => {
+      candidates: async (_session, { query }) => {
         const needle = query.trim().toLowerCase()
         if (needle === '') return sourceItems()
         return sourceItems().filter((item) => item.label.toLowerCase().includes(needle) || item.name.includes(needle))
