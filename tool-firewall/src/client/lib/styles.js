@@ -554,8 +554,10 @@ export const inspectButtonStyle = {
 export const inspectPanelStyle = {
   display: 'flex',
   flexDirection: 'column',
-  width: 'min(720px, 100%)',
+  width: 'min(760px, 100%)',
   maxWidth: 'calc(100vw - 40px)',
+  height: 'min(560px, 80vh)',
+  minHeight: '360px',
   maxHeight: '80vh',
   border: '0.5px solid var(--dsw-alias-border-l3)',
   borderRadius: 'var(--dsw-radius-lg, 12px)',
@@ -618,10 +620,52 @@ export const inspectMetaValueStyle = {
 }
 
 export const inspectContentHeaderStyle = {
-  padding: '8px 16px 0',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '8px',
+  padding: '8px 12px 4px 16px',
   color: 'var(--dsw-alias-label-tertiary)',
   fontSize: '11px',
   fontWeight: 600,
+}
+
+export const inspectUrlValueStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  minWidth: 0,
+}
+
+export const inspectUrlTextStyle = {
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+
+export const copyButtonStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '4px',
+  flex: 'none',
+  padding: '2px 8px',
+  border: '0.5px solid var(--dsw-alias-border-l3)',
+  borderRadius: 'var(--dsw-radius-sm, 6px)',
+  background: 'var(--dsw-alias-bg-layer-1)',
+  color: 'var(--dsw-alias-label-primary)',
+  font: 'inherit',
+  fontSize: '11px',
+  lineHeight: '16px',
+  cursor: 'pointer',
+}
+
+export const copyIconButtonStyle = {
+  ...copyButtonStyle,
+  width: '26px',
+  height: '24px',
+  padding: 0,
 }
 
 export const logValueStyle = {

@@ -658,8 +658,10 @@ var inspectButtonStyle = {
 var inspectPanelStyle = {
   display: "flex",
   flexDirection: "column",
-  width: "min(720px, 100%)",
+  width: "min(760px, 100%)",
   maxWidth: "calc(100vw - 40px)",
+  height: "min(560px, 80vh)",
+  minHeight: "360px",
   maxHeight: "80vh",
   border: "0.5px solid var(--dsw-alias-border-l3)",
   borderRadius: "var(--dsw-radius-lg, 12px)",
@@ -715,10 +717,48 @@ var inspectMetaValueStyle = {
   wordBreak: "break-all"
 };
 var inspectContentHeaderStyle = {
-  padding: "8px 16px 0",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "8px",
+  padding: "8px 12px 4px 16px",
   color: "var(--dsw-alias-label-tertiary)",
   fontSize: "11px",
   fontWeight: 600
+};
+var inspectUrlValueStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  minWidth: 0
+};
+var inspectUrlTextStyle = {
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap"
+};
+var copyButtonStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "4px",
+  flex: "none",
+  padding: "2px 8px",
+  border: "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "var(--dsw-radius-sm, 6px)",
+  background: "var(--dsw-alias-bg-layer-1)",
+  color: "var(--dsw-alias-label-primary)",
+  font: "inherit",
+  fontSize: "11px",
+  lineHeight: "16px",
+  cursor: "pointer"
+};
+var copyIconButtonStyle = {
+  ...copyButtonStyle,
+  width: "26px",
+  height: "24px",
+  padding: 0
 };
 var logValueStyle = {
   color: "var(--dsw-alias-label-primary)",
@@ -1226,6 +1266,65 @@ function writeStoredSize(size) {
   } catch (error) {
   }
 }
+function middleTruncate(value, limit = 88) {
+  const text = String(value);
+  if (text.length <= limit) return text;
+  const head = Math.ceil((limit - 1) * 0.62);
+  const tail = limit - 1 - head;
+  return text.slice(0, head) + "\u2026" + text.slice(-tail);
+}
+async function copyText(value) {
+  try {
+    if (navigator.clipboard !== void 0 && typeof navigator.clipboard.writeText === "function") {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch (error) {
+  }
+  try {
+    const area = document.createElement("textarea");
+    area.value = value;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    const copied = document.execCommand("copy");
+    document.body.removeChild(area);
+    return copied;
+  } catch (error) {
+    return false;
+  }
+}
+function CopyGlyph() {
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("rect", { x: "8", y: "8", width: "12", height: "12", rx: "2" }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" })
+  ] });
+}
+function CopyButton({ value, t, iconOnly = false }) {
+  const [status, setStatus] = (0, import_react3.useState)("idle");
+  const timerRef = (0, import_react3.useRef)(void 0);
+  (0, import_react3.useEffect)(() => () => clearTimeout(timerRef.current), []);
+  const label = status === "copied" ? t("logs.copied") : status === "failed" ? t("logs.copyFailed") : t("logs.copy");
+  async function copy() {
+    const copied = await copyText(value);
+    setStatus(copied ? "copied" : "failed");
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setStatus("idle"), 1600);
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    "button",
+    {
+      type: "button",
+      style: iconOnly ? copyIconButtonStyle : copyButtonStyle,
+      "aria-label": label,
+      title: label,
+      "aria-live": "polite",
+      onClick: copy,
+      children: iconOnly ? status === "copied" ? "\u2713" : status === "failed" ? "!" : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(CopyGlyph, {}) : label
+    }
+  );
+}
 function FirewallSettingsDialog(props) {
   const { uiStore, close, t, configForm } = props;
   const ui = useSnapshot(uiStore);
@@ -1409,7 +1508,10 @@ function FirewallSettingsDialog(props) {
           /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: inspectMetaStyle, children: [
             typeof inspectLog.outputUrl === "string" && inspectLog.outputUrl !== "" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
               /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.inspectUrl") }),
-              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaValueStyle, children: inspectLog.outputUrl })
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { style: inspectUrlValueStyle, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectUrlTextStyle, title: inspectLog.outputUrl, children: middleTruncate(inspectLog.outputUrl) }),
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(CopyButton, { value: inspectLog.outputUrl, t })
+              ] })
             ] }) : null,
             typeof inspectLog.outputStatus === "number" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
               /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.inspectStatus") }),
@@ -1422,7 +1524,10 @@ function FirewallSettingsDialog(props) {
               /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaValueStyle, children: t("logs.yes") })
             ] }) : null
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: inspectContentHeaderStyle, children: t("logs.inspectContent") }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: inspectContentHeaderStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: t("logs.inspectContent") }),
+            typeof inspectLog.outputContent === "string" && inspectLog.outputContent !== "" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(CopyButton, { value: inspectLog.outputContent, t, iconOnly: true }) : null
+          ] }),
           /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("pre", { style: inspectPreStyle, children: typeof inspectLog.outputContent === "string" ? inspectLog.outputContent : "" })
         ] })
       }
@@ -1549,6 +1654,9 @@ var EN = {
   "logs.quarantined": "Quarantined",
   "logs.outputAllowed": "Output allowed",
   "logs.inspect": "View content",
+  "logs.copy": "Copy",
+  "logs.copied": "Copied",
+  "logs.copyFailed": "Copy failed",
   "logs.inspectUrl": "URL",
   "logs.inspectStatus": "Status",
   "logs.inspectContent": "Content",
@@ -1694,6 +1802,9 @@ var ZH = {
   "logs.quarantined": "\u5DF2\u9694\u79BB",
   "logs.outputAllowed": "\u8F93\u51FA\u5DF2\u653E\u884C",
   "logs.inspect": "\u67E5\u770B\u5185\u5BB9",
+  "logs.copy": "\u590D\u5236",
+  "logs.copied": "\u5DF2\u590D\u5236",
+  "logs.copyFailed": "\u590D\u5236\u5931\u8D25",
   "logs.inspectUrl": "URL",
   "logs.inspectStatus": "\u72B6\u6001",
   "logs.inspectContent": "\u5185\u5BB9",
