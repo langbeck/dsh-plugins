@@ -363,11 +363,8 @@ export function apply(ctx, config) {
     }
     const sessionHandler = async ({ agent, rawInput }) => runLimitCommand('session', agent, rawInput)
     const turnHandler = async ({ agent, rawInput }) => runLimitCommand('turn', agent, rawInput)
-    register('session-limit', 'Set, adjust, or clear the current Session cost cap.', sessionHandler)
-    register('sessionlimit', 'Alias for /session-limit.', sessionHandler)
-    register('limit', 'Alias for /session-limit.', sessionHandler)
-    register('turn-limit', 'Set, adjust, or clear the current turn cost budget.', turnHandler)
-    register('turnlimit', 'Alias for /turn-limit.', turnHandler)
+    register('session-limit', 'Session limit — set, adjust, or clear the current Session cost cap.', sessionHandler)
+    register('turn-limit', 'Turn limit — set, adjust, or clear the current turn cost budget.', turnHandler)
     return () => {
       for (const dispose of disposers.reverse()) {
         try { dispose() } catch (error) {}

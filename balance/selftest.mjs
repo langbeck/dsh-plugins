@@ -370,8 +370,6 @@ const sessionLimitCommand = commandDefinitions['session-limit']
 const turnLimitCommand = commandDefinitions['turn-limit']
 check(typeof sessionLimitCommand === 'object', 'Host registers the session-limit command')
 check(typeof turnLimitCommand === 'object', 'Host registers the turn-limit command')
-check(typeof commandDefinitions['limit'] === 'object', 'Host keeps the /limit alias')
-check(typeof commandDefinitions['sessionlimit'] === 'object', 'Host registers the /sessionlimit alias')
 check(typeof preStepHandler === 'function', 'Host registers the pre-step cost guard')
 const service = provided.balanceCost
 const commandResult = await sessionLimitCommand.handler({ agent: capAgent, rawInput: ' 0.01 ' })

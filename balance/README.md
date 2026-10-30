@@ -36,11 +36,10 @@ state of each limit.
 `/session-limit <usd>` sets the current Session cap. `/session-limit +2`
 raises the existing cap by $2, `/session-limit -2` lowers it, and
 `/session-limit off` clears it. `/session-limit` reports the current cap.
-`/sessionlimit` and `/limit` are aliases.
 
 `/turn-limit <usd>` sets a budget for the current turn; `/turn-limit +2`,
 `/turn-limit -2`, `/turn-limit off`, and `/turn-limit` work the same way.
-`/turnlimit` is an alias. Both caps are stored in separate `balance` storage
+Both caps are stored in separate `balance` storage
 domains keyed by Session id and survive plugin reloads and DSH restarts; if a
 domain is unavailable that cap falls back to memory.
 
