@@ -732,3 +732,17 @@ export const detailReasonStyle = {
   gap: '4px',
   minWidth: 0,
 }
+
+export const detailReasonListStyle = {
+  margin: 0,
+  paddingLeft: '18px',
+  fontSize: '11px',
+  lineHeight: '17px',
+  color: 'var(--dsw-alias-label-primary)',
+}
+
+export const detailReasonEmptyStyle = {
+  fontSize: '11px',
+  lineHeight: '17px',
+  color: 'var(--dsw-alias-label-tertiary)',
+}

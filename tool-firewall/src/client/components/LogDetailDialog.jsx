@@ -3,6 +3,8 @@ import {
   detailBodyStyle,
   detailMetaGridStyle,
   detailMetaStyle,
+  detailReasonEmptyStyle,
+  detailReasonListStyle,
   detailReasonStyle,
   detailSplitStyle,
   detailPreStyle,
@@ -155,10 +157,12 @@ export default function LogDetailDialog({ log, t, close }) {
                 </div>
                 <div style={detailReasonStyle}>
                   <div style={detailSectionHeaderStyle}>
-                    <span>{t('logs.reason')}</span>
+                    <span>{t('logs.reasons')}</span>
                     {reasonText !== '—' ? <CopyButton value={reasonText} t={t} iconOnly /> : null}
                   </div>
-                  <pre style={detailPreStyle}>{reasonText}</pre>
+                  {reasonParts.length === 0
+                    ? <span style={detailReasonEmptyStyle}>—</span>
+                    : <ul style={detailReasonListStyle}>{reasonParts.map((reason, index) => <li key={String(index) + ':' + reason}>{reason}</li>)}</ul>}
                 </div>
               </div>
             </>

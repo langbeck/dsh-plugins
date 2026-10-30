@@ -744,6 +744,18 @@ var detailReasonStyle = {
   gap: "4px",
   minWidth: 0
 };
+var detailReasonListStyle = {
+  margin: 0,
+  paddingLeft: "18px",
+  fontSize: "11px",
+  lineHeight: "17px",
+  color: "var(--dsw-alias-label-primary)"
+};
+var detailReasonEmptyStyle = {
+  fontSize: "11px",
+  lineHeight: "17px",
+  color: "var(--dsw-alias-label-tertiary)"
+};
 
 // src/client/components/CopyButton.jsx
 var import_react2 = require("react");
@@ -924,10 +936,10 @@ function LogDetailDialog({ log, t, close }) {
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailReasonStyle, children: [
               /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.reason") }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.reasons") }),
                 reasonText !== "\u2014" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: reasonText, t, iconOnly: true }) : null
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: reasonText })
+              reasonParts.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: detailReasonEmptyStyle, children: "\u2014" }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("ul", { style: detailReasonListStyle, children: reasonParts.map((reason, index) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("li", { children: reason }, String(index) + ":" + reason)) })
             ] })
           ] })
         ] }) })
@@ -1652,6 +1664,7 @@ var EN = {
   "logs.description": "Description",
   "logs.result": "Result",
   "logs.reason": "Reason",
+  "logs.reasons": "Reason(s)",
   "logs.structural": "Structural",
   "logs.malice": "Malice",
   "logs.alignment": "Alignment",
@@ -1804,6 +1817,7 @@ var ZH = {
   "logs.description": "\u63CF\u8FF0",
   "logs.result": "\u7ED3\u679C",
   "logs.reason": "\u539F\u56E0",
+  "logs.reasons": "\u539F\u56E0",
   "logs.structural": "\u7ED3\u6784",
   "logs.malice": "\u6076\u610F",
   "logs.alignment": "\u5BF9\u9F50",
