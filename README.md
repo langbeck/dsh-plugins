@@ -11,7 +11,7 @@ client half, and tests in its own directory.
 | [Slot Explorer](slot-explorer/) | Pills every additive Web UI slot with its key and styles those pills live in a draggable **Slot Explorer** dialog. |
 | [Balance](balance/) | Shows the DeepSeek account balance as a full-width row in the sidebar footer, summed per currency, with a Configure page in the Plugin Manager. |
 | [Session Settings](session-settings/) | Header action opening a tabbed dialog for the Session's permission preset, approval allow-list, tools, and commands. |
-| [Tool Firewall](tool-firewall/) | Inspects every tool call before execution with local structural checks and optional semantic models, configurable in the Plugin Manager. |
+| [Tool Firewall](tool-firewall/) | Inspects tool calls before execution and selected tool results for prompt injection with local structural and semantic checks, configurable in the Plugin Manager. |
 
 ## Install
 

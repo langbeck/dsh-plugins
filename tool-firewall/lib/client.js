@@ -63,7 +63,18 @@ var DEFAULT_CONFIG = Object.freeze({
   semanticFailure: "open",
   cacheEntries: 256,
   cacheTtlMs: 6e5,
-  allowRemoteModels: true
+  allowRemoteModels: true,
+  outputGuardEnabled: true,
+  outputGuardModel: "Horizon-Labs/prompt-injection-guard-small",
+  outputGuardRevision: "1b7c40f4a5fdbf9622d20372ead279e65d4c7fc9",
+  outputGuardLabels: Object.freeze(["INJECTION"]),
+  outputGuardThreshold: 0.8,
+  outputGuardTools: Object.freeze(["web_search", "web_fetch", "skill"]),
+  outputGuardMode: "quarantine",
+  outputGuardMaxChars: 8e3,
+  outputGuardChunkChars: 1200,
+  outputGuardTimeoutMs: 2e3,
+  outputGuardFailureMode: "open"
 });
 var SEMANTIC_FAILURE_MODES = Object.freeze(["open", "closed"]);
 var MAX_COMMAND_CHARS = 65536;
@@ -71,6 +82,8 @@ var MAX_TEXT_TOKENS = 512;
 var MAX_TIMEOUT_MS = 5e3;
 var MAX_CACHE_ENTRIES = 4096;
 var MAX_CACHE_TTL_MS = 864e5;
+var OUTPUT_GUARD_MODES = Object.freeze(["quarantine", "block"]);
+var OUTPUT_GUARD_FAILURE_MODES = Object.freeze(["open", "closed"]);
 function unrefConfig(value) {
   const source = value !== null && typeof value === "object" ? value : {};
   const out = {};
@@ -124,7 +137,18 @@ function normalizeConfig(value) {
     semanticFailure: SEMANTIC_FAILURE_MODES.includes(source.semanticFailure) ? source.semanticFailure : DEFAULT_CONFIG.semanticFailure,
     cacheEntries: clampNumber(source.cacheEntries, DEFAULT_CONFIG.cacheEntries, 1, MAX_CACHE_ENTRIES, true),
     cacheTtlMs: clampNumber(source.cacheTtlMs, DEFAULT_CONFIG.cacheTtlMs, 1e3, MAX_CACHE_TTL_MS, true),
-    allowRemoteModels: source.allowRemoteModels !== false
+    allowRemoteModels: source.allowRemoteModels !== false,
+    outputGuardEnabled: source.outputGuardEnabled !== false,
+    outputGuardModel: normalizeString(source.outputGuardModel, DEFAULT_CONFIG.outputGuardModel),
+    outputGuardRevision: normalizeString(source.outputGuardRevision, DEFAULT_CONFIG.outputGuardRevision),
+    outputGuardLabels: normalizeStringList(source.outputGuardLabels, DEFAULT_CONFIG.outputGuardLabels),
+    outputGuardThreshold: clampNumber(source.outputGuardThreshold, DEFAULT_CONFIG.outputGuardThreshold, 0, 1),
+    outputGuardTools: normalizeStringList(source.outputGuardTools, DEFAULT_CONFIG.outputGuardTools),
+    outputGuardMode: OUTPUT_GUARD_MODES.includes(source.outputGuardMode) ? source.outputGuardMode : DEFAULT_CONFIG.outputGuardMode,
+    outputGuardMaxChars: clampNumber(source.outputGuardMaxChars, DEFAULT_CONFIG.outputGuardMaxChars, 256, 2e5, true),
+    outputGuardChunkChars: clampNumber(source.outputGuardChunkChars, DEFAULT_CONFIG.outputGuardChunkChars, 256, 16e3, true),
+    outputGuardTimeoutMs: clampNumber(source.outputGuardTimeoutMs, DEFAULT_CONFIG.outputGuardTimeoutMs, 10, 5e3, true),
+    outputGuardFailureMode: OUTPUT_GUARD_FAILURE_MODES.includes(source.outputGuardFailureMode) ? source.outputGuardFailureMode : DEFAULT_CONFIG.outputGuardFailureMode
   };
 }
 
@@ -248,6 +272,41 @@ var modelWarningStyle = {
   borderRadius: "var(--dsw-radius-md, 8px)",
   background: "var(--dsw-alias-bg-layer-2)"
 };
+var modelCardStyle = {
+  border: "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "var(--dsw-radius-md, 8px)",
+  background: "var(--dsw-alias-bg-layer-2)",
+  overflow: "hidden"
+};
+var modelCardSummaryStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "12px",
+  padding: "10px 12px",
+  cursor: "pointer",
+  fontSize: "13px",
+  lineHeight: "20px",
+  fontWeight: 600,
+  listStyle: "none"
+};
+var modelCardBodyStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  padding: "0 12px 12px",
+  borderTop: "0.5px solid var(--dsw-alias-border-l3)",
+  paddingTop: "12px"
+};
+function modelStatusStyle(tone) {
+  return {
+    flex: "none",
+    fontSize: "11px",
+    lineHeight: "16px",
+    fontWeight: 600,
+    color: tone === "error" ? "var(--dsw-alias-state-error-primary, #d93025)" : tone === "off" ? "#f59e0b" : tone === "muted" ? "var(--dsw-alias-label-tertiary)" : "var(--dsw-alias-label-primary)"
+  };
+}
 function inputStyle(disabled, width = "96px") {
   return {
     boxSizing: "border-box",
@@ -605,6 +664,9 @@ function LogsPanel(props) {
   if (models?.classifier?.state === "error") {
     warnings.push({ key: "classifier", model: t("stats.classifierModel"), error: String(models.classifier.error ?? "unknown error") });
   }
+  if (models?.outputGuard?.state === "error") {
+    warnings.push({ key: "outputGuard", model: t("stats.outputGuard"), error: String(models.outputGuard.error ?? "unknown error") });
+  }
   const warning = warnings.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: warnings.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: errorStyle, children: t("logs.modelError", { model: entry.model, error: entry.error }) }, entry.key)) });
   if (loading && logs.length === 0) {
     return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
@@ -625,15 +687,31 @@ function LogsPanel(props) {
       if (log.bypass) flags.push(t("logs.bypass"));
       if (log.cached) flags.push(t("logs.cached"));
       if (log.semanticUnavailable) flags.push(t("logs.unavailable"));
+      const isOutput = log.phase === "output";
+      const decisionLabel = isOutput ? log.action === "allow" ? "logs.outputAllowed" : log.action === "block" ? "logs.blocked" : "logs.quarantined" : log.blocked ? "logs.blocked" : "logs.allowed";
       return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("details", { style: logEntryStyle, children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("summary", { style: logSummaryStyle, children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logTimeStyle, children: timeText(log.at) }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logToolStyle, children: log.tool }),
           flags.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logMutedStyle, children: flags.join(" \xB7 ") }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logDecisionStyle(log.blocked), children: t(log.blocked ? "logs.blocked" : "logs.allowed") })
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logDecisionStyle(log.blocked), children: t(decisionLabel) })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logBodyStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
+          isOutput ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logGridStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.outputGuard") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
+              t("logs.outputScore"),
+              ": ",
+              numberText(log.outputScore)
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.action") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: t(decisionLabel) }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.chunks") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
+              String(log.chunks ?? 0),
+              log.truncated ? " \xB7 truncated" : ""
+            ] })
+          ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.command") }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { style: logPreStyle, children: log.command === "" ? t("logs.noCommand") : log.command })
           ] }),
@@ -641,7 +719,7 @@ function LogsPanel(props) {
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.description") }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { style: logPreStyle, children: log.description })
           ] }) : null,
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logGridStyle, children: [
+          isOutput ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logGridStyle, children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.result") }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
               log.blocked ? t("logs.blocked") : t("logs.allowed"),
@@ -691,6 +769,22 @@ var TABS = [
 function TabIcon({ paths }) {
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { style: tabIconStyle, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: paths.map((path) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: path }, path)) });
 }
+function modelStatus(model, enabled) {
+  if (enabled !== true) return { key: "stats.disabled", tone: "muted" };
+  if (model?.state === "error") return { key: "stats.error", tone: "error" };
+  if (model?.state === "ready") return { key: "stats.ready" };
+  return { key: "stats.loading", tone: "muted" };
+}
+function ModelCard({ title, model, enabled, t, children }) {
+  const status = modelStatus(model, enabled);
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("details", { style: modelCardStyle, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("summary", { style: modelCardSummaryStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: title }),
+      model === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: modelStatusStyle(status.tone), children: t(status.key) })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: modelCardBodyStyle, children })
+  ] });
+}
 function listToText(list) {
   return Array.isArray(list) ? list.join(", ") : "";
 }
@@ -717,7 +811,10 @@ function validDraft(draft) {
   if (draft.classifierEnabled && (draft.classifierModel.trim() === "" || draft.classifierRevision.trim() === "")) {
     return "config.invalidClassifier";
   }
-  for (const key of ["maliceThreshold", "alignmentThreshold", "maxCommandChars", "maxTextTokens", "modelTimeoutMs", "cacheEntries", "cacheTtlMs"]) {
+  if (draft.outputGuardEnabled && (draft.outputGuardModel.trim() === "" || draft.outputGuardRevision.trim() === "")) {
+    return "config.invalidOutputGuard";
+  }
+  for (const key of ["maliceThreshold", "alignmentThreshold", "maxCommandChars", "maxTextTokens", "modelTimeoutMs", "cacheEntries", "cacheTtlMs", "outputGuardThreshold", "outputGuardMaxChars", "outputGuardChunkChars", "outputGuardTimeoutMs"]) {
     if (!Number.isFinite(Number(draft[key]))) return "config.invalid";
   }
   return void 0;
@@ -829,6 +926,9 @@ function SettingsForm(props) {
   if (models?.classifier?.state === "error") {
     modelIssues.push({ key: "classifier", model: t("stats.classifierModel"), error: String(models.classifier.error ?? "unknown error") });
   }
+  if (models?.outputGuard?.state === "error") {
+    modelIssues.push({ key: "outputGuard", model: t("stats.outputGuard"), error: String(models.outputGuard.error ?? "unknown error") });
+  }
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedShellStyle : pageStyle, children: [
     tabbed ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: tabBarStyle, children: TABS.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
       "button",
@@ -892,28 +992,106 @@ function SettingsForm(props) {
       ] }) : null,
       !tabbed || tab === "models" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
         tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.models") }),
-        checkboxField("embeddingEnabled"),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.embeddingEnabledHint") }),
-        textField("embeddingModel", "100%", void 0, !draft.embeddingEnabled),
-        textField("embeddingRevision", "100%", void 0, !draft.embeddingEnabled),
-        checkboxField("classifierEnabled"),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierEnabledHint") }),
-        textField("classifierModel", "100%", void 0, !draft.classifierEnabled),
-        textField("classifierRevision", "100%", void 0, !draft.classifierEnabled),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.classifierLabels") }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-            "input",
-            {
-              type: "text",
-              value: listToText(draft.classifierLabels),
-              disabled: disabled || !draft.classifierEnabled,
-              "aria-label": t("field.classifierLabels"),
-              onChange: (event) => update("classifierLabels", textToList(event.target.value)),
-              style: inputStyle(disabled || !draft.classifierEnabled, "100%")
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierLabelsHint") })
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(ModelCard, { title: t("model.embedding"), model: models?.embedding, enabled: draft.embeddingEnabled, t, children: [
+          checkboxField("embeddingEnabled"),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.embeddingEnabledHint") }),
+          textField("embeddingModel", "100%", void 0, !draft.embeddingEnabled),
+          textField("embeddingRevision", "100%", void 0, !draft.embeddingEnabled)
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(ModelCard, { title: t("model.classifier"), model: models?.classifier, enabled: draft.classifierEnabled, t, children: [
+          checkboxField("classifierEnabled"),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierEnabledHint") }),
+          textField("classifierModel", "100%", void 0, !draft.classifierEnabled),
+          textField("classifierRevision", "100%", void 0, !draft.classifierEnabled),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.classifierLabels") }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+              "input",
+              {
+                type: "text",
+                value: listToText(draft.classifierLabels),
+                disabled: disabled || !draft.classifierEnabled,
+                "aria-label": t("field.classifierLabels"),
+                onChange: (event) => update("classifierLabels", textToList(event.target.value)),
+                style: inputStyle(disabled || !draft.classifierEnabled, "100%")
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierLabelsHint") })
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(ModelCard, { title: t("model.outputGuard"), model: models?.outputGuard, enabled: draft.outputGuardEnabled, t, children: [
+          checkboxField("outputGuardEnabled"),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardEnabledHint") }),
+          textField("outputGuardModel", "100%", void 0, !draft.outputGuardEnabled),
+          textField("outputGuardRevision", "100%", void 0, !draft.outputGuardEnabled),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardTools") }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+              "input",
+              {
+                type: "text",
+                value: listToText(draft.outputGuardTools),
+                disabled: disabled || !draft.outputGuardEnabled,
+                "aria-label": t("field.outputGuardTools"),
+                onChange: (event) => update("outputGuardTools", textToList(event.target.value)),
+                style: inputStyle(disabled || !draft.outputGuardEnabled, "100%")
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardToolsHint") })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardLabels") }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+              "input",
+              {
+                type: "text",
+                value: listToText(draft.outputGuardLabels),
+                disabled: disabled || !draft.outputGuardEnabled,
+                "aria-label": t("field.outputGuardLabels"),
+                onChange: (event) => update("outputGuardLabels", textToList(event.target.value)),
+                style: inputStyle(disabled || !draft.outputGuardEnabled, "100%")
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardLabelsHint") })
+          ] }),
+          numberField("outputGuardThreshold", 0, 1, 0.01),
+          numberField("outputGuardMaxChars", 256, 2e5, 1),
+          numberField("outputGuardChunkChars", 256, 16e3, 1),
+          numberField("outputGuardTimeoutMs", 10, 5e3, 1),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardMode") }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+              "select",
+              {
+                value: draft.outputGuardMode,
+                disabled: disabled || !draft.outputGuardEnabled,
+                onChange: (event) => update("outputGuardMode", event.target.value),
+                style: selectStyle(disabled || !draft.outputGuardEnabled),
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "quarantine", children: t("option.quarantine") }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "block", children: t("option.block") })
+                ]
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardModeHint") })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardFailureMode") }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+              "select",
+              {
+                value: draft.outputGuardFailureMode,
+                disabled: disabled || !draft.outputGuardEnabled,
+                onChange: (event) => update("outputGuardFailureMode", event.target.value),
+                style: selectStyle(disabled || !draft.outputGuardEnabled),
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "open", children: t("option.outputOpen") }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "closed", children: t("option.outputClosed") })
+                ]
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardFailureModeHint") })
+          ] })
         ] }),
         checkboxField("allowRemoteModels"),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.allowRemoteModelsHint") })
@@ -1215,6 +1393,12 @@ var EN = {
   "logs.kind": "Kind",
   "logs.noCommand": "(no command text)",
   "logs.hardBlock": "Hard block",
+  "logs.outputGuard": "Output guard",
+  "logs.outputScore": "Injection score",
+  "logs.action": "Action",
+  "logs.chunks": "Chunks",
+  "logs.quarantined": "Quarantined",
+  "logs.outputAllowed": "Output allowed",
   "field.enabled": "Enable firewall",
   "field.enabledHint": "When disabled, all tool calls pass through without inspection.",
   "field.semanticFailure": "When models are unavailable",
@@ -1253,8 +1437,39 @@ var EN = {
   "field.cacheEntriesHint": "Bounded LRU cache; only hashes and decisions are stored.",
   "field.cacheTtlMs": "Decision cache TTL (ms)",
   "field.cacheTtlMsHint": "Cached decisions expire after this interval.",
+  "model.embedding": "Embedding",
+  "model.classifier": "Input classifier",
+  "model.outputGuard": "Output guard",
+  "stats.outputGuard": "Output guard",
+  "stats.outputBlocks": "Output blocks / scanned",
+  "field.outputGuardEnabled": "Enable output guard",
+  "field.outputGuardEnabledHint": "Scans selected tool results for indirect prompt injection before the model sees them.",
+  "field.outputGuardModel": "Output guard model",
+  "field.outputGuardModelHint": "Pinned prompt-injection classifier id.",
+  "field.outputGuardRevision": "Output guard revision",
+  "field.outputGuardRevisionHint": "Pinned model revision; required when the output guard is enabled.",
+  "field.outputGuardTools": "Scanned tools",
+  "field.outputGuardToolsHint": "Comma-separated tool names whose results are scanned.",
+  "field.outputGuardLabels": "Injection labels",
+  "field.outputGuardLabelsHint": "Comma-separated classifier labels that mean prompt injection.",
+  "field.outputGuardThreshold": "Injection threshold",
+  "field.outputGuardThresholdHint": "Results at or above this score are quarantined or blocked.",
+  "field.outputGuardMaxChars": "Maximum result characters",
+  "field.outputGuardMaxCharsHint": "Long results are capped before scanning.",
+  "field.outputGuardChunkChars": "Characters per chunk",
+  "field.outputGuardChunkCharsHint": "Long results are split into chunks of this size.",
+  "field.outputGuardTimeoutMs": "Output scan deadline (ms)",
+  "field.outputGuardTimeoutMsHint": "Maximum time spent scanning one tool result.",
+  "field.outputGuardMode": "Detected injection action",
+  "field.outputGuardModeHint": "Quarantine replaces the result with a warning; block turns it into a tool error.",
+  "field.outputGuardFailureMode": "When the output guard fails",
+  "field.outputGuardFailureModeHint": "Open passes the original result; closed withholds it.",
   "option.open": "Open \u2014 allow with structural checks",
   "option.closed": "Closed \u2014 block the call",
+  "option.quarantine": "Quarantine \u2014 replace the result",
+  "option.block": "Block \u2014 tool error",
+  "option.outputOpen": "Open \u2014 pass the original result",
+  "option.outputClosed": "Closed \u2014 withhold the result",
   "config.save": "Save",
   "config.reset": "Restore defaults",
   "config.saving": "Saving\u2026",
@@ -1265,7 +1480,8 @@ var EN = {
   "config.readOnly": "This profile does not accept settings writes.",
   "config.invalid": "Fix the highlighted values before saving.",
   "config.invalidRegex": "The bypass regex is not valid or matches an empty command.",
-  "config.invalidClassifier": "Classifier model and revision are required when the classifier is enabled."
+  "config.invalidClassifier": "Classifier model and revision are required when the classifier is enabled.",
+  "config.invalidOutputGuard": "Output guard model and revision are required when the output guard is enabled."
 };
 var ZH = {
   "config.title": "\u5DE5\u5177\u9632\u706B\u5899",
@@ -1314,6 +1530,12 @@ var ZH = {
   "logs.kind": "\u7C7B\u578B",
   "logs.noCommand": "\uFF08\u65E0\u547D\u4EE4\u6587\u672C\uFF09",
   "logs.hardBlock": "\u786C\u963B\u6B62",
+  "logs.outputGuard": "\u8F93\u51FA\u9632\u62A4",
+  "logs.outputScore": "\u6CE8\u5165\u8BC4\u5206",
+  "logs.action": "\u52A8\u4F5C",
+  "logs.chunks": "\u5206\u5757",
+  "logs.quarantined": "\u5DF2\u9694\u79BB",
+  "logs.outputAllowed": "\u8F93\u51FA\u5DF2\u653E\u884C",
   "field.enabled": "\u542F\u7528\u9632\u706B\u5899",
   "field.enabledHint": "\u5173\u95ED\u540E\u6240\u6709\u5DE5\u5177\u8C03\u7528\u90FD\u4F1A\u76F4\u63A5\u901A\u8FC7\u3002",
   "field.semanticFailure": "\u6A21\u578B\u4E0D\u53EF\u7528\u65F6",
@@ -1352,8 +1574,39 @@ var ZH = {
   "field.cacheEntriesHint": "\u6709\u754C LRU \u7F13\u5B58\uFF0C\u4EC5\u4FDD\u5B58\u54C8\u5E0C\u548C\u51B3\u7B56\u3002",
   "field.cacheTtlMs": "\u51B3\u7B56\u7F13\u5B58 TTL\uFF08\u6BEB\u79D2\uFF09",
   "field.cacheTtlMsHint": "\u7F13\u5B58\u51B3\u7B56\u5728\u6B64\u65F6\u95F4\u540E\u8FC7\u671F\u3002",
+  "model.embedding": "\u5D4C\u5165",
+  "model.classifier": "\u8F93\u5165\u5206\u7C7B\u5668",
+  "model.outputGuard": "\u8F93\u51FA\u9632\u62A4",
+  "stats.outputGuard": "\u8F93\u51FA\u9632\u62A4",
+  "stats.outputBlocks": "\u8F93\u51FA\u963B\u6B62 / \u626B\u63CF",
+  "field.outputGuardEnabled": "\u542F\u7528\u8F93\u51FA\u9632\u62A4",
+  "field.outputGuardEnabledHint": "\u5728\u6A21\u578B\u770B\u5230\u7ED3\u679C\u524D\u626B\u63CF\u9009\u5B9A\u5DE5\u5177\u7ED3\u679C\u4E2D\u7684\u95F4\u63A5\u63D0\u793A\u6CE8\u5165\u3002",
+  "field.outputGuardModel": "\u8F93\u51FA\u9632\u62A4\u6A21\u578B",
+  "field.outputGuardModelHint": "\u56FA\u5B9A\u7684\u63D0\u793A\u6CE8\u5165\u5206\u7C7B\u5668 id\u3002",
+  "field.outputGuardRevision": "\u8F93\u51FA\u9632\u62A4\u7248\u672C",
+  "field.outputGuardRevisionHint": "\u56FA\u5B9A\u6A21\u578B\u7248\u672C\uFF1B\u542F\u7528\u65F6\u5FC5\u987B\u586B\u5199\u3002",
+  "field.outputGuardTools": "\u626B\u63CF\u5DE5\u5177",
+  "field.outputGuardToolsHint": "\u9700\u8981\u626B\u63CF\u7ED3\u679C\u7684\u9017\u53F7\u5206\u9694\u5DE5\u5177\u540D\u3002",
+  "field.outputGuardLabels": "\u6CE8\u5165\u6807\u7B7E",
+  "field.outputGuardLabelsHint": "\u8868\u793A\u63D0\u793A\u6CE8\u5165\u7684\u9017\u53F7\u5206\u9694\u5206\u7C7B\u6807\u7B7E\u3002",
+  "field.outputGuardThreshold": "\u6CE8\u5165\u9608\u503C",
+  "field.outputGuardThresholdHint": "\u8BC4\u5206\u8FBE\u5230\u6B64\u503C\u65F6\u9694\u79BB\u6216\u963B\u6B62\u7ED3\u679C\u3002",
+  "field.outputGuardMaxChars": "\u6700\u5927\u7ED3\u679C\u5B57\u7B26\u6570",
+  "field.outputGuardMaxCharsHint": "\u626B\u63CF\u524D\u9650\u5236\u957F\u7ED3\u679C\u3002",
+  "field.outputGuardChunkChars": "\u6BCF\u5757\u5B57\u7B26\u6570",
+  "field.outputGuardChunkCharsHint": "\u957F\u7ED3\u679C\u6309\u6B64\u5927\u5C0F\u5206\u5757\u626B\u63CF\u3002",
+  "field.outputGuardTimeoutMs": "\u8F93\u51FA\u626B\u63CF\u8D85\u65F6\uFF08\u6BEB\u79D2\uFF09",
+  "field.outputGuardTimeoutMsHint": "\u626B\u63CF\u5355\u4E2A\u5DE5\u5177\u7ED3\u679C\u7684\u6700\u957F\u65F6\u95F4\u3002",
+  "field.outputGuardMode": "\u68C0\u6D4B\u5230\u6CE8\u5165\u65F6\u7684\u52A8\u4F5C",
+  "field.outputGuardModeHint": "\u9694\u79BB\u4F1A\u7528\u8B66\u544A\u66FF\u6362\u7ED3\u679C\uFF1B\u963B\u6B62\u4F1A\u53D8\u6210\u5DE5\u5177\u9519\u8BEF\u3002",
+  "field.outputGuardFailureMode": "\u8F93\u51FA\u9632\u62A4\u5931\u8D25\u65F6",
+  "field.outputGuardFailureModeHint": "Open \u653E\u884C\u539F\u7ED3\u679C\uFF1BClosed \u9690\u85CF\u7ED3\u679C\u3002",
   "option.open": "Open \u2014 \u653E\u884C\u5E76\u4FDD\u7559\u7ED3\u6784\u68C0\u67E5",
   "option.closed": "Closed \u2014 \u963B\u6B62\u8C03\u7528",
+  "option.quarantine": "\u9694\u79BB \u2014 \u66FF\u6362\u7ED3\u679C",
+  "option.block": "\u963B\u6B62 \u2014 \u5DE5\u5177\u9519\u8BEF",
+  "option.outputOpen": "Open \u2014 \u653E\u884C\u539F\u59CB\u7ED3\u679C",
+  "option.outputClosed": "Closed \u2014 \u9690\u85CF\u7ED3\u679C",
   "config.save": "\u4FDD\u5B58",
   "config.reset": "\u6062\u590D\u9ED8\u8BA4",
   "config.saving": "\u4FDD\u5B58\u4E2D\u2026",
@@ -1364,7 +1617,8 @@ var ZH = {
   "config.readOnly": "\u6B64\u914D\u7F6E\u4E0D\u63A5\u53D7\u5199\u5165\u3002",
   "config.invalid": "\u8BF7\u5148\u4FEE\u6B63\u9AD8\u4EAE\u7684\u503C\u3002",
   "config.invalidRegex": "\u8DF3\u8FC7\u6B63\u5219\u65E0\u6548\uFF0C\u6216\u4F1A\u5339\u914D\u7A7A\u547D\u4EE4\u3002",
-  "config.invalidClassifier": "\u542F\u7528\u5206\u7C7B\u5668\u65F6\u5FC5\u987B\u586B\u5199\u6A21\u578B\u548C\u7248\u672C\u3002"
+  "config.invalidClassifier": "\u542F\u7528\u5206\u7C7B\u5668\u65F6\u5FC5\u987B\u586B\u5199\u6A21\u578B\u548C\u7248\u672C\u3002",
+  "config.invalidOutputGuard": "\u542F\u7528\u8F93\u51FA\u9632\u62A4\u65F6\u5FC5\u987B\u586B\u5199\u6A21\u578B\u548C\u7248\u672C\u3002"
 };
 
 // src/client/index.jsx
@@ -1392,7 +1646,7 @@ function modelEntry(labelKey, configured, model) {
   if (model?.state === "ready") return { labelKey, valueKey: "stats.ready" };
   return { labelKey, valueKey: "stats.loading", tone: "muted" };
 }
-function buildStats(value, counters = { blocked: 0, total: 0 }) {
+function buildStats(value, counters = { blocked: 0, total: 0, outputsBlocked: 0, outputsScanned: 0 }) {
   const config = normalizeConfig(value);
   const models = counters.models ?? {};
   return [
@@ -1401,14 +1655,16 @@ function buildStats(value, counters = { blocked: 0, total: 0 }) {
     { labelKey: "stats.classifier", valueKey: config.classifierEnabled ? "stats.on" : "stats.off", tone: config.classifierEnabled ? void 0 : "off" },
     modelEntry("stats.embeddingModel", config.embeddingEnabled, models.embedding),
     modelEntry("stats.classifierModel", config.classifierEnabled, models.classifier),
+    modelEntry("stats.outputGuard", config.outputGuardEnabled, models.outputGuard),
     { labelKey: "stats.mode", valueKey: config.semanticFailure === "closed" ? "stats.closed" : "stats.open" },
-    { labelKey: "stats.blocks", value: String(counters.blocked ?? 0) + " / " + String(counters.total ?? 0) }
+    { labelKey: "stats.blocks", value: String(counters.blocked ?? 0) + " / " + String(counters.total ?? 0) },
+    { labelKey: "stats.outputBlocks", value: String(counters.outputsBlocked ?? 0) + " / " + String(counters.outputsScanned ?? 0) }
   ];
 }
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), "tool-firewall: dictionaries");
   const configForm = ctx.configForms.get(ROW_ID);
-  const remoteStats = { blocked: 0, total: 0, models: void 0 };
+  const remoteStats = { blocked: 0, total: 0, outputsBlocked: 0, outputsScanned: 0, models: void 0 };
   const statsStore = createValueStore(buildStats(readConfigValue(configForm), remoteStats));
   const uiStore = createValueStore({ open: false });
   const open = () => uiStore.set({ open: true });
@@ -1433,6 +1689,8 @@ function apply(ctx) {
         if (value === null || value === void 0) return;
         remoteStats.blocked = Number.isFinite(value.blocked) ? value.blocked : remoteStats.blocked;
         remoteStats.total = Number.isFinite(value.total) ? value.total : remoteStats.total;
+        remoteStats.outputsBlocked = Number.isFinite(value.outputsBlocked) ? value.outputsBlocked : remoteStats.outputsBlocked;
+        remoteStats.outputsScanned = Number.isFinite(value.outputsScanned) ? value.outputsScanned : remoteStats.outputsScanned;
         remoteStats.models = value.models ?? remoteStats.models;
         refreshStats();
       }).catch(() => {

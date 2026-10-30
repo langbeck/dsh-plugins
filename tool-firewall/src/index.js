@@ -20,6 +20,8 @@ import {
   MAX_COMMAND_CHARS,
   MAX_TEXT_TOKENS,
   MAX_TIMEOUT_MS,
+  OUTPUT_GUARD_FAILURE_MODES,
+  OUTPUT_GUARD_MODES,
   SEMANTIC_FAILURE_MODES,
   unrefConfig,
   validateConfig,
@@ -65,6 +67,17 @@ export const Config = Schema.object({
   cacheEntries: Schema.number().min(1).max(MAX_CACHE_ENTRIES).step(1).default(DEFAULT_CONFIG.cacheEntries).volatile(),
   cacheTtlMs: Schema.number().min(1000).max(MAX_CACHE_TTL_MS).step(1).default(DEFAULT_CONFIG.cacheTtlMs).volatile(),
   allowRemoteModels: Schema.boolean().default(DEFAULT_CONFIG.allowRemoteModels).volatile(),
+  outputGuardEnabled: Schema.boolean().default(DEFAULT_CONFIG.outputGuardEnabled).volatile(),
+  outputGuardModel: Schema.string().default(DEFAULT_CONFIG.outputGuardModel).volatile(),
+  outputGuardRevision: Schema.string().default(DEFAULT_CONFIG.outputGuardRevision).volatile(),
+  outputGuardLabels: Schema.array(Schema.string()).default([...DEFAULT_CONFIG.outputGuardLabels]).volatile(),
+  outputGuardThreshold: Schema.number().min(0).max(1).default(DEFAULT_CONFIG.outputGuardThreshold).volatile(),
+  outputGuardTools: Schema.array(Schema.string()).default([...DEFAULT_CONFIG.outputGuardTools]).volatile(),
+  outputGuardMode: Schema.union(OUTPUT_GUARD_MODES.map((mode) => Schema.const(mode))).default(DEFAULT_CONFIG.outputGuardMode).volatile(),
+  outputGuardMaxChars: Schema.number().min(256).max(200000).step(1).default(DEFAULT_CONFIG.outputGuardMaxChars).volatile(),
+  outputGuardChunkChars: Schema.number().min(256).max(16000).step(1).default(DEFAULT_CONFIG.outputGuardChunkChars).volatile(),
+  outputGuardTimeoutMs: Schema.number().min(10).max(5000).step(1).default(DEFAULT_CONFIG.outputGuardTimeoutMs).volatile(),
+  outputGuardFailureMode: Schema.union(OUTPUT_GUARD_FAILURE_MODES.map((mode) => Schema.const(mode))).default(DEFAULT_CONFIG.outputGuardFailureMode).volatile(),
 })
 
 function describeError(error) {
@@ -78,17 +91,51 @@ function nullInference() {
     evaluate() {
       return Promise.reject(new Error('inference is disabled'))
     },
+    evaluateOutput() {
+      return Promise.reject(new Error('inference is disabled'))
+    },
     dispose() {},
   }
+}
+
+function textContent(content) {
+  if (!Array.isArray(content)) return ''
+  const parts = []
+  for (const block of content) {
+    if (block !== null && typeof block === 'object' && block.type === 'text' && typeof block.text === 'string') {
+      parts.push(block.text)
+    }
+  }
+  return parts.join('\n')
 }
 
 export function apply(ctx, config) {
   const logger = ctx.logger
   const startedAt = Date.now()
-  const counters = { total: 0, blocked: 0 }
+  const counters = { total: 0, blocked: 0, outputsScanned: 0, outputsBlocked: 0 }
   const logs = []
   let logSeq = 0
   let runtime
+
+  function recordOutput({ tool, scan, action, durationMs }) {
+    logs.unshift({
+      id: ++logSeq,
+      at: Date.now(),
+      phase: 'output',
+      tool,
+      command: '',
+      description: '',
+      blocked: action !== 'allow',
+      code: action === 'allow' ? undefined : 'TOOL_FIREWALL_OUTPUT_BLOCKED',
+      reason: action === 'allow' ? '' : 'potential prompt injection in tool output',
+      outputScore: scan?.score,
+      chunks: scan?.chunks,
+      truncated: scan?.truncated === true,
+      action,
+      durationMs: Math.max(0, Math.round(durationMs)),
+    })
+    if (logs.length > LOG_LIMIT) logs.length = LOG_LIMIT
+  }
 
   function recordInspection({ payload, decision, durationMs }) {
     const scores = decision.scores ?? {}
@@ -96,6 +143,7 @@ export function apply(ctx, config) {
     logs.unshift({
       id: ++logSeq,
       at: Date.now(),
+      phase: 'input',
       tool: payload.name,
       kind: payload.kind,
       command: preview(payload.command),
@@ -128,7 +176,7 @@ export function apply(ctx, config) {
   function buildRuntime(value) {
     const resolved = validateConfig(value)
     const cache = createDecisionCache(resolved.cacheEntries, resolved.cacheTtlMs)
-    const needsInference = resolved.enabled && (resolved.embeddingEnabled || resolved.classifierEnabled)
+    const needsInference = resolved.enabled && (resolved.embeddingEnabled || resolved.classifierEnabled || resolved.outputGuardEnabled)
     const inference = needsInference
       ? createInferenceClient(resolved, {
         cacheDir: dshCachePath('tool-firewall', 'models'),
@@ -195,6 +243,51 @@ export function apply(ctx, config) {
     return decision
   }, { prepend: true }), 'tool-firewall: pre-execute gate')
 
+  ctx.effect(() => ctx.on('tools/post-execute', async (exec, result, next) => {
+    const downstream = await next()
+    if (downstream.kind !== 'accept') return downstream
+    if (runtime === undefined || !runtime.config.enabled || !runtime.config.outputGuardEnabled) return downstream
+    if (!runtime.config.outputGuardTools.includes(exec.name)) return downstream
+    if (result.isError === true) return downstream
+    const content = downstream.content !== undefined ? downstream.content : result.content
+    const text = textContent(content)
+    if (text.trim() === '') return downstream
+    const started = Date.now()
+    counters.outputsScanned += 1
+    let scan
+    try {
+      scan = await runtime.inference.evaluateOutput(text, exec.signal)
+    } catch (error) {
+      const action = runtime.config.outputGuardFailureMode === 'closed' ? 'quarantine' : 'allow'
+      if (action === 'quarantine') counters.outputsBlocked += 1
+      recordOutput({ tool: exec.name, scan: { score: undefined, chunks: 0, truncated: false }, action, durationMs: Date.now() - started })
+      if (action === 'allow') return downstream
+      return {
+        kind: 'accept',
+        content: [{ type: 'text', text: '[Tool output withheld: output guard unavailable.]' }],
+      }
+    }
+    const suspicious = typeof scan.score === 'number' && scan.score >= runtime.config.outputGuardThreshold
+    if (!suspicious) {
+      recordOutput({ tool: exec.name, scan, action: 'allow', durationMs: Date.now() - started })
+      return downstream
+    }
+    const mode = runtime.config.outputGuardMode
+    recordOutput({ tool: exec.name, scan, action: mode, durationMs: Date.now() - started })
+    if (mode === 'block') {
+      counters.outputsBlocked += 1
+      return {
+        kind: 'block',
+        feedback: [{ type: 'text', text: '[Tool output blocked: potential prompt injection detected.]' }],
+      }
+    }
+    counters.outputsBlocked += 1
+    return {
+      kind: 'accept',
+      content: [{ type: 'text', text: '[Tool output withheld: potential prompt injection detected. Original content was not shown.]' }],
+    }
+  }), 'tool-firewall: output guard')
+
   ctx.effect(() => {
     const dispose = ctx.connection.fetch.register({
       path: STATS_ROUTE,
@@ -205,6 +298,8 @@ export function apply(ctx, config) {
         value: {
           total: counters.total,
           blocked: counters.blocked,
+          outputsScanned: counters.outputsScanned,
+          outputsBlocked: counters.outputsBlocked,
           enabled: runtime?.config.enabled === true,
           modelReady: runtime?.inference.ready === true,
           modelError: runtime?.inference.lastError ?? null,
@@ -229,6 +324,8 @@ export function apply(ctx, config) {
           logs,
           total: counters.total,
           blocked: counters.blocked,
+          outputsScanned: counters.outputsScanned,
+          outputsBlocked: counters.outputsBlocked,
           modelReady: runtime?.inference.ready === true,
           modelError: runtime?.inference.lastError ?? null,
           models: runtime?.inference.models ?? null,

@@ -2,8 +2,8 @@
 
 Inspects DSH tool calls before they execute. The plugin runs entirely
 in-process: a deterministic structural analyzer always runs, and an optional
-local Transformers.js pipeline adds semantic alignment and a text-classifier
-signal.
+local Transformers.js pipeline adds semantic alignment, a text-classifier
+signal, and an output guard for indirect prompt injection.
 
 ## What it does
 
@@ -22,6 +22,11 @@ For every `tools/pre-execute` call:
 PTC/`run_code` sub-calls traverse the same hook. File contents from
 `write`/`edit` are not treated as shell commands; generic tools get structural
 checks over command-like, URL, and path fields only.
+
+For selected `tools/post-execute` results (default: `web_search`, `web_fetch`,
+and `skill`), the output guard scans text blocks for indirect prompt injection.
+A detected result is replaced with a warning (quarantine) or returned as a tool
+error, depending on configuration.
 
 ## Sidebar stats card
 
@@ -72,6 +77,9 @@ Important fields:
 - `bypassRegex`, `shellTools`
 - `embeddingEnabled`, embedding model/revision
 - `classifierEnabled`, classifier model/revision/hostile labels
+- `outputGuardEnabled`, output guard model/revision/labels
+- `outputGuardTools`, `outputGuardThreshold`, `outputGuardMode`
+- output result caps, chunking, deadline, and failure mode
 - `modelTimeoutMs`, `semanticFailure`
 - structural/model input caps and decision-cache bounds
 
@@ -90,6 +98,10 @@ blocks the call instead.
 - The text classifier is optional and disabled by default. No classifier model
   ships with the plugin; configure a pinned Transformers.js-compatible model
   before enabling it.
+- The output guard defaults to
+  `Horizon-Labs/prompt-injection-guard-small`, pinned to a specific revision and
+  loaded only when enabled. It scans selected tool results in chunks and caps
+  the input before classification.
 - Models are cached under the DSH home (`tool-firewall/models`).
 - A tool call while models are loading triggers another warmup. The sidebar
   shows Model Ready/Loading/Disabled/Error, and the Logs tab shows the
@@ -109,10 +121,11 @@ reloads after that no longer create workers.
 
 ## Security scope
 
-This is an input firewall, not a sandbox. Structural checks are deterministic
-but conservative; semantic checks can produce false positives and false
-negatives. It does not inspect tool outputs, prove shell semantics, or replace
-DSH approval/sandbox policy.
+This is an input firewall plus an optional output guard, not a sandbox.
+Structural checks are deterministic but conservative; semantic checks can
+produce false positives and false negatives. Output scanning covers only the
+configured tools and a bounded prefix of each result. It does not prove shell
+semantics or replace DSH approval/sandbox policy.
 
 ## Development
 

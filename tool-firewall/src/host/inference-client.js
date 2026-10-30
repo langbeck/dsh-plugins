@@ -65,9 +65,11 @@ export function createInferenceClient(config, options = {}) {
   let lastError
   let embeddingPipeline
   let classifierPipeline
+  let outputGuardPipeline
   let modelStates = {
     embedding: { state: config.embeddingEnabled === false ? 'disabled' : 'loading', error: null },
     classifier: { state: config.classifierEnabled === true ? 'loading' : 'disabled', error: null },
+    outputGuard: { state: config.outputGuardEnabled === false ? 'disabled' : 'loading', error: null },
   }
 
   async function loadModels() {
@@ -125,8 +127,27 @@ export function createInferenceClient(config, options = {}) {
           }
         }
       }
+      if (config.outputGuardEnabled) {
+        if (typeof config.outputGuardModel !== 'string' || config.outputGuardModel === ''
+          || typeof config.outputGuardRevision !== 'string' || config.outputGuardRevision === '') {
+          modelStates.outputGuard = { state: 'error', error: 'output guard model and revision are required' }
+        } else {
+          modelStates.outputGuard = { state: 'loading', error: null }
+          try {
+            outputGuardPipeline = await pipeline('text-classification', config.outputGuardModel, {
+              device: 'cpu',
+              dtype: 'q8',
+              revision: config.outputGuardRevision,
+            })
+            modelStates.outputGuard = { state: 'ready', error: null }
+          } catch (error) {
+            outputGuardPipeline = undefined
+            modelStates.outputGuard = { state: 'error', error: modelErrorOf(error) }
+          }
+        }
+      }
       const errors = []
-      for (const key of ['embedding', 'classifier']) {
+      for (const key of ['embedding', 'classifier', 'outputGuard']) {
         if (modelStates[key].state === 'error') errors.push(key + ': ' + String(modelStates[key].error ?? 'unknown error'))
       }
       lastError = errors.length > 0 ? errors.join('; ') : undefined
@@ -197,6 +218,45 @@ export function createInferenceClient(config, options = {}) {
     return withDeadline(work, modelTimeoutMs, signal)
   }
 
+  async function evaluateOutput(text, signal) {
+    if (disposed) throw new Error('inference client disposed')
+    if (!config.outputGuardEnabled) return { score: 0, disabled: true, chunks: 0, truncated: false }
+    if (!ready) {
+      void warmup().catch(() => {})
+      throw new Error('inference models are not ready')
+    }
+    const state = modelStates.outputGuard
+    if (state.state !== 'ready') {
+      throw new Error('output guard model ' + state.state + (state.error ? ': ' + state.error : ''))
+    }
+    const source = typeof text === 'string' ? text : ''
+    const maxChars = Math.max(256, config.outputGuardMaxChars)
+    const chunkChars = Math.max(256, Math.min(config.outputGuardChunkChars, maxChars))
+    const chunks = []
+    for (let offset = 0; offset < source.length && offset < maxChars; offset += chunkChars) {
+      chunks.push(source.slice(offset, Math.min(source.length, offset + chunkChars, maxChars)))
+    }
+    const labels = new Set((config.outputGuardLabels ?? []).map((label) => String(label).toUpperCase()))
+    const work = (async () => {
+      let score = 0
+      for (const chunk of chunks) {
+        const output = await outputGuardPipeline(chunk, {
+          truncation: true,
+          max_length: config.maxTextTokens,
+        })
+        const rows = Array.isArray(output) ? output : [output]
+        for (const row of rows) {
+          if (row === null || row === undefined) continue
+          if (!labels.has(String(row.label ?? '').toUpperCase())) continue
+          const value = Number(row.score)
+          if (Number.isFinite(value)) score = Math.max(score, Math.min(1, Math.max(0, value)))
+        }
+      }
+      return { score, chunks: chunks.length, truncated: source.length > maxChars }
+    })()
+    return withDeadline(work, Math.max(10, config.outputGuardTimeoutMs ?? 2000), signal)
+  }
+
   function start() {
     if (disposed) return
     void warmup().catch(() => {})
@@ -206,18 +266,20 @@ export function createInferenceClient(config, options = {}) {
     disposed = true
     ready = false
     loading = undefined
-    for (const pipeline of [embeddingPipeline, classifierPipeline]) {
+    for (const pipeline of [embeddingPipeline, classifierPipeline, outputGuardPipeline]) {
       try {
         pipeline?.dispose?.()
       } catch (error) {}
     }
     embeddingPipeline = undefined
     classifierPipeline = undefined
+    outputGuardPipeline = undefined
   }
 
   return {
     start,
     evaluate,
+    evaluateOutput,
     warmup,
     dispose,
     get ready() { return ready },

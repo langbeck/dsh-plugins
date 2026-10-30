@@ -106,6 +106,51 @@ export const modelWarningStyle = {
   background: 'var(--dsw-alias-bg-layer-2)',
 }
 
+export const modelCardStyle = {
+  border: '0.5px solid var(--dsw-alias-border-l3)',
+  borderRadius: 'var(--dsw-radius-md, 8px)',
+  background: 'var(--dsw-alias-bg-layer-2)',
+  overflow: 'hidden',
+}
+
+export const modelCardSummaryStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+  padding: '10px 12px',
+  cursor: 'pointer',
+  fontSize: '13px',
+  lineHeight: '20px',
+  fontWeight: 600,
+  listStyle: 'none',
+}
+
+export const modelCardBodyStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '12px',
+  padding: '0 12px 12px',
+  borderTop: '0.5px solid var(--dsw-alias-border-l3)',
+  paddingTop: '12px',
+}
+
+export function modelStatusStyle(tone) {
+  return {
+    flex: 'none',
+    fontSize: '11px',
+    lineHeight: '16px',
+    fontWeight: 600,
+    color: tone === 'error'
+      ? 'var(--dsw-alias-state-error-primary, #d93025)'
+      : tone === 'off'
+        ? '#f59e0b'
+        : tone === 'muted'
+          ? 'var(--dsw-alias-label-tertiary)'
+          : 'var(--dsw-alias-label-primary)',
+  }
+}
+
 export function inputStyle(disabled, width = '96px') {
   return {
     boxSizing: 'border-box',

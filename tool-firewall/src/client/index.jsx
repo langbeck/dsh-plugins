@@ -40,7 +40,7 @@ function modelEntry(labelKey, configured, model) {
   return { labelKey, valueKey: 'stats.loading', tone: 'muted' }
 }
 
-function buildStats(value, counters = { blocked: 0, total: 0 }) {
+function buildStats(value, counters = { blocked: 0, total: 0, outputsBlocked: 0, outputsScanned: 0 }) {
   const config = normalizeConfig(value)
   const models = counters.models ?? {}
   return [
@@ -49,15 +49,17 @@ function buildStats(value, counters = { blocked: 0, total: 0 }) {
     { labelKey: 'stats.classifier', valueKey: config.classifierEnabled ? 'stats.on' : 'stats.off', tone: config.classifierEnabled ? undefined : 'off' },
     modelEntry('stats.embeddingModel', config.embeddingEnabled, models.embedding),
     modelEntry('stats.classifierModel', config.classifierEnabled, models.classifier),
+    modelEntry('stats.outputGuard', config.outputGuardEnabled, models.outputGuard),
     { labelKey: 'stats.mode', valueKey: config.semanticFailure === 'closed' ? 'stats.closed' : 'stats.open' },
     { labelKey: 'stats.blocks', value: String(counters.blocked ?? 0) + ' / ' + String(counters.total ?? 0) },
+    { labelKey: 'stats.outputBlocks', value: String(counters.outputsBlocked ?? 0) + ' / ' + String(counters.outputsScanned ?? 0) },
   ]
 }
 
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), 'tool-firewall: dictionaries')
   const configForm = ctx.configForms.get(ROW_ID)
-  const remoteStats = { blocked: 0, total: 0, models: undefined }
+  const remoteStats = { blocked: 0, total: 0, outputsBlocked: 0, outputsScanned: 0, models: undefined }
   const statsStore = createValueStore(buildStats(readConfigValue(configForm), remoteStats))
   const uiStore = createValueStore({ open: false })
   const open = () => uiStore.set({ open: true })
@@ -88,6 +90,8 @@ function apply(ctx) {
           if (value === null || value === undefined) return
           remoteStats.blocked = Number.isFinite(value.blocked) ? value.blocked : remoteStats.blocked
           remoteStats.total = Number.isFinite(value.total) ? value.total : remoteStats.total
+          remoteStats.outputsBlocked = Number.isFinite(value.outputsBlocked) ? value.outputsBlocked : remoteStats.outputsBlocked
+          remoteStats.outputsScanned = Number.isFinite(value.outputsScanned) ? value.outputsScanned : remoteStats.outputsScanned
           remoteStats.models = value.models ?? remoteStats.models
           refreshStats()
         })

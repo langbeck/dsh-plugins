@@ -35,6 +35,9 @@ export default function LogsPanel(props) {
   if (models?.classifier?.state === 'error') {
     warnings.push({ key: 'classifier', model: t('stats.classifierModel'), error: String(models.classifier.error ?? 'unknown error') })
   }
+  if (models?.outputGuard?.state === 'error') {
+    warnings.push({ key: 'outputGuard', model: t('stats.outputGuard'), error: String(models.outputGuard.error ?? 'unknown error') })
+  }
   const warning = warnings.length === 0 ? null : (
     <>
       {warnings.map((entry) => (
@@ -67,25 +70,41 @@ export default function LogsPanel(props) {
         if (log.bypass) flags.push(t('logs.bypass'))
         if (log.cached) flags.push(t('logs.cached'))
         if (log.semanticUnavailable) flags.push(t('logs.unavailable'))
+        const isOutput = log.phase === 'output'
+        const decisionLabel = isOutput
+          ? (log.action === 'allow' ? 'logs.outputAllowed' : log.action === 'block' ? 'logs.blocked' : 'logs.quarantined')
+          : (log.blocked ? 'logs.blocked' : 'logs.allowed')
         return (
           <details key={log.id} style={logEntryStyle}>
             <summary style={logSummaryStyle}>
               <span style={logTimeStyle}>{timeText(log.at)}</span>
               <span style={logToolStyle}>{log.tool}</span>
               {flags.length === 0 ? null : <span style={logMutedStyle}>{flags.join(' · ')}</span>}
-              <span style={logDecisionStyle(log.blocked)}>{t(log.blocked ? 'logs.blocked' : 'logs.allowed')}</span>
+              <span style={logDecisionStyle(log.blocked)}>{t(decisionLabel)}</span>
             </summary>
             <div style={logBodyStyle}>
-              <div style={logSectionStyle}>
-                <span style={logKeyStyle}>{t('logs.command')}</span>
-                <pre style={logPreStyle}>{log.command === '' ? t('logs.noCommand') : log.command}</pre>
-              </div>
+              {isOutput ? (
+                <div style={logGridStyle}>
+                  <span style={logLabelStyle}>{t('logs.outputGuard')}</span>
+                  <span style={logValueStyle}>{t('logs.outputScore')}: {numberText(log.outputScore)}</span>
+                  <span style={logLabelStyle}>{t('logs.action')}</span>
+                  <span style={logValueStyle}>{t(decisionLabel)}</span>
+                  <span style={logLabelStyle}>{t('logs.chunks')}</span>
+                  <span style={logValueStyle}>{String(log.chunks ?? 0)}{log.truncated ? ' · truncated' : ''}</span>
+                </div>
+              ) : (
+                <div style={logSectionStyle}>
+                  <span style={logKeyStyle}>{t('logs.command')}</span>
+                  <pre style={logPreStyle}>{log.command === '' ? t('logs.noCommand') : log.command}</pre>
+                </div>
+              )}
               {typeof log.description === 'string' && log.description !== '' ? (
                 <div style={logSectionStyle}>
                   <span style={logKeyStyle}>{t('logs.description')}</span>
                   <pre style={logPreStyle}>{log.description}</pre>
                 </div>
               ) : null}
+              {isOutput ? null : (
               <div style={logGridStyle}>
                 <span style={logLabelStyle}>{t('logs.result')}</span>
                 <span style={logValueStyle}>{log.blocked ? t('logs.blocked') : t('logs.allowed')}{log.code === undefined ? '' : ' · ' + log.code}</span>
@@ -100,6 +119,7 @@ export default function LogsPanel(props) {
                 <span style={logLabelStyle}>{t('logs.duration')}</span>
                 <span style={logValueStyle}>{typeof log.durationMs === 'number' ? String(Math.round(log.durationMs)) + ' ms' : '—'}</span>
               </div>
+              )}
               {Array.isArray(log.reasons) && log.reasons.length > 0 ? (
                 <div style={logSectionStyle}>
                   <span style={logKeyStyle}>{t('logs.reason')}</span>

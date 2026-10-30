@@ -10,6 +10,10 @@ import {
   hintStyle,
   inputStyle,
   labelStyle,
+  modelCardBodyStyle,
+  modelCardStyle,
+  modelCardSummaryStyle,
+  modelStatusStyle,
   modelWarningStyle,
   pageStyle,
   primaryButtonStyle,
@@ -44,6 +48,26 @@ function TabIcon({ paths }) {
   )
 }
 
+function modelStatus(model, enabled) {
+  if (enabled !== true) return { key: 'stats.disabled', tone: 'muted' }
+  if (model?.state === 'error') return { key: 'stats.error', tone: 'error' }
+  if (model?.state === 'ready') return { key: 'stats.ready' }
+  return { key: 'stats.loading', tone: 'muted' }
+}
+
+function ModelCard({ title, model, enabled, t, children }) {
+  const status = modelStatus(model, enabled)
+  return (
+    <details style={modelCardStyle}>
+      <summary style={modelCardSummaryStyle}>
+        <span>{title}</span>
+        {model === undefined ? null : <span style={modelStatusStyle(status.tone)}>{t(status.key)}</span>}
+      </summary>
+      <div style={modelCardBodyStyle}>{children}</div>
+    </details>
+  )
+}
+
 function listToText(list) {
   return Array.isArray(list) ? list.join(', ') : ''
 }
@@ -73,7 +97,10 @@ function validDraft(draft) {
   if (draft.classifierEnabled && (draft.classifierModel.trim() === '' || draft.classifierRevision.trim() === '')) {
     return 'config.invalidClassifier'
   }
-  for (const key of ['maliceThreshold', 'alignmentThreshold', 'maxCommandChars', 'maxTextTokens', 'modelTimeoutMs', 'cacheEntries', 'cacheTtlMs']) {
+  if (draft.outputGuardEnabled && (draft.outputGuardModel.trim() === '' || draft.outputGuardRevision.trim() === '')) {
+    return 'config.invalidOutputGuard'
+  }
+  for (const key of ['maliceThreshold', 'alignmentThreshold', 'maxCommandChars', 'maxTextTokens', 'modelTimeoutMs', 'cacheEntries', 'cacheTtlMs', 'outputGuardThreshold', 'outputGuardMaxChars', 'outputGuardChunkChars', 'outputGuardTimeoutMs']) {
     if (!Number.isFinite(Number(draft[key]))) return 'config.invalid'
   }
   return undefined
@@ -206,6 +233,9 @@ export default function SettingsForm(props) {
   if (models?.classifier?.state === 'error') {
     modelIssues.push({ key: 'classifier', model: t('stats.classifierModel'), error: String(models.classifier.error ?? 'unknown error') })
   }
+  if (models?.outputGuard?.state === 'error') {
+    modelIssues.push({ key: 'outputGuard', model: t('stats.outputGuard'), error: String(models.outputGuard.error ?? 'unknown error') })
+  }
 
   return (
     <div style={tabbed ? tabbedShellStyle : pageStyle}>
@@ -281,26 +311,93 @@ export default function SettingsForm(props) {
       {!tabbed || tab === 'models' ? (
         <section style={tabbed ? tabbedSectionStyle : sectionStyle}>
           {tabbed ? null : <h3 style={sectionTitleStyle}>{t('section.models')}</h3>}
-          {checkboxField('embeddingEnabled')}
-          <span style={hintStyle}>{t('field.embeddingEnabledHint')}</span>
-          {textField('embeddingModel', '100%', undefined, !draft.embeddingEnabled)}
-          {textField('embeddingRevision', '100%', undefined, !draft.embeddingEnabled)}
-          {checkboxField('classifierEnabled')}
-          <span style={hintStyle}>{t('field.classifierEnabledHint')}</span>
-          {textField('classifierModel', '100%', undefined, !draft.classifierEnabled)}
-          {textField('classifierRevision', '100%', undefined, !draft.classifierEnabled)}
-          <label style={fieldStyle}>
-            <span style={labelStyle}>{t('field.classifierLabels')}</span>
-            <input
-              type="text"
-              value={listToText(draft.classifierLabels)}
-              disabled={disabled || !draft.classifierEnabled}
-              aria-label={t('field.classifierLabels')}
-              onChange={(event) => update('classifierLabels', textToList(event.target.value))}
-              style={inputStyle(disabled || !draft.classifierEnabled, '100%')}
-            />
-            <span style={hintStyle}>{t('field.classifierLabelsHint')}</span>
-          </label>
+          <ModelCard title={t('model.embedding')} model={models?.embedding} enabled={draft.embeddingEnabled} t={t}>
+            {checkboxField('embeddingEnabled')}
+            <span style={hintStyle}>{t('field.embeddingEnabledHint')}</span>
+            {textField('embeddingModel', '100%', undefined, !draft.embeddingEnabled)}
+            {textField('embeddingRevision', '100%', undefined, !draft.embeddingEnabled)}
+          </ModelCard>
+
+          <ModelCard title={t('model.classifier')} model={models?.classifier} enabled={draft.classifierEnabled} t={t}>
+            {checkboxField('classifierEnabled')}
+            <span style={hintStyle}>{t('field.classifierEnabledHint')}</span>
+            {textField('classifierModel', '100%', undefined, !draft.classifierEnabled)}
+            {textField('classifierRevision', '100%', undefined, !draft.classifierEnabled)}
+            <label style={fieldStyle}>
+              <span style={labelStyle}>{t('field.classifierLabels')}</span>
+              <input
+                type="text"
+                value={listToText(draft.classifierLabels)}
+                disabled={disabled || !draft.classifierEnabled}
+                aria-label={t('field.classifierLabels')}
+                onChange={(event) => update('classifierLabels', textToList(event.target.value))}
+                style={inputStyle(disabled || !draft.classifierEnabled, '100%')}
+              />
+              <span style={hintStyle}>{t('field.classifierLabelsHint')}</span>
+            </label>
+          </ModelCard>
+
+          <ModelCard title={t('model.outputGuard')} model={models?.outputGuard} enabled={draft.outputGuardEnabled} t={t}>
+            {checkboxField('outputGuardEnabled')}
+            <span style={hintStyle}>{t('field.outputGuardEnabledHint')}</span>
+            {textField('outputGuardModel', '100%', undefined, !draft.outputGuardEnabled)}
+            {textField('outputGuardRevision', '100%', undefined, !draft.outputGuardEnabled)}
+            <label style={fieldStyle}>
+              <span style={labelStyle}>{t('field.outputGuardTools')}</span>
+              <input
+                type="text"
+                value={listToText(draft.outputGuardTools)}
+                disabled={disabled || !draft.outputGuardEnabled}
+                aria-label={t('field.outputGuardTools')}
+                onChange={(event) => update('outputGuardTools', textToList(event.target.value))}
+                style={inputStyle(disabled || !draft.outputGuardEnabled, '100%')}
+              />
+              <span style={hintStyle}>{t('field.outputGuardToolsHint')}</span>
+            </label>
+            <label style={fieldStyle}>
+              <span style={labelStyle}>{t('field.outputGuardLabels')}</span>
+              <input
+                type="text"
+                value={listToText(draft.outputGuardLabels)}
+                disabled={disabled || !draft.outputGuardEnabled}
+                aria-label={t('field.outputGuardLabels')}
+                onChange={(event) => update('outputGuardLabels', textToList(event.target.value))}
+                style={inputStyle(disabled || !draft.outputGuardEnabled, '100%')}
+              />
+              <span style={hintStyle}>{t('field.outputGuardLabelsHint')}</span>
+            </label>
+            {numberField('outputGuardThreshold', 0, 1, 0.01)}
+            {numberField('outputGuardMaxChars', 256, 200000, 1)}
+            {numberField('outputGuardChunkChars', 256, 16000, 1)}
+            {numberField('outputGuardTimeoutMs', 10, 5000, 1)}
+            <label style={fieldStyle}>
+              <span style={labelStyle}>{t('field.outputGuardMode')}</span>
+              <select
+                value={draft.outputGuardMode}
+                disabled={disabled || !draft.outputGuardEnabled}
+                onChange={(event) => update('outputGuardMode', event.target.value)}
+                style={selectStyle(disabled || !draft.outputGuardEnabled)}
+              >
+                <option value="quarantine">{t('option.quarantine')}</option>
+                <option value="block">{t('option.block')}</option>
+              </select>
+              <span style={hintStyle}>{t('field.outputGuardModeHint')}</span>
+            </label>
+            <label style={fieldStyle}>
+              <span style={labelStyle}>{t('field.outputGuardFailureMode')}</span>
+              <select
+                value={draft.outputGuardFailureMode}
+                disabled={disabled || !draft.outputGuardEnabled}
+                onChange={(event) => update('outputGuardFailureMode', event.target.value)}
+                style={selectStyle(disabled || !draft.outputGuardEnabled)}
+              >
+                <option value="open">{t('option.outputOpen')}</option>
+                <option value="closed">{t('option.outputClosed')}</option>
+              </select>
+              <span style={hintStyle}>{t('field.outputGuardFailureModeHint')}</span>
+            </label>
+          </ModelCard>
+
           {checkboxField('allowRemoteModels')}
           <span style={hintStyle}>{t('field.allowRemoteModelsHint')}</span>
         </section>

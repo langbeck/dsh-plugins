@@ -20,6 +20,17 @@ export const DEFAULT_CONFIG = Object.freeze({
   cacheEntries: 256,
   cacheTtlMs: 600000,
   allowRemoteModels: true,
+  outputGuardEnabled: true,
+  outputGuardModel: 'Horizon-Labs/prompt-injection-guard-small',
+  outputGuardRevision: '1b7c40f4a5fdbf9622d20372ead279e65d4c7fc9',
+  outputGuardLabels: Object.freeze(['INJECTION']),
+  outputGuardThreshold: 0.8,
+  outputGuardTools: Object.freeze(['web_search', 'web_fetch', 'skill']),
+  outputGuardMode: 'quarantine',
+  outputGuardMaxChars: 8000,
+  outputGuardChunkChars: 1200,
+  outputGuardTimeoutMs: 2000,
+  outputGuardFailureMode: 'open',
 })
 
 export const SEMANTIC_FAILURE_MODES = Object.freeze(['open', 'closed'])
@@ -28,6 +39,8 @@ export const MAX_TEXT_TOKENS = 512
 export const MAX_TIMEOUT_MS = 5000
 export const MAX_CACHE_ENTRIES = 4096
 export const MAX_CACHE_TTL_MS = 86_400_000
+export const OUTPUT_GUARD_MODES = Object.freeze(['quarantine', 'block'])
+export const OUTPUT_GUARD_FAILURE_MODES = Object.freeze(['open', 'closed'])
 
 /** Resolve schemastery volatile Config references into plain values. */
 export function unrefConfig(value) {
@@ -82,6 +95,10 @@ export function validateConfig(value) {
     if (normalized.classifierModel.trim() === '') throw new Error('classifierModel is required when classifierEnabled is true')
     if (normalized.classifierRevision.trim() === '') throw new Error('classifierRevision is required when classifierEnabled is true')
   }
+  if (normalized.outputGuardEnabled) {
+    if (normalized.outputGuardModel.trim() === '') throw new Error('outputGuardModel is required when outputGuardEnabled is true')
+    if (normalized.outputGuardRevision.trim() === '') throw new Error('outputGuardRevision is required when outputGuardEnabled is true')
+  }
   return normalized
 }
 
@@ -108,5 +125,16 @@ export function normalizeConfig(value) {
     cacheEntries: clampNumber(source.cacheEntries, DEFAULT_CONFIG.cacheEntries, 1, MAX_CACHE_ENTRIES, true),
     cacheTtlMs: clampNumber(source.cacheTtlMs, DEFAULT_CONFIG.cacheTtlMs, 1000, MAX_CACHE_TTL_MS, true),
     allowRemoteModels: source.allowRemoteModels !== false,
+    outputGuardEnabled: source.outputGuardEnabled !== false,
+    outputGuardModel: normalizeString(source.outputGuardModel, DEFAULT_CONFIG.outputGuardModel),
+    outputGuardRevision: normalizeString(source.outputGuardRevision, DEFAULT_CONFIG.outputGuardRevision),
+    outputGuardLabels: normalizeStringList(source.outputGuardLabels, DEFAULT_CONFIG.outputGuardLabels),
+    outputGuardThreshold: clampNumber(source.outputGuardThreshold, DEFAULT_CONFIG.outputGuardThreshold, 0, 1),
+    outputGuardTools: normalizeStringList(source.outputGuardTools, DEFAULT_CONFIG.outputGuardTools),
+    outputGuardMode: OUTPUT_GUARD_MODES.includes(source.outputGuardMode) ? source.outputGuardMode : DEFAULT_CONFIG.outputGuardMode,
+    outputGuardMaxChars: clampNumber(source.outputGuardMaxChars, DEFAULT_CONFIG.outputGuardMaxChars, 256, 200000, true),
+    outputGuardChunkChars: clampNumber(source.outputGuardChunkChars, DEFAULT_CONFIG.outputGuardChunkChars, 256, 16000, true),
+    outputGuardTimeoutMs: clampNumber(source.outputGuardTimeoutMs, DEFAULT_CONFIG.outputGuardTimeoutMs, 10, 5000, true),
+    outputGuardFailureMode: OUTPUT_GUARD_FAILURE_MODES.includes(source.outputGuardFailureMode) ? source.outputGuardFailureMode : DEFAULT_CONFIG.outputGuardFailureMode,
   }
 }
