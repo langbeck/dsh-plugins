@@ -153,6 +153,15 @@ export default function BalanceRow(props) {
             </span>
           </div>
         ) : null}
+        {typeof sessionId === 'string' && cost.status === 'ready' && cost.sessionId === sessionId && typeof cost.turnLimitUsd === 'number' ? (
+          <div style={rowStyle}>
+            <span style={rowLabelStyle}>{t('row.turn')}</span>
+            <span style={walletStyle}>
+              <span style={amountStyle}>{formatUsd(cost.turnLimitUsd)}</span>
+              <span style={codeStyle}>USD</span>
+            </span>
+          </div>
+        ) : null}
       </div>
       <span style={timeStyle} title={formatUpdatedAt(balance.updatedAt)}>{compactTimeLabel(relativeTimeParts(balance.updatedAt, now), t)}</span>
     </div>

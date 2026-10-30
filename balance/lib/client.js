@@ -498,6 +498,13 @@ function BalanceRow(props) {
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: codeStyle, children: "USD" }),
           typeof cost.remainingUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: remainingStyle(cost.remainingUsd), children: t("row.remaining", { amount: formatRemainingUsd(cost.remainingUsd) }) }) : null
         ] })
+      ] }) : null,
+      typeof sessionId === "string" && cost.status === "ready" && cost.sessionId === sessionId && typeof cost.turnLimitUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: rowStyle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: rowLabelStyle, children: t("row.turn") }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: walletStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: amountStyle, children: formatUsd(cost.turnLimitUsd) }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: codeStyle, children: "USD" })
+        ] })
       ] }) : null
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: timeStyle, title: formatUpdatedAt(balance.updatedAt), children: compactTimeLabel(relativeTimeParts(balance.updatedAt, now), t) })
@@ -666,7 +673,7 @@ function createSnapshotStore(initial) {
 }
 
 // src/client/lib/cost.js
-var IDLE = Object.freeze({ status: "idle", sessionId: void 0, totalUsd: 0, limitUsd: null, remainingUsd: null, partial: false });
+var IDLE = Object.freeze({ status: "idle", sessionId: void 0, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, partial: false });
 function createCostTracker() {
   const store = createSnapshotStore(IDLE);
   let abort;
@@ -693,6 +700,7 @@ function createCostTracker() {
       totalUsd: keepsPrevious ? previous.totalUsd : 0,
       limitUsd: keepsPrevious ? previous.limitUsd : null,
       remainingUsd: keepsPrevious ? previous.remainingUsd : null,
+      turnLimitUsd: keepsPrevious ? previous.turnLimitUsd : null,
       partial: keepsPrevious ? previous.partial : false
     });
     return Promise.resolve().then(
@@ -709,23 +717,25 @@ function createCostTracker() {
     }).then((result) => {
       if (disposed || current !== generation) return;
       if (result === null || result === void 0 || result.ok !== true) {
-        store.set({ status: "error", sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, partial: false });
+        store.set({ status: "error", sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, partial: false });
         return;
       }
       const value = result.value;
       if (value === null || value === void 0 || value.pricing === null || value.pricing === void 0 || value.pricing.ready !== true) {
-        store.set({ status: "unavailable", sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, partial: false });
+        store.set({ status: "unavailable", sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, partial: false });
         return;
       }
       const totalUsd = typeof value.totalUsd === "number" && Number.isFinite(value.totalUsd) ? value.totalUsd : 0;
       const limitUsd = typeof value.limitUsd === "number" && Number.isFinite(value.limitUsd) ? value.limitUsd : null;
       const remainingUsd = typeof value.remainingUsd === "number" && Number.isFinite(value.remainingUsd) ? value.remainingUsd : null;
+      const turnLimitUsd = typeof value.turnLimitUsd === "number" && Number.isFinite(value.turnLimitUsd) ? value.turnLimitUsd : null;
       store.set({
         status: "ready",
         sessionId,
         totalUsd,
         limitUsd,
         remainingUsd,
+        turnLimitUsd,
         partial: typeof value.unpricedCalls === "number" && value.unpricedCalls > 0
       });
     }).catch(() => {
@@ -763,6 +773,7 @@ var EN = {
   "row.balance": "Balance",
   "row.session": "Session",
   "row.limit": "Limit",
+  "row.turn": "Turn",
   "row.remaining": "({amount} left)",
   "time.now": "now",
   "time.minutes": "{n}min",
@@ -792,6 +803,7 @@ var ZH = {
   "row.balance": "\u4F59\u989D",
   "row.session": "\u4F1A\u8BDD",
   "row.limit": "\u4E0A\u9650",
+  "row.turn": "\u5355\u8F6E",
   "row.remaining": "\uFF08\u5269\u4F59 {amount}\uFF09",
   "time.now": "\u521A\u521A",
   "time.minutes": "{n}\u5206\u949F",

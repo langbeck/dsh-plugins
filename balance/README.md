@@ -23,26 +23,41 @@ The Host provides a `balanceCost` service for other Host plugins:
 
 - `read(sessionId, signal)` → the same Session-cost snapshot the route returns
 - `await limitOf(sessionId)` / `await setLimit(sessionId, limitUsd | null)`
+- `await turnLimitOf(sessionId)` / `await setTurnLimit(sessionId, limitUsd | null)`
 - `pricingState()` → pricing readiness, fetch time, revision, and error
 
 The browser route `/api/balance-session-cost` delegates to this service, so
 other plugins and the Web Client share one pricing cache and one cost fold.
-The route also returns `limitUsd`, `remainingUsd`, and `limitPersistence`.
+The route also returns `limitUsd`, `remainingUsd`, `turnLimitUsd`, and the persistence
+state of each limit.
 
-### Cost cap
+### Session and turn limits
 
-`/limit <usd>` sets the current Session's cap, `/limit off` clears it, and
-`/limit` reports it. Caps are stored in a `balance` storage domain keyed by
-Session id and survive plugin reloads and DSH restarts; if the storage domain
-is unavailable the plugin falls back to memory.
+`/session-limit <usd>` sets the current Session cap. `/session-limit +2`
+raises the existing cap by $2, `/session-limit -2` lowers it, and
+`/session-limit off` clears it. `/session-limit` reports the current cap.
+`/sessionlimit` and `/limit` are aliases.
 
-A Host `agent/pre-step` guard pauses an over-cap turn and asks **Allow turn**
-(rest of the turn) / **Increase limit** / **Cancel**. Increase opens a second
-question with defaults (`+$1`, `+$5`, `+$10`, double) plus a custom amount; the
-new cap is saved before the step proceeds. Per-turn approvals remain ephemeral.
+`/turn-limit <usd>` sets a budget for the current turn; `/turn-limit +2`,
+`/turn-limit -2`, `/turn-limit off`, and `/turn-limit` work the same way.
+`/turnlimit` is an alias. Both caps are stored in separate `balance` storage
+domains keyed by Session id and survive plugin reloads and DSH restarts; if a
+domain is unavailable that cap falls back to memory.
 
-The sidebar's Session block gains a `Limit $5.00 ($2.50 left)` row while a cap
-is set. An overage greater than $0.001 renders as a negative remainder, e.g.
+The Host `agent/pre-step` guard checks the turn budget first, then the Session
+cap. It asks **Allow step** / **Increase turn limit** / **Cancel** for the turn
+budget, and **Allow turn** / **Increase limit** / **Cancel** for the Session
+cap. Increasing either limit opens a second question with defaults (`+$1`,
+`+$5`, `+$10`, double) plus a custom amount.
+
+The turn budget is a guardrail, not a hard token-level limit: the guard runs
+before each model step, so one model call can still overshoot before the next
+step is blocked. Approvals are scoped to one step for the turn budget and to
+the rest of the turn for the Session cap.
+
+The sidebar's Session block gains a `Limit $5.00 ($2.50 left)` row while a
+Session cap is set, and a `Turn $2.00 USD` row while a turn budget is set. An
+overage greater than $0.001 renders as a negative remainder, e.g.
 `Limit $2.00 USD (-$0.10 left)`.
 
 ## Install

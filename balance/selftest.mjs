@@ -299,6 +299,7 @@ globalThis.fetch = originalHostFetch
 const originalCapFetch = globalThis.fetch
 globalThis.fetch = async () => ({ ok: true, json: async () => ({ data: pricingBody.data }) })
 let commandDefinition
+const commandDefinitions = {}
 let preStepHandler
 let routeHandler
 let askAnswer = { answers: [{ id: 'cost-cap', selected: ['Cancel'] }] }
@@ -345,6 +346,7 @@ const fakeCapContext = {
   commands: {
     register(definition) {
       commandDefinition = definition
+      commandDefinitions[definition.name] = definition
       return () => {}
     },
   },
@@ -364,11 +366,16 @@ const fakeCapContext = {
 }
 await host.apply(fakeCapContext, { pricingRefreshSeconds: 3600 })
 check(provided.balanceCost !== undefined, 'Host provides the balanceCost service')
-check(typeof commandDefinition === 'object', 'Host registers the limit command')
+const sessionLimitCommand = commandDefinitions['session-limit']
+const turnLimitCommand = commandDefinitions['turn-limit']
+check(typeof sessionLimitCommand === 'object', 'Host registers the session-limit command')
+check(typeof turnLimitCommand === 'object', 'Host registers the turn-limit command')
+check(typeof commandDefinitions['limit'] === 'object', 'Host keeps the /limit alias')
+check(typeof commandDefinitions['sessionlimit'] === 'object', 'Host registers the /sessionlimit alias')
 check(typeof preStepHandler === 'function', 'Host registers the pre-step cost guard')
 const service = provided.balanceCost
-const commandResult = await commandDefinition.handler({ agent: capAgent, rawInput: ' 0.01 ' })
-equal(commandResult.kind, 'success', 'limit command sets a cap')
+const commandResult = await sessionLimitCommand.handler({ agent: capAgent, rawInput: ' 0.01 ' })
+equal(commandResult.kind, 'success', 'session-limit command sets a cap')
 equal(await service.limitOf('root'), 0.01, 'the service exposes the cap')
 const capRoute = await routeHandler({ json: async () => ({ sessionId: 'root' }), signal: new AbortController().signal })
 const capValue = await capRoute.json()
@@ -383,10 +390,12 @@ const eventsReader = eventsResponse.body.getReader()
 const eventDecoder = new TextDecoder()
 const readyEvent = await eventsReader.read()
 check(eventDecoder.decode(readyEvent.value).includes('"type":"ready"'), 'the cost event stream opens')
-await commandDefinition.handler({ agent: capAgent, rawInput: '0.02' })
+await sessionLimitCommand.handler({ agent: capAgent, rawInput: '0.02' }); await sessionLimitCommand.handler({ agent: capAgent, rawInput: '+2' })
+equal(await service.limitOf('root'), 2.02, 'relative /session-limit +2 increases the cap')
 const limitEvent = await eventsReader.read()
 check(eventDecoder.decode(limitEvent.value).includes('"type":"limit"'), 'setting a cap emits a limit event')
 check(eventDecoder.decode(limitEvent.value).includes('"limitUsd":0.02'), 'the limit event carries the cap')
+await sessionLimitCommand.handler({ agent: capAgent, rawInput: '0.02' })
 eventsAbort.abort()
 await eventsReader.cancel().catch(() => {})
 const next = async () => ({ kind: 'enter', messages: [] })
@@ -407,9 +416,28 @@ askAnswers = [
 const increased = await preStepHandler({ ...payload, turn: 2, step: 1 }, next)
 equal(increased.kind, 'enter', 'increasing the cap allows the step')
 equal(await service.limitOf('root'), 1.02, 'the increased cap is saved through the service')
-const clearResult = await commandDefinition.handler({ agent: capAgent, rawInput: 'off' })
-equal(clearResult.kind, 'success', 'limit command clears the cap')
+const clearResult = await sessionLimitCommand.handler({ agent: capAgent, rawInput: 'off' })
+equal(clearResult.kind, 'success', 'session-limit command clears the cap')
 equal(await service.limitOf('root'), null, 'the service clears the cap')
+const turnSet = await turnLimitCommand.handler({ agent: capAgent, rawInput: '0.01' })
+equal(turnSet.kind, 'success', 'turn-limit command sets a budget')
+equal(await service.turnLimitOf('root'), 0.01, 'the service exposes the turn budget')
+const turnRoute = await routeHandler({ json: async () => ({ sessionId: 'root' }), signal: new AbortController().signal })
+const turnCapValue = await turnRoute.json()
+equal(turnCapValue.value.turnLimitUsd, 0.01, 'the cost route carries the turn budget')
+await turnLimitCommand.handler({ agent: capAgent, rawInput: '+2' })
+equal(await service.turnLimitOf('root'), 2.01, 'relative /turn-limit +2 increases the budget')
+await turnLimitCommand.handler({ agent: capAgent, rawInput: '0.01' })
+askAnswer = { answers: [{ id: 'turn-cost-cap', selected: ['Allow step'] }] }
+const turnBaseline = await preStepHandler({ ...payload, turn: 3, step: 1 }, next)
+equal(turnBaseline.kind, 'enter', 'the first step establishes the turn baseline')
+const turnCapped = await preStepHandler({ ...payload, turn: 3, step: 2 }, next)
+equal(turnCapped.kind, 'enter', 'Allow step proceeds past the turn budget')
+const turnReprompted = await preStepHandler({ ...payload, turn: 3, step: 3 }, next)
+equal(turnReprompted.kind, 'enter', 'the next step asks for turn-budget approval again')
+const turnClear = await turnLimitCommand.handler({ agent: capAgent, rawInput: 'off' })
+equal(turnClear.kind, 'success', 'turn-limit command clears the budget')
+equal(await service.turnLimitOf('root'), null, 'the service clears the turn budget')
 capDisposers.reverse().forEach((dispose) => dispose())
 globalThis.fetch = originalCapFetch
 
@@ -648,12 +676,14 @@ check(balanceLabelStyle !== undefined && balanceLabelStyle.width === '52px', 'la
 check(sessionLabelStyle !== undefined && sessionLabelStyle.width === '52px', 'session and limit labels share the same column')
 check(boldCurrency, 'the currency codes are bold')
 
-injected.costStore.set({ status: 'ready', sessionId: 's1', totalUsd: 1.68, limitUsd: 2, remainingUsd: 0.32, partial: false })
+injected.costStore.set({ status: 'ready', sessionId: 's1', totalUsd: 1.68, limitUsd: 2, remainingUsd: 0.32, turnLimitUsd: 0.5, partial: false })
 const capTree = ReactFake.reset(() => pillRegistration.component(pillProps(true)))
 const capText = textOf(capTree).join(' ')
 check(capText.indexOf('row.limit') !== -1, 'wide block labels the limit row')
 check(capText.indexOf('$2.00') !== -1, 'wide block shows the cap amount')
 check(capText.indexOf('$0.32') !== -1, 'wide block shows the remaining amount')
+check(capText.indexOf('row.turn') !== -1, 'wide block labels the turn budget row')
+check(capText.indexOf('$0.50') !== -1, 'wide block shows the turn budget')
 let remainingNode
 let limitLabelStyle
 walkTree(capTree, (node) => {

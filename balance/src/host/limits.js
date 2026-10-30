@@ -13,3 +13,15 @@ export const LIMITS_DOMAIN = defineDomain({
     })),
   },
 })
+
+/** Durable per-Session turn budgets, separate from the session cap domain. */
+export const TURN_LIMITS_DOMAIN = defineDomain({
+  name: 'balance_turn_limits',
+  version: 1,
+  tables: {
+    session_turn_limits: domainTable(z.object({
+      limitUsd: z.number(),
+      updatedAt: z.number(),
+    })),
+  },
+})
