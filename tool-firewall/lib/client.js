@@ -261,7 +261,12 @@ var tabbedScrollStyle = {
   flex: "1 1 auto",
   minHeight: "100px",
   overflowY: "auto",
-  padding: "4px 16px 12px"
+  padding: "8px 16px 12px"
+};
+var modelListStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "6px"
 };
 var modelWarningStyle = {
   display: "flex",
@@ -992,105 +997,107 @@ function SettingsForm(props) {
       ] }) : null,
       !tabbed || tab === "models" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
         tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.models") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(ModelCard, { title: t("model.embedding"), model: models?.embedding, enabled: draft.embeddingEnabled, t, children: [
-          checkboxField("embeddingEnabled"),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.embeddingEnabledHint") }),
-          textField("embeddingModel", "100%", void 0, !draft.embeddingEnabled),
-          textField("embeddingRevision", "100%", void 0, !draft.embeddingEnabled)
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(ModelCard, { title: t("model.classifier"), model: models?.classifier, enabled: draft.classifierEnabled, t, children: [
-          checkboxField("classifierEnabled"),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierEnabledHint") }),
-          textField("classifierModel", "100%", void 0, !draft.classifierEnabled),
-          textField("classifierRevision", "100%", void 0, !draft.classifierEnabled),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.classifierLabels") }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-              "input",
-              {
-                type: "text",
-                value: listToText(draft.classifierLabels),
-                disabled: disabled || !draft.classifierEnabled,
-                "aria-label": t("field.classifierLabels"),
-                onChange: (event) => update("classifierLabels", textToList(event.target.value)),
-                style: inputStyle(disabled || !draft.classifierEnabled, "100%")
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierLabelsHint") })
-          ] })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(ModelCard, { title: t("model.outputGuard"), model: models?.outputGuard, enabled: draft.outputGuardEnabled, t, children: [
-          checkboxField("outputGuardEnabled"),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardEnabledHint") }),
-          textField("outputGuardModel", "100%", void 0, !draft.outputGuardEnabled),
-          textField("outputGuardRevision", "100%", void 0, !draft.outputGuardEnabled),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardTools") }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-              "input",
-              {
-                type: "text",
-                value: listToText(draft.outputGuardTools),
-                disabled: disabled || !draft.outputGuardEnabled,
-                "aria-label": t("field.outputGuardTools"),
-                onChange: (event) => update("outputGuardTools", textToList(event.target.value)),
-                style: inputStyle(disabled || !draft.outputGuardEnabled, "100%")
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardToolsHint") })
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: modelListStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(ModelCard, { title: t("model.embedding"), model: models?.embedding, enabled: draft.embeddingEnabled, t, children: [
+            checkboxField("embeddingEnabled"),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.embeddingEnabledHint") }),
+            textField("embeddingModel", "100%", void 0, !draft.embeddingEnabled),
+            textField("embeddingRevision", "100%", void 0, !draft.embeddingEnabled)
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardLabels") }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-              "input",
-              {
-                type: "text",
-                value: listToText(draft.outputGuardLabels),
-                disabled: disabled || !draft.outputGuardEnabled,
-                "aria-label": t("field.outputGuardLabels"),
-                onChange: (event) => update("outputGuardLabels", textToList(event.target.value)),
-                style: inputStyle(disabled || !draft.outputGuardEnabled, "100%")
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardLabelsHint") })
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(ModelCard, { title: t("model.classifier"), model: models?.classifier, enabled: draft.classifierEnabled, t, children: [
+            checkboxField("classifierEnabled"),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierEnabledHint") }),
+            textField("classifierModel", "100%", void 0, !draft.classifierEnabled),
+            textField("classifierRevision", "100%", void 0, !draft.classifierEnabled),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.classifierLabels") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                "input",
+                {
+                  type: "text",
+                  value: listToText(draft.classifierLabels),
+                  disabled: disabled || !draft.classifierEnabled,
+                  "aria-label": t("field.classifierLabels"),
+                  onChange: (event) => update("classifierLabels", textToList(event.target.value)),
+                  style: inputStyle(disabled || !draft.classifierEnabled, "100%")
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierLabelsHint") })
+            ] })
           ] }),
-          numberField("outputGuardThreshold", 0, 1, 0.01),
-          numberField("outputGuardMaxChars", 256, 2e5, 1),
-          numberField("outputGuardChunkChars", 256, 16e3, 1),
-          numberField("outputGuardTimeoutMs", 10, 5e3, 1),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardMode") }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-              "select",
-              {
-                value: draft.outputGuardMode,
-                disabled: disabled || !draft.outputGuardEnabled,
-                onChange: (event) => update("outputGuardMode", event.target.value),
-                style: selectStyle(disabled || !draft.outputGuardEnabled),
-                children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "quarantine", children: t("option.quarantine") }),
-                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "block", children: t("option.block") })
-                ]
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardModeHint") })
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardFailureMode") }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
-              "select",
-              {
-                value: draft.outputGuardFailureMode,
-                disabled: disabled || !draft.outputGuardEnabled,
-                onChange: (event) => update("outputGuardFailureMode", event.target.value),
-                style: selectStyle(disabled || !draft.outputGuardEnabled),
-                children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "open", children: t("option.outputOpen") }),
-                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "closed", children: t("option.outputClosed") })
-                ]
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardFailureModeHint") })
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(ModelCard, { title: t("model.outputGuard"), model: models?.outputGuard, enabled: draft.outputGuardEnabled, t, children: [
+            checkboxField("outputGuardEnabled"),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardEnabledHint") }),
+            textField("outputGuardModel", "100%", void 0, !draft.outputGuardEnabled),
+            textField("outputGuardRevision", "100%", void 0, !draft.outputGuardEnabled),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardTools") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                "input",
+                {
+                  type: "text",
+                  value: listToText(draft.outputGuardTools),
+                  disabled: disabled || !draft.outputGuardEnabled,
+                  "aria-label": t("field.outputGuardTools"),
+                  onChange: (event) => update("outputGuardTools", textToList(event.target.value)),
+                  style: inputStyle(disabled || !draft.outputGuardEnabled, "100%")
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardToolsHint") })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardLabels") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+                "input",
+                {
+                  type: "text",
+                  value: listToText(draft.outputGuardLabels),
+                  disabled: disabled || !draft.outputGuardEnabled,
+                  "aria-label": t("field.outputGuardLabels"),
+                  onChange: (event) => update("outputGuardLabels", textToList(event.target.value)),
+                  style: inputStyle(disabled || !draft.outputGuardEnabled, "100%")
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardLabelsHint") })
+            ] }),
+            numberField("outputGuardThreshold", 0, 1, 0.01),
+            numberField("outputGuardMaxChars", 256, 2e5, 1),
+            numberField("outputGuardChunkChars", 256, 16e3, 1),
+            numberField("outputGuardTimeoutMs", 10, 5e3, 1),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardMode") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+                "select",
+                {
+                  value: draft.outputGuardMode,
+                  disabled: disabled || !draft.outputGuardEnabled,
+                  onChange: (event) => update("outputGuardMode", event.target.value),
+                  style: selectStyle(disabled || !draft.outputGuardEnabled),
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "quarantine", children: t("option.quarantine") }),
+                    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "block", children: t("option.block") })
+                  ]
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardModeHint") })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardFailureMode") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+                "select",
+                {
+                  value: draft.outputGuardFailureMode,
+                  disabled: disabled || !draft.outputGuardEnabled,
+                  onChange: (event) => update("outputGuardFailureMode", event.target.value),
+                  style: selectStyle(disabled || !draft.outputGuardEnabled),
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "open", children: t("option.outputOpen") }),
+                    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "closed", children: t("option.outputClosed") })
+                  ]
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardFailureModeHint") })
+            ] })
           ] })
         ] }),
         checkboxField("allowRemoteModels"),

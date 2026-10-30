@@ -93,7 +93,13 @@ export const tabbedScrollStyle = {
   flex: '1 1 auto',
   minHeight: '100px',
   overflowY: 'auto',
-  padding: '4px 16px 12px',
+  padding: '8px 16px 12px',
+}
+
+export const modelListStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6px',
 }
 
 export const modelWarningStyle = {

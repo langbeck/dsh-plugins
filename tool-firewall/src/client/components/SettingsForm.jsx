@@ -13,6 +13,7 @@ import {
   modelCardBodyStyle,
   modelCardStyle,
   modelCardSummaryStyle,
+  modelListStyle,
   modelStatusStyle,
   modelWarningStyle,
   pageStyle,
@@ -311,6 +312,7 @@ export default function SettingsForm(props) {
       {!tabbed || tab === 'models' ? (
         <section style={tabbed ? tabbedSectionStyle : sectionStyle}>
           {tabbed ? null : <h3 style={sectionTitleStyle}>{t('section.models')}</h3>}
+          <div style={modelListStyle}>
           <ModelCard title={t('model.embedding')} model={models?.embedding} enabled={draft.embeddingEnabled} t={t}>
             {checkboxField('embeddingEnabled')}
             <span style={hintStyle}>{t('field.embeddingEnabledHint')}</span>
@@ -397,6 +399,7 @@ export default function SettingsForm(props) {
               <span style={hintStyle}>{t('field.outputGuardFailureModeHint')}</span>
             </label>
           </ModelCard>
+          </div>
 
           {checkboxField('allowRemoteModels')}
           <span style={hintStyle}>{t('field.allowRemoteModelsHint')}</span>
