@@ -538,6 +538,64 @@ export const logLabelStyle = {
   color: 'var(--dsw-alias-label-tertiary)',
 }
 
+export const inspectButtonStyle = {
+  justifySelf: 'start',
+  marginTop: '4px',
+  padding: '3px 8px',
+  border: '0.5px solid var(--dsw-alias-border-l3)',
+  borderRadius: 'var(--dsw-radius-sm, 6px)',
+  background: 'var(--dsw-alias-bg-layer-1)',
+  color: 'var(--dsw-alias-label-primary)',
+  font: 'inherit',
+  fontSize: '11px',
+  cursor: 'pointer',
+}
+
+export const inspectPanelStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  width: 'min(720px, 100%)',
+  maxWidth: 'calc(100vw - 40px)',
+  maxHeight: '80vh',
+  border: '0.5px solid var(--dsw-alias-border-l3)',
+  borderRadius: 'var(--dsw-radius-lg, 12px)',
+  background: 'var(--dsw-alias-bg-layer-1)',
+  color: 'var(--dsw-alias-label-primary)',
+  boxShadow: '0 18px 60px rgba(0, 0, 0, 0.32)',
+  overflow: 'hidden',
+}
+
+export const inspectHeaderStyle = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '12px',
+  padding: '14px 16px 10px',
+  borderBottom: '0.5px solid var(--dsw-alias-border-l3)',
+}
+
+export const inspectPreStyle = {
+  flex: '1 1 auto',
+  minHeight: 0,
+  margin: 0,
+  padding: '12px 16px',
+  overflow: 'auto',
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+  fontSize: '11px',
+  lineHeight: '17px',
+  background: 'var(--dsw-alias-bg-layer-2)',
+}
+
+export const inspectWarningStyle = {
+  margin: 0,
+  padding: '8px 16px',
+  borderBottom: '0.5px solid var(--dsw-alias-border-l3)',
+  color: 'var(--dsw-alias-label-tertiary)',
+  fontSize: '11px',
+  lineHeight: '17px',
+}
+
 export const logValueStyle = {
   color: 'var(--dsw-alias-label-primary)',
   fontVariantNumeric: 'tabular-nums',

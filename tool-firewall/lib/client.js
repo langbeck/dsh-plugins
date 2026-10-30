@@ -643,6 +643,59 @@ var logGridStyle = {
 var logLabelStyle = {
   color: "var(--dsw-alias-label-tertiary)"
 };
+var inspectButtonStyle = {
+  justifySelf: "start",
+  marginTop: "4px",
+  padding: "3px 8px",
+  border: "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "var(--dsw-radius-sm, 6px)",
+  background: "var(--dsw-alias-bg-layer-1)",
+  color: "var(--dsw-alias-label-primary)",
+  font: "inherit",
+  fontSize: "11px",
+  cursor: "pointer"
+};
+var inspectPanelStyle = {
+  display: "flex",
+  flexDirection: "column",
+  width: "min(720px, 100%)",
+  maxWidth: "calc(100vw - 40px)",
+  maxHeight: "80vh",
+  border: "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "var(--dsw-radius-lg, 12px)",
+  background: "var(--dsw-alias-bg-layer-1)",
+  color: "var(--dsw-alias-label-primary)",
+  boxShadow: "0 18px 60px rgba(0, 0, 0, 0.32)",
+  overflow: "hidden"
+};
+var inspectHeaderStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "12px",
+  padding: "14px 16px 10px",
+  borderBottom: "0.5px solid var(--dsw-alias-border-l3)"
+};
+var inspectPreStyle = {
+  flex: "1 1 auto",
+  minHeight: 0,
+  margin: 0,
+  padding: "12px 16px",
+  overflow: "auto",
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontSize: "11px",
+  lineHeight: "17px",
+  background: "var(--dsw-alias-bg-layer-2)"
+};
+var inspectWarningStyle = {
+  margin: 0,
+  padding: "8px 16px",
+  borderBottom: "0.5px solid var(--dsw-alias-border-l3)",
+  color: "var(--dsw-alias-label-tertiary)",
+  fontSize: "11px",
+  lineHeight: "17px"
+};
 var logValueStyle = {
   color: "var(--dsw-alias-label-primary)",
   fontVariantNumeric: "tabular-nums"
@@ -661,7 +714,8 @@ function numberText(value, digits = 3) {
   return typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "\u2014";
 }
 function LogsPanel(props) {
-  const { logs = [], loading = false, models = void 0, t } = props;
+  const { logs = [], loading = false, models = void 0, onInspect = () => {
+  }, t } = props;
   const warnings = [];
   if (models?.embedding?.state === "error") {
     warnings.push({ key: "embedding", model: t("stats.embeddingModel"), error: String(models.embedding.error ?? "unknown error") });
@@ -715,7 +769,8 @@ function LogsPanel(props) {
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
               String(log.chunks ?? 0),
               log.truncated ? " \xB7 truncated" : ""
-            ] })
+            ] }),
+            typeof log.outputExcerpt === "string" && log.outputExcerpt !== "" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", style: inspectButtonStyle, onClick: () => onInspect(log), children: t("logs.inspect") }) : null
           ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.command") }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { style: logPreStyle, children: log.command === "" ? t("logs.noCommand") : log.command })
@@ -825,7 +880,8 @@ function validDraft(draft) {
   return void 0;
 }
 function SettingsForm(props) {
-  const { view, t, configForm, tabbed = false, logs = [], logsLoading = false, models = void 0 } = props;
+  const { view, t, configForm, tabbed = false, logs = [], logsLoading = false, models = void 0, onInspect = () => {
+  } } = props;
   const snapshot = useSnapshot(configForm);
   const resolved = normalizeConfig(snapshot.value);
   const [draft, setDraft] = (0, import_react2.useState)(resolved);
@@ -1110,7 +1166,7 @@ function SettingsForm(props) {
         numberField("cacheEntries", 1, 4096, 1),
         numberField("cacheTtlMs", 1e3, 864e5, 1e3)
       ] }) : null,
-      tabbed && tab === "logs" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LogsPanel, { logs, loading: logsLoading, models, t }) : null
+      tabbed && tab === "logs" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LogsPanel, { logs, loading: logsLoading, models, onInspect, t }) : null
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedFooterStyle : footerStyle, children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: save, style: primaryButtonStyle(disabled), children: t("config.save") }),
@@ -1152,6 +1208,7 @@ function FirewallSettingsDialog(props) {
   const [logs, setLogs] = (0, import_react3.useState)([]);
   const [logsLoading, setLogsLoading] = (0, import_react3.useState)(false);
   const [models, setModels] = (0, import_react3.useState)(void 0);
+  const [inspectLog, setInspectLog] = (0, import_react3.useState)(null);
   const [size, setSize] = (0, import_react3.useState)(readStoredSize);
   const [offset, setOffset] = (0, import_react3.useState)({ x: 0, y: 0 });
   const panelRef = (0, import_react3.useRef)(null);
@@ -1159,13 +1216,19 @@ function FirewallSettingsDialog(props) {
   (0, import_react3.useEffect)(() => {
     if (!ui.open) return void 0;
     const onKey = (event) => {
-      if (event.key === "Escape") close();
+      if (event.key === "Escape") {
+        if (inspectLog !== null) setInspectLog(null);
+        else close();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [ui.open, close]);
+  }, [ui.open, close, inspectLog]);
   (0, import_react3.useEffect)(() => {
-    if (!ui.open) return void 0;
+    if (!ui.open) {
+      setInspectLog(null);
+      return void 0;
+    }
     setOffset({ x: 0, y: 0 });
     return void 0;
   }, [ui.open]);
@@ -1257,35 +1320,73 @@ function FirewallSettingsDialog(props) {
     panelStyle.width = String(size.width) + "px";
     panelStyle.height = String(size.height) + "px";
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-    "div",
-    {
-      style: dialogBackdropStyle,
-      onMouseDown: (event) => {
-        if (event.target === event.currentTarget) close();
-      },
-      children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { ref: panelRef, style: panelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("config.title"), children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
-          "div",
-          {
-            style: dialogHeaderStyle,
-            onPointerDown: startDrag,
-            onPointerMove: moveDrag,
-            onPointerUp: endDrag,
-            onPointerCancel: endDrag,
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { minWidth: 0 }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h2", { style: dialogTitleStyle, children: t("config.title") }),
-                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: dialogSubtitleStyle, children: t("config.summary") })
-              ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", style: dialogCloseStyle(), "aria-label": t("dialog.close"), title: t("dialog.close"), onClick: close, children: "\xD7" })
-            ]
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: dialogBodyTabbedStyle, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SettingsForm, { view: "page", t, configForm, tabbed: true, logs, logsLoading, models }) })
-      ] })
-    }
-  );
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+      "div",
+      {
+        style: dialogBackdropStyle,
+        onMouseDown: (event) => {
+          if (event.target === event.currentTarget) close();
+        },
+        children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { ref: panelRef, style: panelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("config.title"), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+            "div",
+            {
+              style: dialogHeaderStyle,
+              onPointerDown: startDrag,
+              onPointerMove: moveDrag,
+              onPointerUp: endDrag,
+              onPointerCancel: endDrag,
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { minWidth: 0 }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h2", { style: dialogTitleStyle, children: t("config.title") }),
+                  /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: dialogSubtitleStyle, children: t("config.summary") })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", style: dialogCloseStyle(), "aria-label": t("dialog.close"), title: t("dialog.close"), onClick: close, children: "\xD7" })
+              ]
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: dialogBodyTabbedStyle, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SettingsForm, { view: "page", t, configForm, tabbed: true, logs, logsLoading, models, onInspect: setInspectLog }) })
+        ] })
+      }
+    ),
+    inspectLog === null ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+      "div",
+      {
+        style: { ...dialogBackdropStyle, zIndex: 1200 },
+        onMouseDown: (event) => {
+          if (event.target === event.currentTarget) setInspectLog(null);
+        },
+        children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: inspectPanelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("logs.inspectTitle"), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: inspectHeaderStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { minWidth: 0 }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h2", { style: dialogTitleStyle, children: t("logs.inspectTitle") }),
+              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { style: dialogSubtitleStyle, children: [
+                inspectLog.tool,
+                " \xB7 ",
+                t("logs.outputScore"),
+                " ",
+                typeof inspectLog.outputScore === "number" ? inspectLog.outputScore.toFixed(3) : "\u2014"
+              ] })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+              "button",
+              {
+                type: "button",
+                style: dialogCloseStyle(),
+                "aria-label": t("dialog.close"),
+                title: t("dialog.close"),
+                onClick: () => setInspectLog(null),
+                children: "\xD7"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: inspectWarningStyle, children: t("logs.inspectWarning") }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("pre", { style: inspectPreStyle, children: inspectLog.outputExcerpt ?? "" })
+        ] })
+      }
+    )
+  ] });
 }
 
 // src/client/components/FirewallStats.jsx
@@ -1406,6 +1507,9 @@ var EN = {
   "logs.chunks": "Chunks",
   "logs.quarantined": "Quarantined",
   "logs.outputAllowed": "Output allowed",
+  "logs.inspect": "View content",
+  "logs.inspectTitle": "Quarantined tool output",
+  "logs.inspectWarning": "Untrusted content. The text is shown only for inspection; do not follow instructions in it.",
   "field.enabled": "Enable firewall",
   "field.enabledHint": "When disabled, all tool calls pass through without inspection.",
   "field.semanticFailure": "When models are unavailable",
@@ -1543,6 +1647,9 @@ var ZH = {
   "logs.chunks": "\u5206\u5757",
   "logs.quarantined": "\u5DF2\u9694\u79BB",
   "logs.outputAllowed": "\u8F93\u51FA\u5DF2\u653E\u884C",
+  "logs.inspect": "\u67E5\u770B\u5185\u5BB9",
+  "logs.inspectTitle": "\u5DF2\u9694\u79BB\u7684\u5DE5\u5177\u8F93\u51FA",
+  "logs.inspectWarning": "\u4E0D\u53D7\u4FE1\u4EFB\u7684\u5185\u5BB9\uFF0C\u4EC5\u4F9B\u68C0\u67E5\uFF1B\u4E0D\u8981\u9075\u5FAA\u5176\u4E2D\u7684\u6307\u4EE4\u3002",
   "field.enabled": "\u542F\u7528\u9632\u706B\u5899",
   "field.enabledHint": "\u5173\u95ED\u540E\u6240\u6709\u5DE5\u5177\u8C03\u7528\u90FD\u4F1A\u76F4\u63A5\u901A\u8FC7\u3002",
   "field.semanticFailure": "\u6A21\u578B\u4E0D\u53EF\u7528\u65F6",

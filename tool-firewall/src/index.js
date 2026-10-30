@@ -38,13 +38,22 @@ const STATS_ROUTE = '/api/tool-firewall-stats'
 const LOGS_ROUTE = '/api/tool-firewall-logs'
 const LOG_LIMIT = 200
 const LOG_PREVIEW_CHARS = 400
+const OUTPUT_INSPECT_CHARS = 8000
+
+function redactSecrets(value) {
+  return value
+    .replace(/\b(?:sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,})\b/g, '[redacted]')
+    .replace(/((?:password|passwd|token|secret|api[_-]?key|authorization)\s*[=:]\s*)(["']?)[^\s"']+/gi, '$1$2[redacted]')
+}
 
 function preview(value) {
   if (typeof value !== 'string' || value === '') return ''
-  return value
-    .slice(0, LOG_PREVIEW_CHARS)
-    .replace(/\b(?:sk-[A-Za-z0-9_-]{12,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,})\b/g, '[redacted]')
-    .replace(/((?:password|passwd|token|secret|api[_-]?key|authorization)\s*[=:]\s*)(["']?)[^\s"']+/gi, '$1$2[redacted]')
+  return redactSecrets(value.slice(0, LOG_PREVIEW_CHARS))
+}
+
+function inspectionPreview(value) {
+  if (typeof value !== 'string' || value === '') return ''
+  return redactSecrets(value.slice(0, OUTPUT_INSPECT_CHARS))
 }
 
 export const Config = Schema.object({
@@ -117,7 +126,13 @@ export function apply(ctx, config) {
   let logSeq = 0
   let runtime
 
-  function recordOutput({ tool, scan, action, durationMs }) {
+  function recordOutput({ tool, scan, action, durationMs, text, failure, threshold }) {
+    const score = typeof scan?.score === 'number' ? scan.score : undefined
+    const reason = action === 'allow'
+      ? ''
+      : failure !== undefined
+        ? 'output guard unavailable: ' + preview(failure) + '; result withheld'
+        : 'injection score ' + (score === undefined ? 'unavailable' : score.toFixed(3)) + ' >= threshold ' + Number(threshold).toFixed(3)
     logs.unshift({
       id: ++logSeq,
       at: Date.now(),
@@ -127,8 +142,11 @@ export function apply(ctx, config) {
       description: '',
       blocked: action !== 'allow',
       code: action === 'allow' ? undefined : 'TOOL_FIREWALL_OUTPUT_BLOCKED',
-      reason: action === 'allow' ? '' : 'potential prompt injection in tool output',
-      outputScore: scan?.score,
+      reason,
+      outputScore: score,
+      outputThreshold: threshold,
+      outputFailure: failure === undefined ? undefined : preview(failure),
+      outputExcerpt: action === 'allow' ? undefined : inspectionPreview(text),
       chunks: scan?.chunks,
       truncated: scan?.truncated === true,
       action,
@@ -260,7 +278,7 @@ export function apply(ctx, config) {
     } catch (error) {
       const action = runtime.config.outputGuardFailureMode === 'closed' ? 'quarantine' : 'allow'
       if (action === 'quarantine') counters.outputsBlocked += 1
-      recordOutput({ tool: exec.name, scan: { score: undefined, chunks: 0, truncated: false }, action, durationMs: Date.now() - started })
+      recordOutput({ tool: exec.name, scan: { score: undefined, chunks: 0, truncated: false }, action, durationMs: Date.now() - started, text, failure: describeError(error), threshold: runtime.config.outputGuardThreshold })
       if (action === 'allow') return downstream
       return {
         kind: 'accept',
@@ -273,7 +291,7 @@ export function apply(ctx, config) {
       return downstream
     }
     const mode = runtime.config.outputGuardMode
-    recordOutput({ tool: exec.name, scan, action: mode, durationMs: Date.now() - started })
+    recordOutput({ tool: exec.name, scan, action: mode, durationMs: Date.now() - started, text, threshold: runtime.config.outputGuardThreshold })
     if (mode === 'block') {
       counters.outputsBlocked += 1
       return {

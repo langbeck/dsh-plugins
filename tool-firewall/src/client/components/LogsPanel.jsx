@@ -14,6 +14,7 @@ import {
   logToolStyle,
   logValueStyle,
   logsListStyle,
+  inspectButtonStyle,
 } from '../lib/styles.js'
 
 function timeText(at) {
@@ -27,7 +28,7 @@ function numberText(value, digits = 3) {
 
 /** Recent interceptions, one collapsible row per call. */
 export default function LogsPanel(props) {
-  const { logs = [], loading = false, models = undefined, t } = props
+  const { logs = [], loading = false, models = undefined, onInspect = () => {}, t } = props
   const warnings = []
   if (models?.embedding?.state === 'error') {
     warnings.push({ key: 'embedding', model: t('stats.embeddingModel'), error: String(models.embedding.error ?? 'unknown error') })
@@ -91,6 +92,9 @@ export default function LogsPanel(props) {
                   <span style={logValueStyle}>{t(decisionLabel)}</span>
                   <span style={logLabelStyle}>{t('logs.chunks')}</span>
                   <span style={logValueStyle}>{String(log.chunks ?? 0)}{log.truncated ? ' · truncated' : ''}</span>
+                  {typeof log.outputExcerpt === 'string' && log.outputExcerpt !== '' ? (
+                    <button type="button" style={inspectButtonStyle} onClick={() => onInspect(log)}>{t('logs.inspect')}</button>
+                  ) : null}
                 </div>
               ) : (
                 <div style={logSectionStyle}>

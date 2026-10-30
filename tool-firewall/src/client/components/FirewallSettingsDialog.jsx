@@ -10,6 +10,10 @@ import {
   dialogPanelStyle,
   dialogSubtitleStyle,
   dialogTitleStyle,
+  inspectHeaderStyle,
+  inspectPanelStyle,
+  inspectPreStyle,
+  inspectWarningStyle,
 } from '../lib/styles.js'
 import SettingsForm from './SettingsForm.jsx'
 
@@ -45,6 +49,7 @@ export default function FirewallSettingsDialog(props) {
   const [logs, setLogs] = useState([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [models, setModels] = useState(undefined)
+  const [inspectLog, setInspectLog] = useState(null)
   const [size, setSize] = useState(readStoredSize)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const panelRef = useRef(null)
@@ -53,14 +58,20 @@ export default function FirewallSettingsDialog(props) {
   useEffect(() => {
     if (!ui.open) return undefined
     const onKey = (event) => {
-      if (event.key === 'Escape') close()
+      if (event.key === 'Escape') {
+        if (inspectLog !== null) setInspectLog(null)
+        else close()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [ui.open, close])
+  }, [ui.open, close, inspectLog])
 
   useEffect(() => {
-    if (!ui.open) return undefined
+    if (!ui.open) {
+      setInspectLog(null)
+      return undefined
+    }
     setOffset({ x: 0, y: 0 })
     return undefined
   }, [ui.open])
@@ -162,32 +173,65 @@ export default function FirewallSettingsDialog(props) {
     panelStyle.height = String(size.height) + 'px'
   }
   return (
-    <div
-      style={dialogBackdropStyle}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) close()
-      }}
-    >
-      <div ref={panelRef} style={panelStyle} role="dialog" aria-modal="true" aria-label={t('config.title')}>
-        <div
-          style={dialogHeaderStyle}
-          onPointerDown={startDrag}
-          onPointerMove={moveDrag}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-        >
-          <div style={{ minWidth: 0 }}>
-            <h2 style={dialogTitleStyle}>{t('config.title')}</h2>
-            <p style={dialogSubtitleStyle}>{t('config.summary')}</p>
+    <>
+      <div
+        style={dialogBackdropStyle}
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) close()
+        }}
+      >
+        <div ref={panelRef} style={panelStyle} role="dialog" aria-modal="true" aria-label={t('config.title')}>
+          <div
+            style={dialogHeaderStyle}
+            onPointerDown={startDrag}
+            onPointerMove={moveDrag}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+          >
+            <div style={{ minWidth: 0 }}>
+              <h2 style={dialogTitleStyle}>{t('config.title')}</h2>
+              <p style={dialogSubtitleStyle}>{t('config.summary')}</p>
+            </div>
+            <button type="button" style={dialogCloseStyle()} aria-label={t('dialog.close')} title={t('dialog.close')} onClick={close}>
+              ×
+            </button>
           </div>
-          <button type="button" style={dialogCloseStyle()} aria-label={t('dialog.close')} title={t('dialog.close')} onClick={close}>
-            ×
-          </button>
-        </div>
-        <div style={dialogBodyTabbedStyle}>
-          <SettingsForm view="page" t={t} configForm={configForm} tabbed logs={logs} logsLoading={logsLoading} models={models} />
+          <div style={dialogBodyTabbedStyle}>
+            <SettingsForm view="page" t={t} configForm={configForm} tabbed logs={logs} logsLoading={logsLoading} models={models} onInspect={setInspectLog} />
+          </div>
         </div>
       </div>
-    </div>
+
+      {inspectLog === null ? null : (
+        <div
+          style={{ ...dialogBackdropStyle, zIndex: 1200 }}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setInspectLog(null)
+          }}
+        >
+          <div style={inspectPanelStyle} role="dialog" aria-modal="true" aria-label={t('logs.inspectTitle')}>
+            <div style={inspectHeaderStyle}>
+              <div style={{ minWidth: 0 }}>
+                <h2 style={dialogTitleStyle}>{t('logs.inspectTitle')}</h2>
+                <p style={dialogSubtitleStyle}>
+                  {inspectLog.tool} · {t('logs.outputScore')} {typeof inspectLog.outputScore === 'number' ? inspectLog.outputScore.toFixed(3) : '—'}
+                </p>
+              </div>
+              <button
+                type="button"
+                style={dialogCloseStyle()}
+                aria-label={t('dialog.close')}
+                title={t('dialog.close')}
+                onClick={() => setInspectLog(null)}
+              >
+                ×
+              </button>
+            </div>
+            <p style={inspectWarningStyle}>{t('logs.inspectWarning')}</p>
+            <pre style={inspectPreStyle}>{inspectLog.outputExcerpt ?? ''}</pre>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
