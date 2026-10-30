@@ -1,5 +1,6 @@
 import BalanceRow from './components/BalanceRow.jsx'
 import SettingsForm from './components/SettingsForm.jsx'
+import ToastView from './components/ToastView.jsx'
 import { CONFIG_KEY, INJECT, LAYOUT_CSS, LIMIT_ROUTE, NS, ROW_ID } from './constants.js'
 import { normalizeConfig } from './lib/config.js'
 import { createCostTracker } from './lib/cost.js'
@@ -37,7 +38,18 @@ function apply(ctx) {
   const configStore = createSnapshotStore(normalizeConfig(readConfigValue(configForm)))
   const balanceStore = createSnapshotStore({ status: 'loading', wallets: [], error: undefined, updatedAt: undefined })
   const costTracker = createCostTracker()
+  const toastStore = createSnapshotStore({ id: 0, text: '', error: false })
+  const showToast = (text, error) => toastStore.set({ id: Date.now(), text: String(text ?? ''), error: error === true })
   const t = ctx.locale.bind(NS)
+  const restoreFocus = (actx) => {
+    setTimeout(() => {
+      try {
+        const conversation = ctx.get('conversation')
+        const input = conversation === undefined || conversation === null ? undefined : conversation.input.for(actx)
+        if (input !== undefined && input !== null) input.focus()
+      } catch (error) {}
+    }, 50)
+  }
   const claimFor = (scope, sessionId) => {
     const name = scope === 'turn' ? 'turn-budget' : 'session-budget'
     const token = '/' + name + ' '
@@ -45,7 +57,7 @@ function apply(ctx) {
       name,
       token,
       hint: t('budget.claimHint'),
-      submit: async (args) => {
+      submit: async (args, actx) => {
         let result
         try {
           const response = await fetch(LIMIT_ROUTE, {
@@ -56,13 +68,21 @@ function apply(ctx) {
           })
           result = await response.json()
         } catch (error) {
-          return { kind: 'error', text: t('budget.failed') }
+          const text = t('budget.failed')
+          showToast(text, true)
+          restoreFocus(actx)
+          return { kind: 'error' }
         }
         if (result === null || result === undefined || result.ok !== true) {
-          return { kind: 'error', text: result?.error?.message ?? t('budget.failed') }
+          const text = result?.error?.message ?? t('budget.failed')
+          showToast(text, true)
+          restoreFocus(actx)
+          return { kind: 'error' }
         }
         costTracker.refresh(sessionId)
-        return { kind: 'success', text: result.value.text ?? t('budget.saved') }
+        showToast(result.value.text ?? t('budget.saved'), false)
+        restoreFocus(actx)
+        return { kind: 'success' }
       },
     }
   }
@@ -111,6 +131,13 @@ function apply(ctx) {
       },
     })
   }, 'balance: budget input source')
+
+  ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+    name: 'shell.overlay',
+    id: 'balance.toast',
+    locale: NS,
+    inject: () => ({ toastStore }),
+  }, ToastView))
 
 
   let timer = null

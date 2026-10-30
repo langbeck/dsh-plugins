@@ -125,7 +125,8 @@ export default function BalanceRow(props) {
     )
   }
 
-  const costPending = cost.status === 'loading' || cost.status === 'refreshing'
+  const costReady = (cost.status === 'ready' || cost.status === 'refreshing') && cost.sessionId === sessionId
+  const costPending = cost.status === 'loading'
   return (
     <div data-balance-pill="" role="status" aria-label={ariaLabel} style={pillStyle(true)}>
       <div style={contentStyle}>
@@ -136,7 +137,7 @@ export default function BalanceRow(props) {
         {typeof sessionId === 'string' ? (
           <div style={rowStyle}>
             <span style={rowLabelStyle}>{t('row.session')}</span>
-            {cost.status === 'ready' && cost.sessionId === sessionId ? (
+            {costReady ? (
               <span style={walletStyle}>
                 <span style={amountStyle}>{formatUsd(cost.totalUsd)}</span>
                 <span style={codeStyle}>USD</span>
@@ -146,7 +147,7 @@ export default function BalanceRow(props) {
             )}
           </div>
         ) : null}
-        {typeof sessionId === 'string' && cost.status === 'ready' && cost.sessionId === sessionId && typeof cost.limitUsd === 'number' ? (
+        {typeof sessionId === 'string' && costReady && typeof cost.limitUsd === 'number' ? (
           <div style={rowStyle}>
             <span style={rowLabelStyle}>{t('row.limit')}</span>
             <span style={walletStyle}>
@@ -158,7 +159,7 @@ export default function BalanceRow(props) {
             </span>
           </div>
         ) : null}
-        {typeof sessionId === 'string' && cost.status === 'ready' && cost.sessionId === sessionId && typeof cost.turnLimitUsd === 'number' ? (
+        {typeof sessionId === 'string' && costReady && typeof cost.turnLimitUsd === 'number' ? (
           <div style={rowStyle}>
             <span style={rowLabelStyle}>{t('row.turn')}</span>
             <span style={walletStyle}>

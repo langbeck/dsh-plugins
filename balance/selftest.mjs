@@ -727,6 +727,10 @@ check(runningText.indexOf('$0.20') !== -1, 'wide block shows the remaining turn 
 const idleTree = ReactFake.reset(() => pillRegistration.component(pillProps(true, false)))
 const idleText = textOf(idleTree).join(' ')
 check(idleText.indexOf('$0.20') === -1, 'remaining turn budget is hidden outside a turn')
+injected.costStore.set({ status: 'refreshing', sessionId: 's1', totalUsd: 1.68, limitUsd: 2, remainingUsd: 0.32, turnLimitUsd: 0.5, turnRemainingUsd: 0.2, partial: false })
+const refreshingTree = ReactFake.reset(() => pillRegistration.component(pillProps(true, true)))
+const refreshingText = textOf(refreshingTree).join(' ')
+check(refreshingText.indexOf('$1.68') !== -1 && refreshingText.indexOf('row.limit') !== -1 && refreshingText.indexOf('row.turn') !== -1, 'refreshing keeps the previous cost rows visible')
 let remainingNode
 let limitLabelStyle
 walkTree(capTree, (node) => {

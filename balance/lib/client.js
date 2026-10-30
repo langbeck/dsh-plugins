@@ -483,7 +483,8 @@ function BalanceRow(props) {
   if (!wide) {
     return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { "data-balance-pill": "", role: "status", "aria-label": ariaLabel, style: pillStyle(false), children: walletNodes });
   }
-  const costPending = cost.status === "loading" || cost.status === "refreshing";
+  const costReady = (cost.status === "ready" || cost.status === "refreshing") && cost.sessionId === sessionId;
+  const costPending = cost.status === "loading";
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { "data-balance-pill": "", role: "status", "aria-label": ariaLabel, style: pillStyle(true), children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: contentStyle, children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: rowStyle, children: [
@@ -492,12 +493,12 @@ function BalanceRow(props) {
       ] }),
       typeof sessionId === "string" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: rowStyle, children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: rowLabelStyle, children: t("row.session") }),
-        cost.status === "ready" && cost.sessionId === sessionId ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: walletStyle, children: [
+        costReady ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: walletStyle, children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: amountStyle, children: formatUsd(cost.totalUsd) }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: codeStyle, children: "USD" })
         ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: amountStyle, children: costPending ? "\u2026" : "\u2014" })
       ] }) : null,
-      typeof sessionId === "string" && cost.status === "ready" && cost.sessionId === sessionId && typeof cost.limitUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: rowStyle, children: [
+      typeof sessionId === "string" && costReady && typeof cost.limitUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: rowStyle, children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: rowLabelStyle, children: t("row.limit") }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: walletStyle, children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: amountStyle, children: formatUsd(cost.limitUsd) }),
@@ -505,7 +506,7 @@ function BalanceRow(props) {
           typeof cost.remainingUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: remainingStyle(cost.remainingUsd), children: t("row.remaining", { amount: formatRemainingUsd(cost.remainingUsd) }) }) : null
         ] })
       ] }) : null,
-      typeof sessionId === "string" && cost.status === "ready" && cost.sessionId === sessionId && typeof cost.turnLimitUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: rowStyle, children: [
+      typeof sessionId === "string" && costReady && typeof cost.turnLimitUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: rowStyle, children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: rowLabelStyle, children: t("row.turn") }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: walletStyle, children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: amountStyle, children: formatUsd(cost.turnLimitUsd) }),
@@ -655,6 +656,62 @@ function SettingsForm(props) {
       noticeText === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { role: notice === "error" ? "alert" : "status", style: notice === "error" ? errorStyle : hintStyle, children: noticeText })
     ] }),
     writable ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.readOnly") })
+  ] });
+}
+
+// src/client/components/ToastView.jsx
+var import_react4 = require("react");
+var import_jsx_runtime3 = require("react/jsx-runtime");
+var toastStyle = (visible, position) => ({
+  position: "fixed",
+  left: position === void 0 ? "50%" : String(position.left) + "px",
+  bottom: position === void 0 ? "104px" : String(position.bottom) + "px",
+  zIndex: 1300,
+  maxWidth: "min(520px, calc(100vw - 32px))",
+  padding: "8px 14px",
+  border: "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "var(--dsw-radius-lg, 12px)",
+  background: "var(--dsw-alias-bg-layer-3)",
+  color: "var(--dsw-alias-label-primary)",
+  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.32)",
+  fontSize: "12px",
+  lineHeight: "18px",
+  textAlign: "center",
+  pointerEvents: "none",
+  transform: position === void 0 ? "translateX(-50%)" : "none",
+  opacity: visible ? 1 : 0,
+  transition: "opacity 300ms ease"
+});
+function ToastView({ toastStore }) {
+  const toast = useSnapshot(toastStore);
+  const [visible, setVisible] = (0, import_react4.useState)(false);
+  const [position, setPosition] = (0, import_react4.useState)(void 0);
+  (0, import_react4.useLayoutEffect)(() => {
+    if (toast.text === "" || typeof document === "undefined") return void 0;
+    const update = () => {
+      const composer = document.querySelector("[data-composer-overlay]");
+      if (composer === null) return;
+      const rect = composer.getBoundingClientRect();
+      setPosition({ left: Math.max(8, Math.round(rect.left)), bottom: Math.max(8, Math.round(window.innerHeight - rect.top + 6)) });
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [toast.id, toast.text]);
+  (0, import_react4.useEffect)(() => {
+    if (toast.id === 0 || toast.text === "") return void 0;
+    setVisible(true);
+    const fade = setTimeout(() => setVisible(false), 2400);
+    const clear = setTimeout(() => toastStore.set({ id: 0, text: "", error: false }), 2800);
+    return () => {
+      clearTimeout(fade);
+      clearTimeout(clear);
+    };
+  }, [toast.id, toast.text, toastStore]);
+  if (toast.text === "") return null;
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { role: "status", "aria-live": "polite", style: toastStyle(visible, position), children: [
+    toast.error ? "\u26A0 " : "",
+    toast.text
   ] });
 }
 
@@ -889,15 +946,15 @@ var ZH = {
 };
 
 // src/client/index.jsx
-var import_jsx_runtime3 = require("react/jsx-runtime");
+var import_jsx_runtime4 = require("react/jsx-runtime");
 function createClient() {
   return { apply, inject: INJECT };
 }
 function WalletIcon(props) {
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("svg", { ...props, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 16.5v-9Z" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M4 8h16" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M15 12h5v4h-5a2 2 0 0 1 0-4Z" })
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { ...props, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 16.5v-9Z" }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M4 8h16" }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M15 12h5v4h-5a2 2 0 0 1 0-4Z" })
   ] });
 }
 function apply(ctx) {
@@ -906,7 +963,19 @@ function apply(ctx) {
   const configStore = createSnapshotStore(normalizeConfig(readConfigValue(configForm)));
   const balanceStore = createSnapshotStore({ status: "loading", wallets: [], error: void 0, updatedAt: void 0 });
   const costTracker = createCostTracker();
+  const toastStore = createSnapshotStore({ id: 0, text: "", error: false });
+  const showToast = (text, error) => toastStore.set({ id: Date.now(), text: String(text ?? ""), error: error === true });
   const t = ctx.locale.bind(NS);
+  const restoreFocus = (actx) => {
+    setTimeout(() => {
+      try {
+        const conversation = ctx.get("conversation");
+        const input = conversation === void 0 || conversation === null ? void 0 : conversation.input.for(actx);
+        if (input !== void 0 && input !== null) input.focus();
+      } catch (error) {
+      }
+    }, 50);
+  };
   const claimFor = (scope, sessionId) => {
     const name = scope === "turn" ? "turn-budget" : "session-budget";
     const token = "/" + name + " ";
@@ -914,7 +983,7 @@ function apply(ctx) {
       name,
       token,
       hint: t("budget.claimHint"),
-      submit: async (args) => {
+      submit: async (args, actx) => {
         let result;
         try {
           const response = await fetch(LIMIT_ROUTE, {
@@ -925,13 +994,21 @@ function apply(ctx) {
           });
           result = await response.json();
         } catch (error) {
-          return { kind: "error", text: t("budget.failed") };
+          const text = t("budget.failed");
+          showToast(text, true);
+          restoreFocus(actx);
+          return { kind: "error" };
         }
         if (result === null || result === void 0 || result.ok !== true) {
-          return { kind: "error", text: result?.error?.message ?? t("budget.failed") };
+          const text = result?.error?.message ?? t("budget.failed");
+          showToast(text, true);
+          restoreFocus(actx);
+          return { kind: "error" };
         }
         costTracker.refresh(sessionId);
-        return { kind: "success", text: result.value.text ?? t("budget.saved") };
+        showToast(result.value.text ?? t("budget.saved"), false);
+        restoreFocus(actx);
+        return { kind: "success" };
       }
     };
   };
@@ -980,6 +1057,12 @@ function apply(ctx) {
       }
     });
   }, "balance: budget input source");
+  ctx.slots.inject("shell.overlay", () => ctx.slots.register({
+    name: "shell.overlay",
+    id: "balance.toast",
+    locale: NS,
+    inject: () => ({ toastStore })
+  }, ToastView));
   let timer = null;
   let refreshing = false;
   let disposed = false;
