@@ -10,19 +10,8 @@ import {
   dialogPanelStyle,
   dialogSubtitleStyle,
   dialogTitleStyle,
-  copyButtonStyle,
-  copyIconButtonStyle,
-  inspectContentHeaderStyle,
-  inspectHeaderStyle,
-  inspectMetaLabelStyle,
-  inspectMetaStyle,
-  inspectMetaValueStyle,
-  inspectUrlTextStyle,
-  inspectUrlValueStyle,
-  inspectPanelStyle,
-  inspectPreStyle,
-  inspectWarningStyle,
 } from '../lib/styles.js'
+import LogDetailDialog from './LogDetailDialog.jsx'
 import SettingsForm from './SettingsForm.jsx'
 
 const SIZE_KEY = 'dsh-plugin-tool-firewall:dialog-size'
@@ -48,74 +37,6 @@ function writeStoredSize(size) {
   try {
     window.localStorage.setItem(SIZE_KEY, JSON.stringify(size))
   } catch (error) {}
-}
-
-function middleTruncate(value, limit = 88) {
-  const text = String(value)
-  if (text.length <= limit) return text
-  const head = Math.ceil((limit - 1) * 0.62)
-  const tail = limit - 1 - head
-  return text.slice(0, head) + '…' + text.slice(-tail)
-}
-
-async function copyText(value) {
-  try {
-    if (navigator.clipboard !== undefined && typeof navigator.clipboard.writeText === 'function') {
-      await navigator.clipboard.writeText(value)
-      return true
-    }
-  } catch (error) {}
-  try {
-    const area = document.createElement('textarea')
-    area.value = value
-    area.style.position = 'fixed'
-    area.style.opacity = '0'
-    document.body.appendChild(area)
-    area.select()
-    const copied = document.execCommand('copy')
-    document.body.removeChild(area)
-    return copied
-  } catch (error) {
-    return false
-  }
-}
-
-function CopyGlyph() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="8" y="8" width="12" height="12" rx="2" />
-      <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
-    </svg>
-  )
-}
-
-function CopyButton({ value, t, iconOnly = false }) {
-  const [status, setStatus] = useState('idle')
-  const timerRef = useRef(undefined)
-  useEffect(() => () => clearTimeout(timerRef.current), [])
-  const label = status === 'copied'
-    ? t('logs.copied')
-    : status === 'failed'
-      ? t('logs.copyFailed')
-      : t('logs.copy')
-  async function copy() {
-    const copied = await copyText(value)
-    setStatus(copied ? 'copied' : 'failed')
-    clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => setStatus('idle'), 1600)
-  }
-  return (
-    <button
-      type="button"
-      style={iconOnly ? copyIconButtonStyle : copyButtonStyle}
-      aria-label={label}
-      title={label}
-      aria-live="polite"
-      onClick={copy}
-    >
-      {iconOnly ? (status === 'copied' ? '✓' : status === 'failed' ? '!' : <CopyGlyph />) : label}
-    </button>
-  )
 }
 
 /** Modal wrapper around the settings form with drag and persisted resize. */
@@ -278,70 +199,7 @@ export default function FirewallSettingsDialog(props) {
         </div>
       </div>
 
-      {inspectLog === null ? null : (
-        <div
-          style={{ ...dialogBackdropStyle, zIndex: 1200 }}
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setInspectLog(null)
-          }}
-        >
-          <div style={inspectPanelStyle} role="dialog" aria-modal="true" aria-label={t('logs.inspectTitle')}>
-            <div style={inspectHeaderStyle}>
-              <div style={{ minWidth: 0 }}>
-                <h2 style={dialogTitleStyle}>{t('logs.inspectTitle')}</h2>
-                <p style={dialogSubtitleStyle}>
-                  {inspectLog.tool} · {t('logs.outputScore')} {typeof inspectLog.outputScore === 'number' ? inspectLog.outputScore.toFixed(3) : '—'}
-                </p>
-              </div>
-              <button
-                type="button"
-                style={dialogCloseStyle()}
-                aria-label={t('dialog.close')}
-                title={t('dialog.close')}
-                onClick={() => setInspectLog(null)}
-              >
-                ×
-              </button>
-            </div>
-            <p style={inspectWarningStyle}>{t('logs.inspectWarning')}</p>
-            <div style={inspectMetaStyle}>
-              {typeof inspectLog.outputUrl === 'string' && inspectLog.outputUrl !== '' ? (
-                <>
-                  <span style={inspectMetaLabelStyle}>{t('logs.inspectUrl')}</span>
-                  <span style={inspectUrlValueStyle}>
-                    <span style={inspectUrlTextStyle} title={inspectLog.outputUrl}>{middleTruncate(inspectLog.outputUrl)}</span>
-                    <CopyButton value={inspectLog.outputUrl} t={t} />
-                  </span>
-                </>
-              ) : null}
-              {typeof inspectLog.outputStatus === 'number' ? (
-                <>
-                  <span style={inspectMetaLabelStyle}>{t('logs.inspectStatus')}</span>
-                  <span style={inspectMetaValueStyle}>{String(inspectLog.outputStatus)}</span>
-                </>
-              ) : null}
-              <span style={inspectMetaLabelStyle}>{t('logs.action')}</span>
-              <span style={inspectMetaValueStyle}>
-                {inspectLog.action === 'block' ? t('logs.blocked') : t('logs.quarantined')}
-              </span>
-              {inspectLog.outputTruncated === true ? (
-                <>
-                  <span style={inspectMetaLabelStyle}>{t('logs.inspectTruncated')}</span>
-                  <span style={inspectMetaValueStyle}>{t('logs.yes')}</span>
-                </>
-              ) : null}
-            </div>
-            <div style={inspectContentHeaderStyle}>
-              <span>{t('logs.inspectContent')}</span>
-              {typeof inspectLog.outputContent === 'string' && inspectLog.outputContent !== ''
-                ? <CopyButton value={inspectLog.outputContent} t={t} iconOnly />
-                : null}
-            </div>
-            {/* Untrusted text is rendered as a React text node, never as HTML. */}
-            <pre style={inspectPreStyle}>{typeof inspectLog.outputContent === 'string' ? inspectLog.outputContent : ''}</pre>
-          </div>
-        </div>
-      )}
+      {inspectLog === null ? null : <LogDetailDialog log={inspectLog} t={t} close={() => setInspectLog(null)} />}
     </>
   )
 }

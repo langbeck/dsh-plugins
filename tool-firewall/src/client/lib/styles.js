@@ -674,3 +674,39 @@ export const logValueStyle = {
 }
 
 
+
+export const detailBodyStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+  flex: '1 1 auto',
+  minHeight: 0,
+  overflowY: 'auto',
+  padding: '12px 16px 16px',
+}
+
+export const detailMetaStyle = {
+  ...inspectMetaStyle,
+  padding: 0,
+  borderBottom: 'none',
+}
+
+export const detailPreStyle = {
+  ...inspectPreStyle,
+  flex: 'none',
+  minHeight: 0,
+  margin: 0,
+  border: '0.5px solid var(--dsw-alias-border-l3)',
+  borderRadius: 'var(--dsw-radius-md, 8px)',
+}
+
+export const detailSectionStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+}
+
+export const detailSectionHeaderStyle = {
+  ...inspectContentHeaderStyle,
+  padding: 0,
+}

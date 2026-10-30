@@ -41,7 +41,7 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 
 // src/client/components/FirewallSettingsDialog.jsx
-var import_react3 = require("react");
+var import_react4 = require("react");
 
 // src/config.js
 var DEFAULT_CONFIG = Object.freeze({
@@ -602,59 +602,6 @@ var logMutedStyle = {
   color: "var(--dsw-alias-label-tertiary)",
   fontSize: "11px"
 };
-var logBodyStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "8px",
-  padding: "4px 10px 10px 10px",
-  borderTop: "0.5px solid var(--dsw-alias-border-l3)"
-};
-var logSectionStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "3px"
-};
-var logKeyStyle = {
-  color: "var(--dsw-alias-label-tertiary)",
-  fontSize: "11px",
-  fontWeight: 600
-};
-var logPreStyle = {
-  margin: 0,
-  padding: "6px 8px",
-  borderRadius: "var(--dsw-radius-md, 8px)",
-  background: "var(--dsw-alias-bg-layer-3)",
-  color: "var(--dsw-alias-label-primary)",
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-  fontSize: "11px",
-  lineHeight: "16px",
-  whiteSpace: "pre-wrap",
-  wordBreak: "break-word",
-  maxHeight: "140px",
-  overflow: "auto"
-};
-var logGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "max-content minmax(0, 1fr)",
-  gap: "2px 10px",
-  fontSize: "11px",
-  lineHeight: "17px"
-};
-var logLabelStyle = {
-  color: "var(--dsw-alias-label-tertiary)"
-};
-var inspectButtonStyle = {
-  justifySelf: "start",
-  marginTop: "4px",
-  padding: "3px 8px",
-  border: "0.5px solid var(--dsw-alias-border-l3)",
-  borderRadius: "var(--dsw-radius-sm, 6px)",
-  background: "var(--dsw-alias-bg-layer-1)",
-  color: "var(--dsw-alias-label-primary)",
-  font: "inherit",
-  fontSize: "11px",
-  cursor: "pointer"
-};
 var inspectPanelStyle = {
   display: "flex",
   flexDirection: "column",
@@ -689,14 +636,6 @@ var inspectPreStyle = {
   fontSize: "11px",
   lineHeight: "17px",
   background: "var(--dsw-alias-bg-layer-2)"
-};
-var inspectWarningStyle = {
-  margin: 0,
-  padding: "8px 16px",
-  borderBottom: "0.5px solid var(--dsw-alias-border-l3)",
-  color: "var(--dsw-alias-label-tertiary)",
-  fontSize: "11px",
-  lineHeight: "17px"
 };
 var inspectMetaStyle = {
   display: "grid",
@@ -760,22 +699,229 @@ var copyIconButtonStyle = {
   height: "24px",
   padding: 0
 };
-var logValueStyle = {
-  color: "var(--dsw-alias-label-primary)",
-  fontVariantNumeric: "tabular-nums"
+var detailBodyStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "10px",
+  flex: "1 1 auto",
+  minHeight: 0,
+  overflowY: "auto",
+  padding: "12px 16px 16px"
+};
+var detailMetaStyle = {
+  ...inspectMetaStyle,
+  padding: 0,
+  borderBottom: "none"
+};
+var detailPreStyle = {
+  ...inspectPreStyle,
+  flex: "none",
+  minHeight: 0,
+  margin: 0,
+  border: "0.5px solid var(--dsw-alias-border-l3)",
+  borderRadius: "var(--dsw-radius-md, 8px)"
+};
+var detailSectionStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px"
+};
+var detailSectionHeaderStyle = {
+  ...inspectContentHeaderStyle,
+  padding: 0
 };
 
-// src/client/components/SettingsForm.jsx
+// src/client/components/CopyButton.jsx
 var import_react2 = require("react");
-
-// src/client/components/LogsPanel.jsx
 var import_jsx_runtime = require("react/jsx-runtime");
+function middleTruncate(value, limit = 88) {
+  const text = String(value);
+  if (text.length <= limit) return text;
+  const head = Math.ceil((limit - 1) * 0.62);
+  const tail = limit - 1 - head;
+  return text.slice(0, head) + "\u2026" + text.slice(-tail);
+}
+async function copyText(value) {
+  try {
+    if (navigator.clipboard !== void 0 && typeof navigator.clipboard.writeText === "function") {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch (error) {
+  }
+  try {
+    const area = document.createElement("textarea");
+    area.value = value;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    const copied = document.execCommand("copy");
+    document.body.removeChild(area);
+    return copied;
+  } catch (error) {
+    return false;
+  }
+}
+function CopyGlyph() {
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", { x: "8", y: "8", width: "12", height: "12", rx: "2" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" })
+  ] });
+}
+function CopyButton({ value, t, iconOnly = false }) {
+  const [status, setStatus] = (0, import_react2.useState)("idle");
+  const timerRef = (0, import_react2.useRef)(void 0);
+  (0, import_react2.useEffect)(() => () => clearTimeout(timerRef.current), []);
+  const label = status === "copied" ? t("logs.copied") : status === "failed" ? t("logs.copyFailed") : t("logs.copy");
+  async function copy() {
+    const copied = await copyText(value);
+    setStatus(copied ? "copied" : "failed");
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setStatus("idle"), 1600);
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+    "button",
+    {
+      type: "button",
+      style: iconOnly ? copyIconButtonStyle : copyButtonStyle,
+      "aria-label": label,
+      title: label,
+      "aria-live": "polite",
+      onClick: copy,
+      children: iconOnly ? status === "copied" ? "\u2713" : status === "failed" ? "!" : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CopyGlyph, {}) : label
+    }
+  );
+}
+
+// src/client/components/LogDetailDialog.jsx
+var import_jsx_runtime2 = require("react/jsx-runtime");
 function timeText(at) {
   if (typeof at !== "number" || !Number.isFinite(at)) return "";
-  return new Date(at).toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return new Date(at).toLocaleString();
 }
 function numberText(value, digits = 3) {
   return typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "\u2014";
+}
+function MetaRow({ label, value }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaLabelStyle, children: label }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaValueStyle, children: value })
+  ] });
+}
+function FlagList({ log, t }) {
+  const flags = [];
+  if (log.bypass) flags.push(t("logs.bypass"));
+  if (log.cached) flags.push(t("logs.cached"));
+  if (log.semanticUnavailable) flags.push(t("logs.unavailable"));
+  return flags.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.flags") }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaValueStyle, children: flags.join(" \xB7 ") })
+  ] });
+}
+function LogDetailDialog({ log, t, close }) {
+  const isOutput = log.phase === "output";
+  const decision = isOutput ? log.action === "allow" ? t("logs.outputAllowed") : log.action === "block" ? t("logs.blocked") : t("logs.quarantined") : log.blocked ? t("logs.blocked") : t("logs.allowed");
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    "div",
+    {
+      style: { ...dialogBackdropStyle, zIndex: 1200 },
+      onMouseDown: (event) => {
+        if (event.target === event.currentTarget) close();
+      },
+      children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: inspectPanelStyle, role: "dialog", "aria-modal": "true", "aria-label": isOutput ? t("logs.inspectOutputTitle") : t("logs.inspectInputTitle"), children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: inspectHeaderStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { minWidth: 0 }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { style: dialogTitleStyle, children: isOutput ? t("logs.inspectOutputTitle") : t("logs.inspectInputTitle") }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { style: dialogSubtitleStyle, children: [
+              log.tool,
+              " \xB7 ",
+              timeText(log.at),
+              " \xB7 ",
+              decision
+            ] })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            "button",
+            {
+              type: "button",
+              style: dialogCloseStyle(),
+              "aria-label": t("dialog.close"),
+              title: t("dialog.close"),
+              onClick: close,
+              children: "\xD7"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: detailBodyStyle, children: isOutput ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailMetaStyle, children: [
+            typeof log.outputUrl === "string" && log.outputUrl !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.inspectUrl") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { style: inspectUrlValueStyle, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectUrlTextStyle, title: log.outputUrl, children: middleTruncate(log.outputUrl) }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: log.outputUrl, t })
+              ] })
+            ] }) : null,
+            typeof log.outputStatus === "number" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.inspectStatus"), value: String(log.outputStatus) }) : null,
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.action"), value: decision }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.outputScore"), value: numberText(log.outputScore) }),
+            typeof log.outputThreshold === "number" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.threshold"), value: numberText(log.outputThreshold) }) : null,
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.chunks"), value: String(log.chunks ?? 0) + (log.truncated ? " \xB7 truncated" : "") }),
+            log.outputTruncated === true ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.inspectTruncated"), value: t("logs.yes") }) : null
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.inspectContent") }),
+            typeof log.outputContent === "string" && log.outputContent !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: log.outputContent, t, iconOnly: true }) : null
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: typeof log.outputContent === "string" ? log.outputContent : "" }),
+          typeof log.reason === "string" && log.reason !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.reason") }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaValueStyle, children: log.reason })
+          ] }) : null
+        ] }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailMetaStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.result"), value: decision + (log.code === void 0 ? "" : " \xB7 " + log.code) }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.kind"), value: log.kind ?? "\u2014" }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.structural"), value: numberText(log.structural) + (log.hardBlock ? " \xB7 " + t("logs.hardBlock") : "") }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.malice"), value: numberText(log.malice) + (log.classifier === void 0 ? "" : " \xB7 " + t("logs.classifier") + " " + numberText(log.classifier)) }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.alignment"), value: log.alignment === void 0 ? "\u2014" : numberText(log.alignment) }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.duration"), value: typeof log.durationMs === "number" ? String(Math.round(log.durationMs)) + " ms" : "\u2014" }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(FlagList, { log, t })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.command") }),
+            typeof log.command === "string" && log.command !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: log.command, t, iconOnly: true }) : null
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: typeof log.command === "string" && log.command !== "" ? log.command : t("logs.noCommand") }),
+          typeof log.description === "string" && log.description !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.description") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: log.description, t, iconOnly: true })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: log.description })
+          ] }) : null,
+          Array.isArray(log.reasons) && log.reasons.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.reason") }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaValueStyle, children: log.reasons.join(" \xB7 ") })
+          ] }) : null,
+          typeof log.reason === "string" && log.reason !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.reason") }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaValueStyle, children: log.reason })
+          ] }) : null
+        ] }) })
+      ] })
+    }
+  );
+}
+
+// src/client/components/SettingsForm.jsx
+var import_react3 = require("react");
+
+// src/client/components/LogsPanel.jsx
+var import_jsx_runtime3 = require("react/jsx-runtime");
+function timeText2(at) {
+  if (typeof at !== "number" || !Number.isFinite(at)) return "";
+  return new Date(at).toLocaleTimeString(void 0, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 function LogsPanel(props) {
   const { logs = [], loading = false, models = void 0, onInspect = () => {
@@ -790,98 +936,60 @@ function LogsPanel(props) {
   if (models?.outputGuard?.state === "error") {
     warnings.push({ key: "outputGuard", model: t("stats.outputGuard"), error: String(models.outputGuard.error ?? "unknown error") });
   }
-  const warning = warnings.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: warnings.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: errorStyle, children: t("logs.modelError", { model: entry.model, error: entry.error }) }, entry.key)) });
+  const warning = warnings.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_jsx_runtime3.Fragment, { children: warnings.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: errorStyle, children: t("logs.modelError", { model: entry.model, error: entry.error }) }, entry.key)) });
   if (loading && logs.length === 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
       warning,
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: logMutedStyle, children: t("logs.loading") })
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: logMutedStyle, children: t("logs.loading") })
     ] });
   }
   if (logs.length === 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
       warning,
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: logMutedStyle, children: t("logs.empty") })
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: logMutedStyle, children: t("logs.empty") })
     ] });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
     warning,
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: logsListStyle, children: logs.map((log) => {
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: logsListStyle, children: logs.map((log) => {
       const flags = [];
       if (log.bypass) flags.push(t("logs.bypass"));
       if (log.cached) flags.push(t("logs.cached"));
       if (log.semanticUnavailable) flags.push(t("logs.unavailable"));
       const isOutput = log.phase === "output";
       const decisionLabel = isOutput ? log.action === "allow" ? "logs.outputAllowed" : log.action === "block" ? "logs.blocked" : "logs.quarantined" : log.blocked ? "logs.blocked" : "logs.allowed";
-      return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("details", { style: logEntryStyle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("summary", { style: logSummaryStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logTimeStyle, children: timeText(log.at) }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logToolStyle, children: log.tool }),
-          flags.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logMutedStyle, children: flags.join(" \xB7 ") }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logDecisionStyle(log.blocked), children: t(decisionLabel) })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logBodyStyle, children: [
-          isOutput ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logGridStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.outputGuard") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
-              t("logs.outputScore"),
-              ": ",
-              numberText(log.outputScore)
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.action") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: t(decisionLabel) }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.chunks") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
-              String(log.chunks ?? 0),
-              log.truncated ? " \xB7 truncated" : ""
-            ] }),
-            typeof log.outputContent === "string" || typeof log.outputUrl === "string" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", style: inspectButtonStyle, onClick: () => onInspect(log), children: t("logs.inspect") }) : null
-          ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.command") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { style: logPreStyle, children: log.command === "" ? t("logs.noCommand") : log.command })
-          ] }),
-          typeof log.description === "string" && log.description !== "" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.description") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { style: logPreStyle, children: log.description })
-          ] }) : null,
-          isOutput ? null : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logGridStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.result") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
-              log.blocked ? t("logs.blocked") : t("logs.allowed"),
-              log.code === void 0 ? "" : " \xB7 " + log.code
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.kind") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.kind }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.structural") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
-              numberText(log.structural),
-              log.hardBlock ? " \xB7 " + t("logs.hardBlock") : ""
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.malice") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: logValueStyle, children: [
-              numberText(log.malice),
-              log.classifier === void 0 ? "" : " \xB7 " + t("logs.classifier") + " " + numberText(log.classifier)
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.alignment") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.alignment === void 0 ? "\u2014" : numberText(log.alignment) }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logLabelStyle, children: t("logs.duration") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: typeof log.durationMs === "number" ? String(Math.round(log.durationMs)) + " ms" : "\u2014" })
-          ] }),
-          Array.isArray(log.reasons) && log.reasons.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.reason") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.reasons.join(" \xB7 ") })
-          ] }) : null,
-          typeof log.reason === "string" && log.reason !== "" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: logSectionStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logKeyStyle, children: t("logs.reason") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: logValueStyle, children: log.reason })
-          ] }) : null
-        ] })
-      ] }, log.id);
+      return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        "button",
+        {
+          type: "button",
+          "aria-label": t("logs.inspect"),
+          title: t("logs.inspect"),
+          style: {
+            ...logEntryStyle,
+            display: "block",
+            width: "100%",
+            padding: 0,
+            textAlign: "left",
+            color: "inherit",
+            font: "inherit",
+            cursor: "pointer"
+          },
+          onClick: () => onInspect(log),
+          children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { style: logSummaryStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: logTimeStyle, children: timeText2(log.at) }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: logToolStyle, children: log.tool }),
+            flags.length === 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: logMutedStyle, children: flags.join(" \xB7 ") }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: logDecisionStyle(log.blocked), children: t(decisionLabel) })
+          ] })
+        },
+        log.id
+      );
     }) })
   ] });
 }
 
 // src/client/components/SettingsForm.jsx
-var import_jsx_runtime2 = require("react/jsx-runtime");
+var import_jsx_runtime4 = require("react/jsx-runtime");
 var FIELDS = Object.keys(DEFAULT_CONFIG);
 var TABS = [
   { id: "general", labelKey: "section.general", icon: ["M4 7h16", "M4 12h16", "M4 17h16"] },
@@ -891,7 +999,7 @@ var TABS = [
   { id: "logs", labelKey: "tab.logs", icon: ["M9 6h11", "M9 12h11", "M9 18h11", "M4 6h1", "M4 12h1", "M4 18h1"] }
 ];
 function TabIcon({ paths }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { style: tabIconStyle, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: paths.map((path) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: path }, path)) });
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("svg", { style: tabIconStyle, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: paths.map((path) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: path }, path)) });
 }
 function modelStatus(model, enabled) {
   if (enabled !== true) return { key: "stats.disabled", tone: "muted" };
@@ -901,12 +1009,12 @@ function modelStatus(model, enabled) {
 }
 function ModelCard({ title, model, enabled, t, children }) {
   const status = modelStatus(model, enabled);
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("details", { style: modelCardStyle, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("summary", { style: modelCardSummaryStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: title }),
-      model === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: modelStatusStyle(status.tone), children: t(status.key) })
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("details", { style: modelCardStyle, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("summary", { style: modelCardSummaryStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: title }),
+      model === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: modelStatusStyle(status.tone), children: t(status.key) })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: modelCardBodyStyle, children })
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: modelCardBodyStyle, children })
   ] });
 }
 function listToText(list) {
@@ -948,19 +1056,19 @@ function SettingsForm(props) {
   } } = props;
   const snapshot = useSnapshot(configForm);
   const resolved = normalizeConfig(snapshot.value);
-  const [draft, setDraft] = (0, import_react2.useState)(resolved);
-  const [notice, setNotice] = (0, import_react2.useState)("idle");
-  const [validation, setValidation] = (0, import_react2.useState)(void 0);
-  const [tab, setTab] = (0, import_react2.useState)("general");
+  const [draft, setDraft] = (0, import_react3.useState)(resolved);
+  const [notice, setNotice] = (0, import_react3.useState)("idle");
+  const [validation, setValidation] = (0, import_react3.useState)(void 0);
+  const [tab, setTab] = (0, import_react3.useState)("general");
   const revision = snapshot.revision;
-  (0, import_react2.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     setDraft(normalizeConfig(configForm.getSnapshot().value));
     setNotice("idle");
     setValidation(void 0);
   }, [revision]);
-  if (view === "summary") return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("config.summary") });
-  if (snapshot.status === "loading") return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.loading") });
-  if (snapshot.status === "unavailable") return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.unavailable") });
+  if (view === "summary") return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: t("config.summary") });
+  if (snapshot.status === "loading") return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { style: hintStyle, children: t("config.loading") });
+  if (snapshot.status === "unavailable") return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { style: hintStyle, children: t("config.unavailable") });
   const writable = snapshot.writable === true;
   const saving = notice === "saving";
   const disabled = !writable || saving;
@@ -993,9 +1101,9 @@ function SettingsForm(props) {
     submit(FIELDS.map((field) => ({ op: "unset", path: [field] })));
   }
   function textField(field, width = "320px", hint = void 0, extraDisabled = false) {
-    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field." + field) }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { style: fieldStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: labelStyle, children: t("field." + field) }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
         "input",
         {
           type: "text",
@@ -1006,13 +1114,13 @@ function SettingsForm(props) {
           style: inputStyle(disabled || extraDisabled, width)
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field." + field + "Hint") })
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field." + field + "Hint") })
     ] });
   }
   function numberField(field, min, max, step, hint = void 0) {
-    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field." + field) }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { style: fieldStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: labelStyle, children: t("field." + field) }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
         "input",
         {
           type: "number",
@@ -1026,12 +1134,12 @@ function SettingsForm(props) {
           style: inputStyle(disabled)
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field." + field + "Hint") })
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field." + field + "Hint") })
     ] });
   }
   function checkboxField(field, extraDisabled = false) {
-    return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: checkboxStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { style: checkboxStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
         "input",
         {
           type: "checkbox",
@@ -1040,7 +1148,7 @@ function SettingsForm(props) {
           onChange: (event) => update(field, event.target.checked)
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field." + field) })
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: labelStyle, children: t("field." + field) })
     ] });
   }
   const noticeText = validation !== void 0 ? t(validation) : notice === "saved" ? t("config.saved") : notice === "error" ? t("config.saveError") : notice === "saving" ? t("config.saving") : "";
@@ -1054,8 +1162,8 @@ function SettingsForm(props) {
   if (models?.outputGuard?.state === "error") {
     modelIssues.push({ key: "outputGuard", model: t("stats.outputGuard"), error: String(models.outputGuard.error ?? "unknown error") });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedShellStyle : pageStyle, children: [
-    tabbed ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: tabBarStyle, children: TABS.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: tabbed ? tabbedShellStyle : pageStyle, children: [
+    tabbed ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: tabBarStyle, children: TABS.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
       "button",
       {
         type: "button",
@@ -1063,21 +1171,21 @@ function SettingsForm(props) {
         "aria-pressed": tab === entry.id,
         onClick: () => setTab(entry.id),
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(TabIcon, { paths: entry.icon }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(TabIcon, { paths: entry.icon }),
           t(entry.labelKey)
         ]
       },
       entry.id
     )) }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedScrollStyle : { display: "contents" }, children: [
-      tabbed && modelIssues.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: modelWarningStyle, children: modelIssues.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: errorStyle, children: t("logs.modelError", { model: entry.model, error: entry.error }) }, entry.key)) }) : null,
-      !tabbed || tab === "general" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
-        tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.general") }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: tabbed ? tabbedScrollStyle : { display: "contents" }, children: [
+      tabbed && modelIssues.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: modelWarningStyle, children: modelIssues.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { style: errorStyle, children: t("logs.modelError", { model: entry.model, error: entry.error }) }, entry.key)) }) : null,
+      !tabbed || tab === "general" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
+        tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("h3", { style: sectionTitleStyle, children: t("section.general") }),
         checkboxField("enabled"),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.enabledHint") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.semanticFailure") }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field.enabledHint") }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { style: fieldStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: labelStyle, children: t("field.semanticFailure") }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
             "select",
             {
               value: draft.semanticFailure,
@@ -1085,23 +1193,23 @@ function SettingsForm(props) {
               onChange: (event) => update("semanticFailure", event.target.value),
               style: selectStyle(disabled),
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "open", children: t("option.open") }),
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "closed", children: t("option.closed") })
+                /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("option", { value: "open", children: t("option.open") }),
+                /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("option", { value: "closed", children: t("option.closed") })
               ]
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.semanticFailureHint") })
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field.semanticFailureHint") })
         ] }),
         numberField("modelTimeoutMs", 1, 5e3, 1)
       ] }) : null,
-      !tabbed || tab === "detection" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
-        tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.detection") }),
+      !tabbed || tab === "detection" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
+        tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("h3", { style: sectionTitleStyle, children: t("section.detection") }),
         numberField("maliceThreshold", 0, 1, 0.01),
         numberField("alignmentThreshold", 0, 1, 0.01),
         textField("bypassRegex", "100%"),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.shellTools") }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { style: fieldStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: labelStyle, children: t("field.shellTools") }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
             "input",
             {
               type: "text",
@@ -1112,26 +1220,26 @@ function SettingsForm(props) {
               style: inputStyle(disabled, "100%")
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.shellToolsHint") })
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field.shellToolsHint") })
         ] })
       ] }) : null,
-      !tabbed || tab === "models" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
-        tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.models") }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: modelListStyle, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(ModelCard, { title: t("model.embedding"), model: models?.embedding, enabled: draft.embeddingEnabled, t, children: [
+      !tabbed || tab === "models" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
+        tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("h3", { style: sectionTitleStyle, children: t("section.models") }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: modelListStyle, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(ModelCard, { title: t("model.embedding"), model: models?.embedding, enabled: draft.embeddingEnabled, t, children: [
             checkboxField("embeddingEnabled"),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.embeddingEnabledHint") }),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field.embeddingEnabledHint") }),
             textField("embeddingModel", "100%", void 0, !draft.embeddingEnabled),
             textField("embeddingRevision", "100%", void 0, !draft.embeddingEnabled)
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(ModelCard, { title: t("model.classifier"), model: models?.classifier, enabled: draft.classifierEnabled, t, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(ModelCard, { title: t("model.classifier"), model: models?.classifier, enabled: draft.classifierEnabled, t, children: [
             checkboxField("classifierEnabled"),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierEnabledHint") }),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field.classifierEnabledHint") }),
             textField("classifierModel", "100%", void 0, !draft.classifierEnabled),
             textField("classifierRevision", "100%", void 0, !draft.classifierEnabled),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.classifierLabels") }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { style: fieldStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: labelStyle, children: t("field.classifierLabels") }),
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
                 "input",
                 {
                   type: "text",
@@ -1142,17 +1250,17 @@ function SettingsForm(props) {
                   style: inputStyle(disabled || !draft.classifierEnabled, "100%")
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.classifierLabelsHint") })
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field.classifierLabelsHint") })
             ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(ModelCard, { title: t("model.outputGuard"), model: models?.outputGuard, enabled: draft.outputGuardEnabled, t, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(ModelCard, { title: t("model.outputGuard"), model: models?.outputGuard, enabled: draft.outputGuardEnabled, t, children: [
             checkboxField("outputGuardEnabled"),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardEnabledHint") }),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field.outputGuardEnabledHint") }),
             textField("outputGuardModel", "100%", void 0, !draft.outputGuardEnabled),
             textField("outputGuardRevision", "100%", void 0, !draft.outputGuardEnabled),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardTools") }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { style: fieldStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: labelStyle, children: t("field.outputGuardTools") }),
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
                 "input",
                 {
                   type: "text",
@@ -1163,11 +1271,11 @@ function SettingsForm(props) {
                   style: inputStyle(disabled || !draft.outputGuardEnabled, "100%")
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardToolsHint") })
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field.outputGuardToolsHint") })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardLabels") }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { style: fieldStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: labelStyle, children: t("field.outputGuardLabels") }),
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
                 "input",
                 {
                   type: "text",
@@ -1178,15 +1286,15 @@ function SettingsForm(props) {
                   style: inputStyle(disabled || !draft.outputGuardEnabled, "100%")
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardLabelsHint") })
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field.outputGuardLabelsHint") })
             ] }),
             numberField("outputGuardThreshold", 0, 1, 0.01),
             numberField("outputGuardMaxChars", 256, 2e5, 1),
             numberField("outputGuardChunkChars", 256, 16e3, 1),
             numberField("outputGuardTimeoutMs", 10, 5e3, 1),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardMode") }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { style: fieldStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: labelStyle, children: t("field.outputGuardMode") }),
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
                 "select",
                 {
                   value: draft.outputGuardMode,
@@ -1194,16 +1302,16 @@ function SettingsForm(props) {
                   onChange: (event) => update("outputGuardMode", event.target.value),
                   style: selectStyle(disabled || !draft.outputGuardEnabled),
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "quarantine", children: t("option.quarantine") }),
-                    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "block", children: t("option.block") })
+                    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("option", { value: "quarantine", children: t("option.quarantine") }),
+                    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("option", { value: "block", children: t("option.block") })
                   ]
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardModeHint") })
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field.outputGuardModeHint") })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { style: fieldStyle, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: labelStyle, children: t("field.outputGuardFailureMode") }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { style: fieldStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: labelStyle, children: t("field.outputGuardFailureMode") }),
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
                 "select",
                 {
                   value: draft.outputGuardFailureMode,
@@ -1211,38 +1319,38 @@ function SettingsForm(props) {
                   onChange: (event) => update("outputGuardFailureMode", event.target.value),
                   style: selectStyle(disabled || !draft.outputGuardEnabled),
                   children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "open", children: t("option.outputOpen") }),
-                    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: "closed", children: t("option.outputClosed") })
+                    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("option", { value: "open", children: t("option.outputOpen") }),
+                    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("option", { value: "closed", children: t("option.outputClosed") })
                   ]
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.outputGuardFailureModeHint") })
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field.outputGuardFailureModeHint") })
             ] })
           ] })
         ] }),
         checkboxField("allowRemoteModels"),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: hintStyle, children: t("field.allowRemoteModelsHint") })
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: hintStyle, children: t("field.allowRemoteModelsHint") })
       ] }) : null,
-      !tabbed || tab === "cache" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
-        tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { style: sectionTitleStyle, children: t("section.cache") }),
+      !tabbed || tab === "cache" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { style: tabbed ? tabbedSectionStyle : sectionStyle, children: [
+        tabbed ? null : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("h3", { style: sectionTitleStyle, children: t("section.cache") }),
         numberField("maxCommandChars", 64, 65536, 1),
         numberField("maxTextTokens", 16, 512, 1),
         numberField("cacheEntries", 1, 4096, 1),
         numberField("cacheTtlMs", 1e3, 864e5, 1e3)
       ] }) : null,
-      tabbed && tab === "logs" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(LogsPanel, { logs, loading: logsLoading, models, onInspect, t }) : null
+      tabbed && tab === "logs" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(LogsPanel, { logs, loading: logsLoading, models, onInspect, t }) : null
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: tabbed ? tabbedFooterStyle : footerStyle, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: save, style: primaryButtonStyle(disabled), children: t("config.save") }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { type: "button", disabled, onClick: reset, style: secondaryButtonStyle(disabled), children: t("config.reset") }),
-      noticeText === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { role: notice === "error" ? "alert" : "status", style: notice === "error" ? errorStyle : hintStyle, children: noticeText }),
-      writable ? null : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { style: hintStyle, children: t("config.readOnly") })
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: tabbed ? tabbedFooterStyle : footerStyle, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", disabled, onClick: save, style: primaryButtonStyle(disabled), children: t("config.save") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", disabled, onClick: reset, style: secondaryButtonStyle(disabled), children: t("config.reset") }),
+      noticeText === "" ? null : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { role: notice === "error" ? "alert" : "status", style: notice === "error" ? errorStyle : hintStyle, children: noticeText }),
+      writable ? null : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { style: hintStyle, children: t("config.readOnly") })
     ] })
   ] });
 }
 
 // src/client/components/FirewallSettingsDialog.jsx
-var import_jsx_runtime3 = require("react/jsx-runtime");
+var import_jsx_runtime5 = require("react/jsx-runtime");
 var SIZE_KEY = "dsh-plugin-tool-firewall:dialog-size";
 function readStoredSize() {
   if (typeof window === "undefined") return void 0;
@@ -1266,77 +1374,18 @@ function writeStoredSize(size) {
   } catch (error) {
   }
 }
-function middleTruncate(value, limit = 88) {
-  const text = String(value);
-  if (text.length <= limit) return text;
-  const head = Math.ceil((limit - 1) * 0.62);
-  const tail = limit - 1 - head;
-  return text.slice(0, head) + "\u2026" + text.slice(-tail);
-}
-async function copyText(value) {
-  try {
-    if (navigator.clipboard !== void 0 && typeof navigator.clipboard.writeText === "function") {
-      await navigator.clipboard.writeText(value);
-      return true;
-    }
-  } catch (error) {
-  }
-  try {
-    const area = document.createElement("textarea");
-    area.value = value;
-    area.style.position = "fixed";
-    area.style.opacity = "0";
-    document.body.appendChild(area);
-    area.select();
-    const copied = document.execCommand("copy");
-    document.body.removeChild(area);
-    return copied;
-  } catch (error) {
-    return false;
-  }
-}
-function CopyGlyph() {
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("rect", { x: "8", y: "8", width: "12", height: "12", rx: "2" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" })
-  ] });
-}
-function CopyButton({ value, t, iconOnly = false }) {
-  const [status, setStatus] = (0, import_react3.useState)("idle");
-  const timerRef = (0, import_react3.useRef)(void 0);
-  (0, import_react3.useEffect)(() => () => clearTimeout(timerRef.current), []);
-  const label = status === "copied" ? t("logs.copied") : status === "failed" ? t("logs.copyFailed") : t("logs.copy");
-  async function copy() {
-    const copied = await copyText(value);
-    setStatus(copied ? "copied" : "failed");
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setStatus("idle"), 1600);
-  }
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-    "button",
-    {
-      type: "button",
-      style: iconOnly ? copyIconButtonStyle : copyButtonStyle,
-      "aria-label": label,
-      title: label,
-      "aria-live": "polite",
-      onClick: copy,
-      children: iconOnly ? status === "copied" ? "\u2713" : status === "failed" ? "!" : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(CopyGlyph, {}) : label
-    }
-  );
-}
 function FirewallSettingsDialog(props) {
   const { uiStore, close, t, configForm } = props;
   const ui = useSnapshot(uiStore);
-  const [logs, setLogs] = (0, import_react3.useState)([]);
-  const [logsLoading, setLogsLoading] = (0, import_react3.useState)(false);
-  const [models, setModels] = (0, import_react3.useState)(void 0);
-  const [inspectLog, setInspectLog] = (0, import_react3.useState)(null);
-  const [size, setSize] = (0, import_react3.useState)(readStoredSize);
-  const [offset, setOffset] = (0, import_react3.useState)({ x: 0, y: 0 });
-  const panelRef = (0, import_react3.useRef)(null);
-  const dragRef = (0, import_react3.useRef)(void 0);
-  (0, import_react3.useEffect)(() => {
+  const [logs, setLogs] = (0, import_react4.useState)([]);
+  const [logsLoading, setLogsLoading] = (0, import_react4.useState)(false);
+  const [models, setModels] = (0, import_react4.useState)(void 0);
+  const [inspectLog, setInspectLog] = (0, import_react4.useState)(null);
+  const [size, setSize] = (0, import_react4.useState)(readStoredSize);
+  const [offset, setOffset] = (0, import_react4.useState)({ x: 0, y: 0 });
+  const panelRef = (0, import_react4.useRef)(null);
+  const dragRef = (0, import_react4.useRef)(void 0);
+  (0, import_react4.useEffect)(() => {
     if (!ui.open) return void 0;
     const onKey = (event) => {
       if (event.key === "Escape") {
@@ -1347,7 +1396,7 @@ function FirewallSettingsDialog(props) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [ui.open, close, inspectLog]);
-  (0, import_react3.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (!ui.open) {
       setInspectLog(null);
       return void 0;
@@ -1355,7 +1404,7 @@ function FirewallSettingsDialog(props) {
     setOffset({ x: 0, y: 0 });
     return void 0;
   }, [ui.open]);
-  (0, import_react3.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (!ui.open || panelRef.current === null || typeof ResizeObserver === "undefined") return void 0;
     let saveTimer;
     const observer = new ResizeObserver((entries) => {
@@ -1375,7 +1424,7 @@ function FirewallSettingsDialog(props) {
       observer.disconnect();
     };
   }, [ui.open]);
-  (0, import_react3.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (!ui.open || typeof window === "undefined" || typeof fetch !== "function") return void 0;
     let disposed = false;
     let timer;
@@ -1443,16 +1492,16 @@ function FirewallSettingsDialog(props) {
     panelStyle.width = String(size.width) + "px";
     panelStyle.height = String(size.height) + "px";
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
       "div",
       {
         style: dialogBackdropStyle,
         onMouseDown: (event) => {
           if (event.target === event.currentTarget) close();
         },
-        children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { ref: panelRef, style: panelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("config.title"), children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { ref: panelRef, style: panelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("config.title"), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
             "div",
             {
               style: dialogHeaderStyle,
@@ -1461,87 +1510,29 @@ function FirewallSettingsDialog(props) {
               onPointerUp: endDrag,
               onPointerCancel: endDrag,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { minWidth: 0 }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h2", { style: dialogTitleStyle, children: t("config.title") }),
-                  /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: dialogSubtitleStyle, children: t("config.summary") })
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { minWidth: 0 }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("h2", { style: dialogTitleStyle, children: t("config.title") }),
+                  /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { style: dialogSubtitleStyle, children: t("config.summary") })
                 ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", style: dialogCloseStyle(), "aria-label": t("dialog.close"), title: t("dialog.close"), onClick: close, children: "\xD7" })
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { type: "button", style: dialogCloseStyle(), "aria-label": t("dialog.close"), title: t("dialog.close"), onClick: close, children: "\xD7" })
               ]
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: dialogBodyTabbedStyle, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SettingsForm, { view: "page", t, configForm, tabbed: true, logs, logsLoading, models, onInspect: setInspectLog }) })
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: dialogBodyTabbedStyle, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(SettingsForm, { view: "page", t, configForm, tabbed: true, logs, logsLoading, models, onInspect: setInspectLog }) })
         ] })
       }
     ),
-    inspectLog === null ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-      "div",
-      {
-        style: { ...dialogBackdropStyle, zIndex: 1200 },
-        onMouseDown: (event) => {
-          if (event.target === event.currentTarget) setInspectLog(null);
-        },
-        children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: inspectPanelStyle, role: "dialog", "aria-modal": "true", "aria-label": t("logs.inspectTitle"), children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: inspectHeaderStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { minWidth: 0 }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h2", { style: dialogTitleStyle, children: t("logs.inspectTitle") }),
-              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { style: dialogSubtitleStyle, children: [
-                inspectLog.tool,
-                " \xB7 ",
-                t("logs.outputScore"),
-                " ",
-                typeof inspectLog.outputScore === "number" ? inspectLog.outputScore.toFixed(3) : "\u2014"
-              ] })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-              "button",
-              {
-                type: "button",
-                style: dialogCloseStyle(),
-                "aria-label": t("dialog.close"),
-                title: t("dialog.close"),
-                onClick: () => setInspectLog(null),
-                children: "\xD7"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: inspectWarningStyle, children: t("logs.inspectWarning") }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: inspectMetaStyle, children: [
-            typeof inspectLog.outputUrl === "string" && inspectLog.outputUrl !== "" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.inspectUrl") }),
-              /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { style: inspectUrlValueStyle, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectUrlTextStyle, title: inspectLog.outputUrl, children: middleTruncate(inspectLog.outputUrl) }),
-                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(CopyButton, { value: inspectLog.outputUrl, t })
-              ] })
-            ] }) : null,
-            typeof inspectLog.outputStatus === "number" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.inspectStatus") }),
-              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaValueStyle, children: String(inspectLog.outputStatus) })
-            ] }) : null,
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.action") }),
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaValueStyle, children: inspectLog.action === "block" ? t("logs.blocked") : t("logs.quarantined") }),
-            inspectLog.outputTruncated === true ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.inspectTruncated") }),
-              /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: inspectMetaValueStyle, children: t("logs.yes") })
-            ] }) : null
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: inspectContentHeaderStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: t("logs.inspectContent") }),
-            typeof inspectLog.outputContent === "string" && inspectLog.outputContent !== "" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(CopyButton, { value: inspectLog.outputContent, t, iconOnly: true }) : null
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("pre", { style: inspectPreStyle, children: typeof inspectLog.outputContent === "string" ? inspectLog.outputContent : "" })
-        ] })
-      }
-    )
+    inspectLog === null ? null : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(LogDetailDialog, { log: inspectLog, t, close: () => setInspectLog(null) })
   ] });
 }
 
 // src/client/components/FirewallStats.jsx
-var import_jsx_runtime4 = require("react/jsx-runtime");
+var import_jsx_runtime6 = require("react/jsx-runtime");
 function FirewallStats(props) {
   const { wide = true, t, statsStore, open } = props;
   const stats = useSnapshot(statsStore);
   if (!wide) {
-    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
       "button",
       {
         type: "button",
@@ -1554,7 +1545,7 @@ function FirewallStats(props) {
       }
     );
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
     "button",
     {
       type: "button",
@@ -1563,8 +1554,8 @@ function FirewallStats(props) {
       title: t("stats.aria"),
       onClick: open,
       style: statsCardStyle(true),
-      children: stats.map((stat, index) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { style: statsRowStyle, title: stat.title, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: statsLabelStyle, children: typeof stat.label === "string" ? stat.label : t(stat.labelKey) }),
+      children: stats.map((stat, index) => /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { style: statsRowStyle, title: stat.title, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: statsLabelStyle, children: typeof stat.label === "string" ? stat.label : t(stat.labelKey) }),
         (() => {
           const value = typeof stat.value === "string" ? stat.value : t(stat.valueKey);
           let tone = stat.tone;
@@ -1572,7 +1563,7 @@ function FirewallStats(props) {
             if (stat.valueKey === "stats.error" || value === t("stats.error")) tone = "error";
             else if (stat.valueKey === "stats.off" || value === t("stats.off")) tone = "off";
           }
-          return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { style: statsValueStyle(tone), title: stat.title, children: value });
+          return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { style: statsValueStyle(tone), title: stat.title, children: value });
         })()
       ] }, String(stat.label ?? stat.labelKey ?? index)))
     }
@@ -1649,11 +1640,12 @@ var EN = {
   "logs.hardBlock": "Hard block",
   "logs.outputGuard": "Output guard",
   "logs.outputScore": "Injection score",
+  "logs.threshold": "Threshold",
   "logs.action": "Action",
   "logs.chunks": "Chunks",
   "logs.quarantined": "Quarantined",
   "logs.outputAllowed": "Output allowed",
-  "logs.inspect": "View content",
+  "logs.inspect": "View details",
   "logs.copy": "Copy",
   "logs.copied": "Copied",
   "logs.copyFailed": "Copy failed",
@@ -1663,6 +1655,9 @@ var EN = {
   "logs.inspectTruncated": "Truncated",
   "logs.yes": "Yes",
   "logs.inspectTitle": "Quarantined tool output",
+  "logs.inspectOutputTitle": "Tool output",
+  "logs.inspectInputTitle": "Tool call details",
+  "logs.flags": "Flags",
   "logs.inspectWarning": "Untrusted content. The text is shown only for inspection; do not follow instructions in it.",
   "field.enabled": "Enable firewall",
   "field.enabledHint": "When disabled, all tool calls pass through without inspection.",
@@ -1797,11 +1792,12 @@ var ZH = {
   "logs.hardBlock": "\u786C\u963B\u6B62",
   "logs.outputGuard": "\u8F93\u51FA\u9632\u62A4",
   "logs.outputScore": "\u6CE8\u5165\u8BC4\u5206",
+  "logs.threshold": "\u9608\u503C",
   "logs.action": "\u52A8\u4F5C",
   "logs.chunks": "\u5206\u5757",
   "logs.quarantined": "\u5DF2\u9694\u79BB",
   "logs.outputAllowed": "\u8F93\u51FA\u5DF2\u653E\u884C",
-  "logs.inspect": "\u67E5\u770B\u5185\u5BB9",
+  "logs.inspect": "\u67E5\u770B\u8BE6\u60C5",
   "logs.copy": "\u590D\u5236",
   "logs.copied": "\u5DF2\u590D\u5236",
   "logs.copyFailed": "\u590D\u5236\u5931\u8D25",
@@ -1811,6 +1807,9 @@ var ZH = {
   "logs.inspectTruncated": "\u5DF2\u622A\u65AD",
   "logs.yes": "\u662F",
   "logs.inspectTitle": "\u5DF2\u9694\u79BB\u7684\u5DE5\u5177\u8F93\u51FA",
+  "logs.inspectOutputTitle": "\u5DE5\u5177\u8F93\u51FA",
+  "logs.inspectInputTitle": "\u5DE5\u5177\u8C03\u7528\u8BE6\u60C5",
+  "logs.flags": "\u6807\u8BB0",
   "logs.inspectWarning": "\u4E0D\u53D7\u4FE1\u4EFB\u7684\u5185\u5BB9\uFF0C\u4EC5\u4F9B\u68C0\u67E5\uFF1B\u4E0D\u8981\u9075\u5FAA\u5176\u4E2D\u7684\u6307\u4EE4\u3002",
   "field.enabled": "\u542F\u7528\u9632\u706B\u5899",
   "field.enabledHint": "\u5173\u95ED\u540E\u6240\u6709\u5DE5\u5177\u8C03\u7528\u90FD\u4F1A\u76F4\u63A5\u901A\u8FC7\u3002",
