@@ -758,6 +758,19 @@ var detailReasonEmptyStyle = {
   lineHeight: "17px",
   color: "var(--dsw-alias-label-tertiary)"
 };
+var detailPreWrapStyle = {
+  position: "relative",
+  minWidth: 0
+};
+var detailPreWithCopyStyle = {
+  ...detailPreStyle,
+  paddingRight: "38px"
+};
+var detailCopyInPreStyle = {
+  position: "absolute",
+  top: "6px",
+  right: "6px"
+};
 
 // src/client/components/CopyButton.jsx
 var import_react2 = require("react");
@@ -847,6 +860,12 @@ function FlagList({ log, t }) {
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaValueStyle, children: flags.join(" \xB7 ") })
   ] });
 }
+function PreWithCopy({ value, t, children }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailPreWrapStyle, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreWithCopyStyle, children }),
+    typeof value === "string" && value !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: detailCopyInPreStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value, t, iconOnly: true }) }) : null
+  ] });
+}
 function LogDetailDialog({ log, t, close }) {
   const isOutput = log.phase === "output";
   const reasonParts = [];
@@ -901,31 +920,19 @@ function LogDetailDialog({ log, t, close }) {
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.chunks"), value: String(log.chunks ?? 0) + (log.truncated ? " \xB7 truncated" : "") }),
             log.outputTruncated === true ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.inspectTruncated"), value: t("logs.yes") }) : null
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.inspectContent") }),
-            typeof log.outputContent === "string" && log.outputContent !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: log.outputContent, t, iconOnly: true }) : null
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: typeof log.outputContent === "string" ? log.outputContent : "" }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: detailSectionHeaderStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.inspectContent") }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(PreWithCopy, { value: log.outputContent, t, children: typeof log.outputContent === "string" ? log.outputContent : "" }),
           typeof log.reason === "string" && log.reason !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailReasonStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.reason") }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: log.reason, t, iconOnly: true })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: log.reason })
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: detailSectionHeaderStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.reason") }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(PreWithCopy, { value: log.reason, t, children: log.reason })
           ] }) : null
         ] }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
           typeof log.description === "string" && log.description !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.description") }),
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: log.description, t, iconOnly: true })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: log.description })
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: detailSectionHeaderStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.description") }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(PreWithCopy, { value: log.description, t, children: log.description })
           ] }) : null,
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.command") }),
-            typeof log.command === "string" && log.command !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: log.command, t, iconOnly: true }) : null
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: typeof log.command === "string" && log.command !== "" ? log.command : t("logs.noCommand") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: detailSectionHeaderStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.command") }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(PreWithCopy, { value: log.command, t, children: typeof log.command === "string" && log.command !== "" ? log.command : t("logs.noCommand") }),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSplitStyle, children: [
             /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailMetaGridStyle, children: [
               /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.result"), value: decision + (log.code === void 0 ? "" : " \xB7 " + log.code) }),
@@ -937,10 +944,7 @@ function LogDetailDialog({ log, t, close }) {
               /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(FlagList, { log, t })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailReasonStyle, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.reasons") }),
-                reasonText !== "\u2014" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: reasonText, t, iconOnly: true }) : null
-              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { style: detailSectionHeaderStyle, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.reasons") }) }),
               reasonParts.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: detailReasonEmptyStyle, children: "\u2014" }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("ul", { style: detailReasonListStyle, children: reasonParts.map((reason, index) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("li", { children: reason }, String(index) + ":" + reason)) })
             ] })
           ] })

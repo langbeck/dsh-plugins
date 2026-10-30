@@ -7,7 +7,9 @@ import {
   detailReasonListStyle,
   detailReasonStyle,
   detailSplitStyle,
-  detailPreStyle,
+  detailPreWithCopyStyle,
+  detailPreWrapStyle,
+  detailCopyInPreStyle,
   detailSectionHeaderStyle,
   detailSectionStyle,
   dialogBackdropStyle,
@@ -50,6 +52,17 @@ function FlagList({ log, t }) {
       <span style={inspectMetaLabelStyle}>{t('logs.flags')}</span>
       <span style={inspectMetaValueStyle}>{flags.join(' · ')}</span>
     </>
+  )
+}
+
+function PreWithCopy({ value, t, children }) {
+  return (
+    <div style={detailPreWrapStyle}>
+      <pre style={detailPreWithCopyStyle}>{children}</pre>
+      {typeof value === 'string' && value !== '' ? (
+        <span style={detailCopyInPreStyle}><CopyButton value={value} t={t} iconOnly /></span>
+      ) : null}
+    </div>
   )
 }
 
@@ -111,19 +124,15 @@ export default function LogDetailDialog({ log, t, close }) {
               </div>
               <div style={detailSectionHeaderStyle}>
                 <span>{t('logs.inspectContent')}</span>
-                {typeof log.outputContent === 'string' && log.outputContent !== ''
-                  ? <CopyButton value={log.outputContent} t={t} iconOnly />
-                  : null}
               </div>
               {/* Untrusted text is rendered as a React text node, never as HTML. */}
-              <pre style={detailPreStyle}>{typeof log.outputContent === 'string' ? log.outputContent : ''}</pre>
+              <PreWithCopy value={log.outputContent} t={t}>{typeof log.outputContent === 'string' ? log.outputContent : ''}</PreWithCopy>
               {typeof log.reason === 'string' && log.reason !== '' ? (
                 <div style={detailReasonStyle}>
                   <div style={detailSectionHeaderStyle}>
                     <span>{t('logs.reason')}</span>
-                    <CopyButton value={log.reason} t={t} iconOnly />
                   </div>
-                  <pre style={detailPreStyle}>{log.reason}</pre>
+                  <PreWithCopy value={log.reason} t={t}>{log.reason}</PreWithCopy>
                 </div>
               ) : null}
             </>
@@ -133,18 +142,14 @@ export default function LogDetailDialog({ log, t, close }) {
                 <>
                   <div style={detailSectionHeaderStyle}>
                     <span>{t('logs.description')}</span>
-                    <CopyButton value={log.description} t={t} iconOnly />
                   </div>
-                  <pre style={detailPreStyle}>{log.description}</pre>
+                  <PreWithCopy value={log.description} t={t}>{log.description}</PreWithCopy>
                 </>
               ) : null}
               <div style={detailSectionHeaderStyle}>
                 <span>{t('logs.command')}</span>
-                {typeof log.command === 'string' && log.command !== ''
-                  ? <CopyButton value={log.command} t={t} iconOnly />
-                  : null}
               </div>
-              <pre style={detailPreStyle}>{typeof log.command === 'string' && log.command !== '' ? log.command : t('logs.noCommand')}</pre>
+              <PreWithCopy value={log.command} t={t}>{typeof log.command === 'string' && log.command !== '' ? log.command : t('logs.noCommand')}</PreWithCopy>
               <div style={detailSplitStyle}>
                 <div style={detailMetaGridStyle}>
                   <MetaRow label={t('logs.result')} value={decision + (log.code === undefined ? '' : ' · ' + log.code)} />
@@ -158,7 +163,6 @@ export default function LogDetailDialog({ log, t, close }) {
                 <div style={detailReasonStyle}>
                   <div style={detailSectionHeaderStyle}>
                     <span>{t('logs.reasons')}</span>
-                    {reasonText !== '—' ? <CopyButton value={reasonText} t={t} iconOnly /> : null}
                   </div>
                   {reasonParts.length === 0
                     ? <span style={detailReasonEmptyStyle}>—</span>

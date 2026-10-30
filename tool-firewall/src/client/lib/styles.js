@@ -748,3 +748,19 @@ export const detailReasonEmptyStyle = {
   lineHeight: '17px',
   color: 'var(--dsw-alias-label-tertiary)',
 }
+
+export const detailPreWrapStyle = {
+  position: 'relative',
+  minWidth: 0,
+}
+
+export const detailPreWithCopyStyle = {
+  ...detailPreStyle,
+  paddingRight: '38px',
+}
+
+export const detailCopyInPreStyle = {
+  position: 'absolute',
+  top: '6px',
+  right: '6px',
+}
