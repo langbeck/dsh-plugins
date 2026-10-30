@@ -3,7 +3,7 @@
 import { COST_ROUTE } from '../constants.js'
 import { createSnapshotStore } from './store.js'
 
-const IDLE = Object.freeze({ status: 'idle', sessionId: undefined, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, partial: false })
+const IDLE = Object.freeze({ status: 'idle', sessionId: undefined, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, turnSpentUsd: null, turnRemainingUsd: null, partial: false })
 
 /**
  * Track the cost of one Session at a time. The Host recomputes on demand, so
@@ -38,6 +38,8 @@ export function createCostTracker() {
       limitUsd: keepsPrevious ? previous.limitUsd : null,
       remainingUsd: keepsPrevious ? previous.remainingUsd : null,
       turnLimitUsd: keepsPrevious ? previous.turnLimitUsd : null,
+      turnSpentUsd: keepsPrevious ? previous.turnSpentUsd : null,
+      turnRemainingUsd: keepsPrevious ? previous.turnRemainingUsd : null,
       partial: keepsPrevious ? previous.partial : false,
     })
     return Promise.resolve()
@@ -57,18 +59,20 @@ export function createCostTracker() {
       .then((result) => {
         if (disposed || current !== generation) return
         if (result === null || result === undefined || result.ok !== true) {
-          store.set({ status: 'error', sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, partial: false })
+          store.set({ status: 'error', sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, turnSpentUsd: null, turnRemainingUsd: null, partial: false })
           return
         }
         const value = result.value
         if (value === null || value === undefined || value.pricing === null || value.pricing === undefined || value.pricing.ready !== true) {
-          store.set({ status: 'unavailable', sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, partial: false })
+          store.set({ status: 'unavailable', sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, turnSpentUsd: null, turnRemainingUsd: null, partial: false })
           return
         }
         const totalUsd = typeof value.totalUsd === 'number' && Number.isFinite(value.totalUsd) ? value.totalUsd : 0
         const limitUsd = typeof value.limitUsd === 'number' && Number.isFinite(value.limitUsd) ? value.limitUsd : null
         const remainingUsd = typeof value.remainingUsd === 'number' && Number.isFinite(value.remainingUsd) ? value.remainingUsd : null
         const turnLimitUsd = typeof value.turnLimitUsd === 'number' && Number.isFinite(value.turnLimitUsd) ? value.turnLimitUsd : null
+        const turnSpentUsd = typeof value.turnSpentUsd === 'number' && Number.isFinite(value.turnSpentUsd) ? value.turnSpentUsd : null
+        const turnRemainingUsd = typeof value.turnRemainingUsd === 'number' && Number.isFinite(value.turnRemainingUsd) ? value.turnRemainingUsd : null
         store.set({
           status: 'ready',
           sessionId,
@@ -76,6 +80,8 @@ export function createCostTracker() {
           limitUsd,
           remainingUsd,
           turnLimitUsd,
+          turnSpentUsd,
+          turnRemainingUsd,
           partial: typeof value.unpricedCalls === 'number' && value.unpricedCalls > 0,
         })
       })

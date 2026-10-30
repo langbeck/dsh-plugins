@@ -322,11 +322,16 @@ export function apply(ctx, config) {
       const value = await readSessionCost(ctx, pricing, catalogCache, costCache, { sessionId }, signal)
       const limitUsd = await limitOf(sessionId)
       const turnLimitUsd = await turnLimitOf(sessionId)
+      const turnState = turnStarts.get(sessionId)
+      const turnSpentUsd = turnState === undefined ? null : Math.max(0, value.totalUsd - turnState.startUsd)
+      const turnRemainingUsd = turnLimitUsd === null || turnSpentUsd === null ? null : turnLimitUsd - turnSpentUsd
       return {
         ...value,
         limitUsd,
         remainingUsd: limitUsd === null ? null : limitUsd - value.totalUsd,
         turnLimitUsd,
+        turnSpentUsd,
+        turnRemainingUsd,
         limitPersistence: limitsTable === undefined ? 'memory' : 'durable',
         turnLimitPersistence: turnLimitsTable === undefined ? 'memory' : 'durable',
       }

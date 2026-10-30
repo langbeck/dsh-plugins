@@ -28,8 +28,8 @@ The Host provides a `balanceCost` service for other Host plugins:
 
 The browser route `/api/balance-session-cost` delegates to this service, so
 other plugins and the Web Client share one pricing cache and one cost fold.
-The route also returns `limitUsd`, `remainingUsd`, `turnLimitUsd`, and the persistence
-state of each limit.
+The route also returns `limitUsd`, `remainingUsd`, `turnLimitUsd`, active-turn
+`turnSpentUsd`/`turnRemainingUsd`, and the persistence state of each limit.
 
 ### Session and turn limits
 
@@ -60,7 +60,9 @@ step is blocked. Approvals are scoped to one step for the turn budget and to
 the rest of the turn for the Session cap.
 
 The sidebar's Session block gains a `Limit $5.00 ($2.50 left)` row while a
-Session cap is set, and a `Turn $2.00 USD` row while a turn budget is set. An
+Session cap is set, and a `Turn $2.00 USD ($0.40 left)` row while a turn budget
+is set. The turn remainder is shown only while that Session is running and is
+removed when the turn ends. An
 overage greater than $0.001 renders as a negative remainder, e.g.
 `Limit $2.00 USD (-$0.10 left)`.
 

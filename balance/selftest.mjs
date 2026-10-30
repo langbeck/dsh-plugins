@@ -299,6 +299,7 @@ globalThis.fetch = originalHostFetch
 const originalCapFetch = globalThis.fetch
 globalThis.fetch = async () => ({ ok: true, json: async () => ({ data: pricingBody.data }) })
 let preStepHandler
+let turnStoppingHandler
 let routeHandler
 let limitRouteHandler
 let commandRegistrations = 0
@@ -351,6 +352,7 @@ const fakeCapContext = {
   },
   on(event, handler) {
     if (event === 'agent/pre-step') preStepHandler = handler
+    if (event === 'agent/turn-stopping') turnStoppingHandler = handler
     return () => {}
   },
   connection: {
@@ -435,6 +437,13 @@ const turnCapped = await preStepHandler({ ...payload, turn: 3, step: 2 }, next)
 equal(turnCapped.kind, 'enter', 'Allow step proceeds past the turn budget')
 const turnReprompted = await preStepHandler({ ...payload, turn: 3, step: 3 }, next)
 equal(turnReprompted.kind, 'enter', 'the next step asks for turn-budget approval again')
+const activeTurn = await (await routeHandler({ json: async () => ({ sessionId: 'root' }), signal: new AbortController().signal })).json()
+check(typeof activeTurn.value.turnSpentUsd === 'number', 'the cost route reports current turn spend')
+check(typeof activeTurn.value.turnRemainingUsd === 'number', 'the cost route reports current turn remaining')
+turnStoppingHandler({ agent: capAgent, turn: 3 })
+const endedTurn = await (await routeHandler({ json: async () => ({ sessionId: 'root' }), signal: new AbortController().signal })).json()
+equal(endedTurn.value.turnSpentUsd, null, 'turn spend is cleared when the turn ends')
+equal(endedTurn.value.turnRemainingUsd, null, 'turn remaining is cleared when the turn ends')
 const turnClear = await limit('turn', 'off')
 equal(turnClear.ok, true, 'limit route clears the turn budget')
 equal(await service.turnLimitOf('root'), null, 'the service clears the turn budget')
@@ -623,12 +632,14 @@ const sessionsState = {
   phase: 'ready',
   projectionsBySession: {},
 }
-function pillProps(wide) {
+function pillProps(wide, running = false) {
+  const statuses = new Map()
+  if (running) statuses.set('s1', { running: true })
   return {
     ...injected,
     wide,
     useSessions: (selector) => selector(sessionsState),
-    useSessionStatus: (selector) => selector(new Map()),
+    useSessionStatus: (selector) => selector(statuses),
     t: (key, params) => params === undefined ? key : key + ':' + JSON.stringify(params),
   }
 }
@@ -699,7 +710,7 @@ check(balanceLabelStyle !== undefined && balanceLabelStyle.width === '52px', 'la
 check(sessionLabelStyle !== undefined && sessionLabelStyle.width === '52px', 'session and limit labels share the same column')
 check(boldCurrency, 'the currency codes are bold')
 
-injected.costStore.set({ status: 'ready', sessionId: 's1', totalUsd: 1.68, limitUsd: 2, remainingUsd: 0.32, turnLimitUsd: 0.5, partial: false })
+injected.costStore.set({ status: 'ready', sessionId: 's1', totalUsd: 1.68, limitUsd: 2, remainingUsd: 0.32, turnLimitUsd: 0.5, turnRemainingUsd: 0.2, partial: false })
 const capTree = ReactFake.reset(() => pillRegistration.component(pillProps(true)))
 const capText = textOf(capTree).join(' ')
 check(capText.indexOf('row.limit') !== -1, 'wide block labels the limit row')
@@ -707,6 +718,12 @@ check(capText.indexOf('$2.00') !== -1, 'wide block shows the cap amount')
 check(capText.indexOf('$0.32') !== -1, 'wide block shows the remaining amount')
 check(capText.indexOf('row.turn') !== -1, 'wide block labels the turn budget row')
 check(capText.indexOf('$0.50') !== -1, 'wide block shows the turn budget')
+const runningTree = ReactFake.reset(() => pillRegistration.component(pillProps(true, true)))
+const runningText = textOf(runningTree).join(' ')
+check(runningText.indexOf('$0.20') !== -1, 'wide block shows the remaining turn budget while running')
+const idleTree = ReactFake.reset(() => pillRegistration.component(pillProps(true, false)))
+const idleText = textOf(idleTree).join(' ')
+check(idleText.indexOf('$0.20') === -1, 'remaining turn budget is hidden outside a turn')
 let remainingNode
 let limitLabelStyle
 walkTree(capTree, (node) => {

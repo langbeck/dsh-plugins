@@ -417,6 +417,11 @@ function BalanceRow(props) {
     }
     return ids.join("|");
   });
+  const currentRunning = useSessionStatus((snapshot) => {
+    if (typeof sessionId !== "string" || snapshot === void 0 || snapshot === null) return false;
+    const status = typeof snapshot.get === "function" ? snapshot.get(sessionId) : void 0;
+    return status !== void 0 && status !== null && status.running === true;
+  });
   const previousRunning = (0, import_react2.useRef)(/* @__PURE__ */ new Set());
   (0, import_react2.useEffect)(() => {
     const current = new Set(runningKey === "" ? [] : runningKey.split("|"));
@@ -438,11 +443,11 @@ function BalanceRow(props) {
     void refreshCost(sessionId);
     const timer = setInterval(() => {
       void refreshCost(sessionId);
-    }, COST_REFRESH_MS);
+    }, currentRunning ? 5e3 : COST_REFRESH_MS);
     return () => {
       clearInterval(timer);
     };
-  }, [sessionId]);
+  }, [sessionId, currentRunning]);
   (0, import_react2.useEffect)(() => {
     if (typeof sessionId !== "string" || typeof EventSource === "undefined") return void 0;
     const source = new EventSource(EVENTS_ROUTE + "?sessionId=" + encodeURIComponent(sessionId));
@@ -504,7 +509,8 @@ function BalanceRow(props) {
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: rowLabelStyle, children: t("row.turn") }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: walletStyle, children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: amountStyle, children: formatUsd(cost.turnLimitUsd) }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: codeStyle, children: "USD" })
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: codeStyle, children: "USD" }),
+          currentRunning && typeof cost.turnRemainingUsd === "number" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: remainingStyle(cost.turnRemainingUsd), children: t("row.remainingUsd", { amount: formatRemainingUsd(cost.turnRemainingUsd) }) }) : null
         ] })
       ] }) : null
     ] }),
@@ -833,7 +839,7 @@ function createSnapshotStore(initial) {
 }
 
 // src/client/lib/cost.js
-var IDLE = Object.freeze({ status: "idle", sessionId: void 0, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, partial: false });
+var IDLE = Object.freeze({ status: "idle", sessionId: void 0, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, turnSpentUsd: null, turnRemainingUsd: null, partial: false });
 function createCostTracker() {
   const store = createSnapshotStore(IDLE);
   let abort;
@@ -861,6 +867,8 @@ function createCostTracker() {
       limitUsd: keepsPrevious ? previous.limitUsd : null,
       remainingUsd: keepsPrevious ? previous.remainingUsd : null,
       turnLimitUsd: keepsPrevious ? previous.turnLimitUsd : null,
+      turnSpentUsd: keepsPrevious ? previous.turnSpentUsd : null,
+      turnRemainingUsd: keepsPrevious ? previous.turnRemainingUsd : null,
       partial: keepsPrevious ? previous.partial : false
     });
     return Promise.resolve().then(
@@ -877,18 +885,20 @@ function createCostTracker() {
     }).then((result) => {
       if (disposed || current !== generation) return;
       if (result === null || result === void 0 || result.ok !== true) {
-        store.set({ status: "error", sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, partial: false });
+        store.set({ status: "error", sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, turnSpentUsd: null, turnRemainingUsd: null, partial: false });
         return;
       }
       const value = result.value;
       if (value === null || value === void 0 || value.pricing === null || value.pricing === void 0 || value.pricing.ready !== true) {
-        store.set({ status: "unavailable", sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, partial: false });
+        store.set({ status: "unavailable", sessionId, totalUsd: 0, limitUsd: null, remainingUsd: null, turnLimitUsd: null, turnSpentUsd: null, turnRemainingUsd: null, partial: false });
         return;
       }
       const totalUsd = typeof value.totalUsd === "number" && Number.isFinite(value.totalUsd) ? value.totalUsd : 0;
       const limitUsd = typeof value.limitUsd === "number" && Number.isFinite(value.limitUsd) ? value.limitUsd : null;
       const remainingUsd = typeof value.remainingUsd === "number" && Number.isFinite(value.remainingUsd) ? value.remainingUsd : null;
       const turnLimitUsd = typeof value.turnLimitUsd === "number" && Number.isFinite(value.turnLimitUsd) ? value.turnLimitUsd : null;
+      const turnSpentUsd = typeof value.turnSpentUsd === "number" && Number.isFinite(value.turnSpentUsd) ? value.turnSpentUsd : null;
+      const turnRemainingUsd = typeof value.turnRemainingUsd === "number" && Number.isFinite(value.turnRemainingUsd) ? value.turnRemainingUsd : null;
       store.set({
         status: "ready",
         sessionId,
@@ -896,6 +906,8 @@ function createCostTracker() {
         limitUsd,
         remainingUsd,
         turnLimitUsd,
+        turnSpentUsd,
+        turnRemainingUsd,
         partial: typeof value.unpricedCalls === "number" && value.unpricedCalls > 0
       });
     }).catch(() => {
@@ -959,6 +971,7 @@ var EN = {
   "limit.set": "Set to {amount}",
   "row.turn": "Turn",
   "row.remaining": "({amount} left)",
+  "row.remainingUsd": "({amount} USD left)",
   "time.now": "now",
   "time.minutes": "{n}min",
   "time.hours": "{n}h",
@@ -1013,6 +1026,7 @@ var ZH = {
   "limit.set": "\u8BBE\u4E3A {amount}",
   "row.turn": "\u5355\u8F6E",
   "row.remaining": "\uFF08\u5269\u4F59 {amount}\uFF09",
+  "row.remainingUsd": "\uFF08\u5269\u4F59 {amount} USD\uFF09",
   "time.now": "\u521A\u521A",
   "time.minutes": "{n}\u5206\u949F",
   "time.hours": "{n}\u5C0F\u65F6",

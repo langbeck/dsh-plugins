@@ -44,6 +44,11 @@ export default function BalanceRow(props) {
     }
     return ids.join('|')
   })
+  const currentRunning = useSessionStatus((snapshot) => {
+    if (typeof sessionId !== 'string' || snapshot === undefined || snapshot === null) return false
+    const status = typeof snapshot.get === 'function' ? snapshot.get(sessionId) : undefined
+    return status !== undefined && status !== null && status.running === true
+  })
   const previousRunning = useRef(new Set())
   useEffect(() => {
     const current = new Set(runningKey === '' ? [] : runningKey.split('|'))
@@ -66,11 +71,11 @@ export default function BalanceRow(props) {
     void refreshCost(sessionId)
     const timer = setInterval(() => {
       void refreshCost(sessionId)
-    }, COST_REFRESH_MS)
+    }, currentRunning ? 5000 : COST_REFRESH_MS)
     return () => {
       clearInterval(timer)
     }
-  }, [sessionId])
+  }, [sessionId, currentRunning])
 
   useEffect(() => {
     if (typeof sessionId !== 'string' || typeof EventSource === 'undefined') return undefined
@@ -159,6 +164,9 @@ export default function BalanceRow(props) {
             <span style={walletStyle}>
               <span style={amountStyle}>{formatUsd(cost.turnLimitUsd)}</span>
               <span style={codeStyle}>USD</span>
+              {currentRunning && typeof cost.turnRemainingUsd === 'number' ? (
+                <span style={remainingStyle(cost.turnRemainingUsd)}>{t('row.remainingUsd', { amount: formatRemainingUsd(cost.turnRemainingUsd) })}</span>
+              ) : null}
             </span>
           </div>
         ) : null}
