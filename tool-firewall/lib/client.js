@@ -721,14 +721,28 @@ var detailPreStyle = {
   border: "0.5px solid var(--dsw-alias-border-l3)",
   borderRadius: "var(--dsw-radius-md, 8px)"
 };
-var detailSectionStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "4px"
-};
 var detailSectionHeaderStyle = {
   ...inspectContentHeaderStyle,
   padding: 0
+};
+var detailSplitStyle = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 0.85fr) minmax(0, 1.15fr)",
+  gap: "16px",
+  alignItems: "start"
+};
+var detailMetaGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "max-content minmax(0, 1fr)",
+  gap: "4px 12px",
+  fontSize: "11px",
+  lineHeight: "17px"
+};
+var detailReasonStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+  minWidth: 0
 };
 
 // src/client/components/CopyButton.jsx
@@ -821,6 +835,10 @@ function FlagList({ log, t }) {
 }
 function LogDetailDialog({ log, t, close }) {
   const isOutput = log.phase === "output";
+  const reasonParts = [];
+  if (Array.isArray(log.reasons)) reasonParts.push(...log.reasons);
+  if (typeof log.reason === "string" && log.reason !== "" && !reasonParts.includes(log.reason)) reasonParts.push(log.reason);
+  const reasonText = reasonParts.length === 0 ? "\u2014" : reasonParts.join("\n");
   const decision = isOutput ? log.action === "allow" ? t("logs.outputAllowed") : log.action === "block" ? t("logs.blocked") : t("logs.quarantined") : log.blocked ? t("logs.blocked") : t("logs.allowed");
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
     "div",
@@ -874,25 +892,14 @@ function LogDetailDialog({ log, t, close }) {
             typeof log.outputContent === "string" && log.outputContent !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: log.outputContent, t, iconOnly: true }) : null
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: typeof log.outputContent === "string" ? log.outputContent : "" }),
-          typeof log.reason === "string" && log.reason !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.reason") }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaValueStyle, children: log.reason })
+          typeof log.reason === "string" && log.reason !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailReasonStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.reason") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: log.reason, t, iconOnly: true })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: log.reason })
           ] }) : null
         ] }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailMetaStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.result"), value: decision + (log.code === void 0 ? "" : " \xB7 " + log.code) }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.kind"), value: log.kind ?? "\u2014" }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.structural"), value: numberText(log.structural) + (log.hardBlock ? " \xB7 " + t("logs.hardBlock") : "") }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.malice"), value: numberText(log.malice) + (log.classifier === void 0 ? "" : " \xB7 " + t("logs.classifier") + " " + numberText(log.classifier)) }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.alignment"), value: log.alignment === void 0 ? "\u2014" : numberText(log.alignment) }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.duration"), value: typeof log.durationMs === "number" ? String(Math.round(log.durationMs)) + " ms" : "\u2014" }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(FlagList, { log, t })
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.command") }),
-            typeof log.command === "string" && log.command !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: log.command, t, iconOnly: true }) : null
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: typeof log.command === "string" && log.command !== "" ? log.command : t("logs.noCommand") }),
           typeof log.description === "string" && log.description !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
             /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
               /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.description") }),
@@ -900,14 +907,29 @@ function LogDetailDialog({ log, t, close }) {
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: log.description })
           ] }) : null,
-          Array.isArray(log.reasons) && log.reasons.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.reason") }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaValueStyle, children: log.reasons.join(" \xB7 ") })
-          ] }) : null,
-          typeof log.reason === "string" && log.reason !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionStyle, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaLabelStyle, children: t("logs.reason") }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { style: inspectMetaValueStyle, children: log.reason })
-          ] }) : null
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.command") }),
+            typeof log.command === "string" && log.command !== "" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: log.command, t, iconOnly: true }) : null
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: typeof log.command === "string" && log.command !== "" ? log.command : t("logs.noCommand") }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSplitStyle, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailMetaGridStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.result"), value: decision + (log.code === void 0 ? "" : " \xB7 " + log.code) }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.kind"), value: log.kind ?? "\u2014" }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.structural"), value: numberText(log.structural) + (log.hardBlock ? " \xB7 " + t("logs.hardBlock") : "") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.malice"), value: numberText(log.malice) + (log.classifier === void 0 ? "" : " \xB7 " + t("logs.classifier") + " " + numberText(log.classifier)) }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.alignment"), value: log.alignment === void 0 ? "\u2014" : numberText(log.alignment) }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(MetaRow, { label: t("logs.duration"), value: typeof log.durationMs === "number" ? String(Math.round(log.durationMs)) + " ms" : "\u2014" }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(FlagList, { log, t })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailReasonStyle, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: detailSectionHeaderStyle, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("logs.reason") }),
+                reasonText !== "\u2014" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(CopyButton, { value: reasonText, t, iconOnly: true }) : null
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { style: detailPreStyle, children: reasonText })
+            ] })
+          ] })
         ] }) })
       ] })
     }

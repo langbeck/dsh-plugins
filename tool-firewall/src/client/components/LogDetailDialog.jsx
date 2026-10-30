@@ -1,7 +1,10 @@
 import CopyButton, { middleTruncate } from './CopyButton.jsx'
 import {
   detailBodyStyle,
+  detailMetaGridStyle,
   detailMetaStyle,
+  detailReasonStyle,
+  detailSplitStyle,
   detailPreStyle,
   detailSectionHeaderStyle,
   detailSectionStyle,
@@ -51,6 +54,10 @@ function FlagList({ log, t }) {
 /** Human inspection dialog for one input or output firewall log row. */
 export default function LogDetailDialog({ log, t, close }) {
   const isOutput = log.phase === 'output'
+  const reasonParts = []
+  if (Array.isArray(log.reasons)) reasonParts.push(...log.reasons)
+  if (typeof log.reason === 'string' && log.reason !== '' && !reasonParts.includes(log.reason)) reasonParts.push(log.reason)
+  const reasonText = reasonParts.length === 0 ? '—' : reasonParts.join('\n')
   const decision = isOutput
     ? (log.action === 'allow' ? t('logs.outputAllowed') : log.action === 'block' ? t('logs.blocked') : t('logs.quarantined'))
     : (log.blocked ? t('logs.blocked') : t('logs.allowed'))
@@ -109,30 +116,17 @@ export default function LogDetailDialog({ log, t, close }) {
               {/* Untrusted text is rendered as a React text node, never as HTML. */}
               <pre style={detailPreStyle}>{typeof log.outputContent === 'string' ? log.outputContent : ''}</pre>
               {typeof log.reason === 'string' && log.reason !== '' ? (
-                <div style={detailSectionStyle}>
-                  <span style={inspectMetaLabelStyle}>{t('logs.reason')}</span>
-                  <span style={inspectMetaValueStyle}>{log.reason}</span>
+                <div style={detailReasonStyle}>
+                  <div style={detailSectionHeaderStyle}>
+                    <span>{t('logs.reason')}</span>
+                    <CopyButton value={log.reason} t={t} iconOnly />
+                  </div>
+                  <pre style={detailPreStyle}>{log.reason}</pre>
                 </div>
               ) : null}
             </>
           ) : (
             <>
-              <div style={detailMetaStyle}>
-                <MetaRow label={t('logs.result')} value={decision + (log.code === undefined ? '' : ' · ' + log.code)} />
-                <MetaRow label={t('logs.kind')} value={log.kind ?? '—'} />
-                <MetaRow label={t('logs.structural')} value={numberText(log.structural) + (log.hardBlock ? ' · ' + t('logs.hardBlock') : '')} />
-                <MetaRow label={t('logs.malice')} value={numberText(log.malice) + (log.classifier === undefined ? '' : ' · ' + t('logs.classifier') + ' ' + numberText(log.classifier))} />
-                <MetaRow label={t('logs.alignment')} value={log.alignment === undefined ? '—' : numberText(log.alignment)} />
-                <MetaRow label={t('logs.duration')} value={typeof log.durationMs === 'number' ? String(Math.round(log.durationMs)) + ' ms' : '—'} />
-                <FlagList log={log} t={t} />
-              </div>
-              <div style={detailSectionHeaderStyle}>
-                <span>{t('logs.command')}</span>
-                {typeof log.command === 'string' && log.command !== ''
-                  ? <CopyButton value={log.command} t={t} iconOnly />
-                  : null}
-              </div>
-              <pre style={detailPreStyle}>{typeof log.command === 'string' && log.command !== '' ? log.command : t('logs.noCommand')}</pre>
               {typeof log.description === 'string' && log.description !== '' ? (
                 <>
                   <div style={detailSectionHeaderStyle}>
@@ -142,18 +136,31 @@ export default function LogDetailDialog({ log, t, close }) {
                   <pre style={detailPreStyle}>{log.description}</pre>
                 </>
               ) : null}
-              {Array.isArray(log.reasons) && log.reasons.length > 0 ? (
-                <div style={detailSectionStyle}>
-                  <span style={inspectMetaLabelStyle}>{t('logs.reason')}</span>
-                  <span style={inspectMetaValueStyle}>{log.reasons.join(' · ')}</span>
+              <div style={detailSectionHeaderStyle}>
+                <span>{t('logs.command')}</span>
+                {typeof log.command === 'string' && log.command !== ''
+                  ? <CopyButton value={log.command} t={t} iconOnly />
+                  : null}
+              </div>
+              <pre style={detailPreStyle}>{typeof log.command === 'string' && log.command !== '' ? log.command : t('logs.noCommand')}</pre>
+              <div style={detailSplitStyle}>
+                <div style={detailMetaGridStyle}>
+                  <MetaRow label={t('logs.result')} value={decision + (log.code === undefined ? '' : ' · ' + log.code)} />
+                  <MetaRow label={t('logs.kind')} value={log.kind ?? '—'} />
+                  <MetaRow label={t('logs.structural')} value={numberText(log.structural) + (log.hardBlock ? ' · ' + t('logs.hardBlock') : '')} />
+                  <MetaRow label={t('logs.malice')} value={numberText(log.malice) + (log.classifier === undefined ? '' : ' · ' + t('logs.classifier') + ' ' + numberText(log.classifier))} />
+                  <MetaRow label={t('logs.alignment')} value={log.alignment === undefined ? '—' : numberText(log.alignment)} />
+                  <MetaRow label={t('logs.duration')} value={typeof log.durationMs === 'number' ? String(Math.round(log.durationMs)) + ' ms' : '—'} />
+                  <FlagList log={log} t={t} />
                 </div>
-              ) : null}
-              {typeof log.reason === 'string' && log.reason !== '' ? (
-                <div style={detailSectionStyle}>
-                  <span style={inspectMetaLabelStyle}>{t('logs.reason')}</span>
-                  <span style={inspectMetaValueStyle}>{log.reason}</span>
+                <div style={detailReasonStyle}>
+                  <div style={detailSectionHeaderStyle}>
+                    <span>{t('logs.reason')}</span>
+                    {reasonText !== '—' ? <CopyButton value={reasonText} t={t} iconOnly /> : null}
+                  </div>
+                  <pre style={detailPreStyle}>{reasonText}</pre>
                 </div>
-              ) : null}
+              </div>
             </>
           )}
         </div>

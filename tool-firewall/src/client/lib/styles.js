@@ -710,3 +710,25 @@ export const detailSectionHeaderStyle = {
   ...inspectContentHeaderStyle,
   padding: 0,
 }
+
+export const detailSplitStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 0.85fr) minmax(0, 1.15fr)',
+  gap: '16px',
+  alignItems: 'start',
+}
+
+export const detailMetaGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'max-content minmax(0, 1fr)',
+  gap: '4px 12px',
+  fontSize: '11px',
+  lineHeight: '17px',
+}
+
+export const detailReasonStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+  minWidth: 0,
+}
