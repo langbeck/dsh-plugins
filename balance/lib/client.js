@@ -48,7 +48,7 @@ var NS = "balance";
 var PACKAGE = "dsh-plugin-balance";
 var ROW_ID = "balance";
 var CONFIG_KEY = `${PACKAGE}#${ROW_ID}`;
-var INJECT = ["slots", "locale", "remote", "remote.account", "configForms"];
+var INJECT = ["slots", "locale", "remote", "remote.account", "remote.commands", "configForms", "commandUi"];
 var DEFAULT_CONFIG = Object.freeze({
   refreshSeconds: 60,
   showZeroBalances: true,
@@ -773,6 +773,15 @@ var EN = {
   "row.balance": "Balance",
   "row.session": "Session",
   "row.limit": "Limit",
+  "limit.group.current": "Current",
+  "limit.group.relative": "Relative",
+  "limit.group.absolute": "Absolute",
+  "limit.show": "Show current limit",
+  "limit.current": "Current: {amount}",
+  "limit.notSet": "Not set",
+  "limit.clear": "Clear limit",
+  "limit.increase": "Increase by {amount}",
+  "limit.set": "Set to {amount}",
   "row.turn": "Turn",
   "row.remaining": "({amount} left)",
   "time.now": "now",
@@ -803,6 +812,15 @@ var ZH = {
   "row.balance": "\u4F59\u989D",
   "row.session": "\u4F1A\u8BDD",
   "row.limit": "\u4E0A\u9650",
+  "limit.group.current": "\u5F53\u524D",
+  "limit.group.relative": "\u76F8\u5BF9",
+  "limit.group.absolute": "\u7EDD\u5BF9",
+  "limit.show": "\u663E\u793A\u5F53\u524D\u4E0A\u9650",
+  "limit.current": "\u5F53\u524D\uFF1A{amount}",
+  "limit.notSet": "\u672A\u8BBE\u7F6E",
+  "limit.clear": "\u6E05\u9664\u4E0A\u9650",
+  "limit.increase": "\u589E\u52A0 {amount}",
+  "limit.set": "\u8BBE\u4E3A {amount}",
   "row.turn": "\u5355\u8F6E",
   "row.remaining": "\uFF08\u5269\u4F59 {amount}\uFF09",
   "time.now": "\u521A\u521A",
@@ -819,8 +837,77 @@ function createClient() {
 }
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), "balance: dictionaries");
+  ctx.effect(() => {
+    const commandUi = ctx.commandUi;
+    const remoteCommands = ctx.remote === void 0 ? void 0 : ctx.remote.commands;
+    if (commandUi === void 0 || typeof commandUi.decorate !== "function" || remoteCommands === void 0 || typeof remoteCommands.execute !== "function") {
+      return void 0;
+    }
+    const t = ctx.locale.bind(NS);
+    const optionsFor = (scope, session) => {
+      const snapshot = costTracker.store.getSnapshot();
+      const current = snapshot.sessionId === session.sessionId ? scope === "turn" ? snapshot.turnLimitUsd : snapshot.limitUsd : null;
+      const amount = (value) => "$" + Number(value).toFixed(2);
+      const group = (type) => ({ name: type, label: t("limit.group." + type) });
+      const result = [
+        {
+          id: "show",
+          label: t("limit.show"),
+          detail: typeof current === "number" ? t("limit.current", { amount: amount(current) }) : t("limit.notSet"),
+          group: group("current")
+        },
+        { id: "off", label: t("limit.clear"), group: group("current") }
+      ];
+      for (const value of [0.5, 1, 5, 10]) {
+        result.push({
+          id: "add:" + value,
+          label: t("limit.increase", { amount: amount(value) }),
+          group: group("relative")
+        });
+      }
+      for (const value of [1, 5, 10, 20]) {
+        result.push({
+          id: "set:" + value,
+          label: t("limit.set", { amount: amount(value) }),
+          group: group("absolute")
+        });
+      }
+      return result;
+    };
+    const decorate = (name, scope) => commandUi.decorate({
+      name,
+      available: () => true,
+      ui: {
+        kind: "popupSelect",
+        options: async (session) => optionsFor(scope, session),
+        onSelect: async (option, session) => {
+          const raw = option.id === "show" ? "" : option.id === "off" ? "off" : option.id.startsWith("add:") ? "+" + option.id.slice(4) : option.id.slice(4);
+          const line = "/" + name + (raw === "" ? "" : " " + raw);
+          const result = await remoteCommands.execute(session.sessionId, line, []);
+          if (result !== void 0 && result !== null && result.ok !== true) {
+            throw new Error(result.error?.message ?? "limit command failed");
+          }
+          if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+            window.dispatchEvent(new CustomEvent(COST_CHANGED_EVENT, { detail: { sessionId: session.sessionId } }));
+          }
+        }
+      }
+    });
+    const disposers = [
+      decorate("session-limit", "session"),
+      decorate("turn-limit", "turn")
+    ];
+    return () => {
+      for (const dispose of disposers.reverse()) {
+        try {
+          dispose();
+        } catch (error) {
+        }
+      }
+    };
+  }, "balance: limit command decorations");
   ctx.effect(() => ctx.on("command/executed", (sessionId, name) => {
-    if (name !== "limit") return;
+    if (name !== "limit" && name !== "session-limit" && name !== "turn-limit") return;
     if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
       window.dispatchEvent(new CustomEvent(COST_CHANGED_EVENT, { detail: { sessionId } }));
     }

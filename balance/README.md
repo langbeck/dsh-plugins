@@ -39,6 +39,11 @@ raises the existing cap by $2, `/session-limit -2` lowers it, and
 
 `/turn-limit <usd>` sets a budget for the current turn; `/turn-limit +2`,
 `/turn-limit -2`, `/turn-limit off`, and `/turn-limit` work the same way.
+In the Web client, a bare invocation of either command opens a popup with
+**Show current**, **Clear**, relative **+$0.50 / +$1 / +$5 / +$10**, and
+absolute **$1 / $5 / $10 / $20** choices. Typed arguments continue to execute
+directly. The popup is a Client decoration: the Host command keeps its name
+and lifecycle, and the command row still has no custom title or icon.
 Both caps are stored in separate `balance` storage
 domains keyed by Session id and survive plugin reloads and DSH restarts; if a
 domain is unavailable that cap falls back to memory.

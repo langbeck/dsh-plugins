@@ -524,11 +524,13 @@ const plugin = entry.factory((specifier) => {
 })
 equal(typeof plugin.apply, 'function', 'bundle exports apply')
 check(Array.isArray(plugin.inject), 'bundle exports inject')
-for (const service of ['slots', 'locale', 'remote', 'remote.account', 'configForms']) {
+for (const service of ['slots', 'locale', 'remote', 'remote.account', 'remote.commands', 'configForms', 'commandUi']) {
   check(plugin.inject.indexOf(service) !== -1, 'inject includes ' + service)
 }
 
 const registrations = []
+const decorations = []
+const executedCommands = []
 const disposers = []
 const form = {
   getSnapshot: () => ({
@@ -553,11 +555,23 @@ const fakeClientContext = {
     getSnapshot: () => ({ active: 'en' }),
   },
   configForms: { get: () => form },
+  commandUi: {
+    decorate(decoration) {
+      decorations.push(decoration)
+      return () => {}
+    },
+  },
   slots: {
     inject(key, callback) { callback() },
     register(options, component) { registrations.push({ options, component }) },
   },
   remote: {
+    commands: {
+      async execute(sessionId, line, attachments) {
+        executedCommands.push({ sessionId, line, attachments })
+        return { ok: true, value: { kind: 'success', text: 'ok' } }
+      },
+    },
     account: {
       getBalance: async () => ({
         ok: true,
@@ -576,6 +590,17 @@ await new Promise((resolve) => setTimeout(resolve, 20))
 check(injectedStyles.length === 1, 'apply injects one layout stylesheet')
 check(injectedStyles[0].textContent.indexOf('flex-wrap: wrap') !== -1, 'layout stylesheet makes the footer actions wrap')
 check(injectedStyles[0].textContent.indexOf('data-slot="sidebar.footer.action"') !== -1, 'layout rule is scoped to the footer slot')
+
+const sessionDecoration = decorations.find((decoration) => decoration.name === 'session-limit')
+const turnDecoration = decorations.find((decoration) => decoration.name === 'turn-limit')
+check(sessionDecoration !== undefined && turnDecoration !== undefined, 'limit commands are decorated with popup choices')
+const decorationOptions = await sessionDecoration.ui.options({ sessionId: 's1' }, new AbortController().signal)
+check(decorationOptions.some((option) => option.id === 'add:1'), 'decoration offers relative session amounts')
+check(decorationOptions.some((option) => option.id === 'set:5'), 'decoration offers absolute session amounts')
+await sessionDecoration.ui.onSelect({ id: 'add:2' }, { sessionId: 's1' })
+equal(executedCommands.at(-1)?.line, '/session-limit +2', 'decoration submits the session command with relative input')
+await turnDecoration.ui.onSelect({ id: 'set:5' }, { sessionId: 's1' })
+equal(executedCommands.at(-1)?.line, '/turn-limit 5', 'decoration submits the turn command with absolute input')
 
 const pillRegistration = registrations.find((registration) => registration.options.name === 'sidebar.footer.action')
 const rowConfigRegistration = registrations.find((registration) => registration.options.name === 'plugins.row.config')

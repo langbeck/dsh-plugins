@@ -22,8 +22,83 @@ export default function createClient() {
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { en: EN, zh: ZH }), 'balance: dictionaries')
 
+  ctx.effect(() => {
+    const commandUi = ctx.commandUi
+    const remoteCommands = ctx.remote === undefined ? undefined : ctx.remote.commands
+    if (commandUi === undefined || typeof commandUi.decorate !== 'function' || remoteCommands === undefined || typeof remoteCommands.execute !== 'function') {
+      return undefined
+    }
+    const t = ctx.locale.bind(NS)
+    const optionsFor = (scope, session) => {
+      const snapshot = costTracker.store.getSnapshot()
+      const current = snapshot.sessionId === session.sessionId
+        ? (scope === 'turn' ? snapshot.turnLimitUsd : snapshot.limitUsd)
+        : null
+      const amount = (value) => '$' + Number(value).toFixed(2)
+      const group = (type) => ({ name: type, label: t('limit.group.' + type) })
+      const result = [
+        {
+          id: 'show',
+          label: t('limit.show'),
+          detail: typeof current === 'number' ? t('limit.current', { amount: amount(current) }) : t('limit.notSet'),
+          group: group('current'),
+        },
+        { id: 'off', label: t('limit.clear'), group: group('current') },
+      ]
+      for (const value of [0.5, 1, 5, 10]) {
+        result.push({
+          id: 'add:' + value,
+          label: t('limit.increase', { amount: amount(value) }),
+          group: group('relative'),
+        })
+      }
+      for (const value of [1, 5, 10, 20]) {
+        result.push({
+          id: 'set:' + value,
+          label: t('limit.set', { amount: amount(value) }),
+          group: group('absolute'),
+        })
+      }
+      return result
+    }
+    const decorate = (name, scope) => commandUi.decorate({
+      name,
+      available: () => true,
+      ui: {
+        kind: 'popupSelect',
+        options: async (session) => optionsFor(scope, session),
+        onSelect: async (option, session) => {
+          const raw = option.id === 'show'
+            ? ''
+            : option.id === 'off'
+              ? 'off'
+              : option.id.startsWith('add:')
+                ? '+' + option.id.slice(4)
+                : option.id.slice(4)
+          const line = '/' + name + (raw === '' ? '' : ' ' + raw)
+          const result = await remoteCommands.execute(session.sessionId, line, [])
+          if (result !== undefined && result !== null && result.ok !== true) {
+            throw new Error(result.error?.message ?? 'limit command failed')
+          }
+          if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+            window.dispatchEvent(new CustomEvent(COST_CHANGED_EVENT, { detail: { sessionId: session.sessionId } }))
+          }
+        },
+      },
+    })
+    const disposers = [
+      decorate('session-limit', 'session'),
+      decorate('turn-limit', 'turn'),
+    ]
+    return () => {
+      for (const dispose of disposers.reverse()) {
+        try { dispose() } catch (error) {}
+      }
+    }
+  }, 'balance: limit command decorations')
+
   ctx.effect(() => ctx.on('command/executed', (sessionId, name) => {
-    if (name !== 'limit') return
+    if (name !== 'limit' && name !== 'session-limit' && name !== 'turn-limit') return
     if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
       window.dispatchEvent(new CustomEvent(COST_CHANGED_EVENT, { detail: { sessionId } }))
     }

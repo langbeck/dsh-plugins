@@ -5,7 +5,7 @@ export const PACKAGE = 'dsh-plugin-balance'
 export const ROW_ID = 'balance'
 export const CONFIG_KEY = `${PACKAGE}#${ROW_ID}`
 
-export const INJECT = ['slots', 'locale', 'remote', 'remote.account', 'configForms']
+export const INJECT = ['slots', 'locale', 'remote', 'remote.account', 'remote.commands', 'configForms', 'commandUi']
 
 export const DEFAULT_CONFIG = Object.freeze({
   refreshSeconds: 60,
