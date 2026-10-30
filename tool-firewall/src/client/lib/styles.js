@@ -13,7 +13,7 @@ export const pageStyle = {
 export const sectionStyle = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '12px',
+  gap: '16px',
   padding: '8px 0 0',
   borderTop: '0.5px solid var(--dsw-alias-border-l3)',
 }
@@ -46,6 +46,8 @@ export const checkboxStyle = {
 
 export const labelStyle = {
   color: 'var(--dsw-alias-label-primary)',
+  fontSize: '13px',
+  lineHeight: '20px',
   fontWeight: 500,
 }
 
@@ -420,7 +422,7 @@ export function tabButtonStyle(active) {
     background: active ? 'var(--dsw-alias-bg-layer-1)' : 'transparent',
     color: active ? 'var(--dsw-alias-label-primary)' : 'var(--dsw-alias-label-tertiary)',
     font: 'inherit',
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: active ? 600 : 500,
     cursor: 'pointer',
     whiteSpace: 'nowrap',
