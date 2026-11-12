@@ -1,7 +1,9 @@
-# Container image tasks for the DSH sandbox image built by the Dockerfile
-# beside this justfile.
+# Container image tasks for the DSH sandbox image. base.dockerfile builds the
+# base image; golang.dockerfile adds the Go toolchain on top of it.
 #
-#   just build          build the image with podman
+#   just build          build both images (base, then Go)
+#   just build base     build only the base image
+#   just build golang   build the Go image (and the base it depends on)
 #   just web            serve the Web UI: `dsh --profile web --no-open`, bound
 #                       to HOST:PORT inside the container and published only
 #                       on PUBLISH_HOST (defaults: HOST=auto, PUBLISH_HOST=
@@ -15,10 +17,12 @@ set shell := ["bash", "-uc"]
 # spaces survive; interpolating "{{args}}" would split them on whitespace.
 set positional-arguments
 
-# Image name and tag used by both recipes; override per invocation, e.g.
-# `just image=my-dsh tag=dev build`.
-image := "dsh-sandbox"
-tag := "latest"
+# Image name and tags shared by this justfile and the build module; set the
+# IMAGE, BASE_TAG, and TAG environment variables to override them.
+import 'images.just'
+
+# The build recipes live in build.just, invoked as `just build [base|golang]`.
+mod build
 
 # Absolute path of the project root on the host, symlinks resolved. The
 # container mounts it at the very same path, so absolute paths in plugins,
@@ -52,10 +56,6 @@ network := env_var_or_default("NETWORK", "podman")
 # stable private bridge address. Set HOST to a literal IPv4 to pin it instead,
 # e.g. `HOST=10.88.0.2 just web`. A wildcard is rejected by dsh by design.
 host := env_var_or_default("HOST", "auto")
-
-# Build the image from the Dockerfile in this directory.
-build:
-    podman build --tag {{image}}:{{tag}} .
 
 # Serve the Web UI on the same host port, binding the container's own IPv4.
 # Only the loopback host address is published by default.
